@@ -1,10 +1,16 @@
-
-import { ConsumerWebLoginPayload, ConsumerWebLoginResponse, LoginCredentials, LoginResponse, UserProfile } from "./types";
+import {
+  ConsumerWebLoginPayload,
+  ConsumerWebLoginResponse,
+  LoginCredentials,
+  LoginResponse,
+  UserProfile,
+} from "./types";
 import { API_ENDPOINTS } from "../../shared/api/endpoints";
 
 import {
   authApiClient,
   cxApiClient,
+  consumerApiClient,
 } from "@shared/api/clients/apiClientFactory";
 import { ApiEndpoints } from "@shared/api/api-endpoints";
 import axios from "axios";
@@ -48,15 +54,15 @@ export const authApi = {
     const response = await authApiClient.post(API_ENDPOINTS.auth.logout, {});
     return response.data;
   },
-loginConsumerWeb: async (
-  payload: ConsumerWebLoginPayload
-): Promise<ConsumerWebLoginResponse> => {
-  const response = await axios.post<ConsumerWebLoginResponse>(
-    "https://api-cx-staging.bynry.com/api/consumer-web/login/",
-    payload
-  );
-  return response.data;
-},
+  loginConsumerWeb: async (
+    payload: ConsumerWebLoginPayload
+  ): Promise<ConsumerWebLoginResponse> => {
+    const response = await consumerApiClient.post<ConsumerWebLoginResponse>(
+      "/login/",
+      payload
+    );
+    return response.data;
+  },
 
   // Consumer Web Login - GET (check login status or get login info)
   getConsumerWebLogin: async (): Promise<any> => {
@@ -66,7 +72,9 @@ loginConsumerWeb: async (
 
   // User Utility - GET
   getUserUtility: async (params: { tenant_alias: string }): Promise<any> => {
-    const response = await authApiClient.get(`utility/?tenant_alias=${params.tenant_alias}`);
+    const response = await authApiClient.get(
+      `utility/?tenant_alias=${params.tenant_alias}`
+    );
     return response.data;
   },
 };
@@ -82,7 +90,7 @@ export const forgotPassword = async (payload: {
 // api/auth.ts
 
 export const resetPassword = async (
-  payload: { password: string,email:any },
+  payload: { password: string; email: any },
   queryParams: { et: string; code: string }
 ): Promise<any> => {
   const url = ApiEndpoints.createUrlWithQueryParameters(
@@ -97,5 +105,3 @@ export const resetPassword = async (
   const response = await authApiClient.post(url, payload);
   return response.data;
 };
-
-

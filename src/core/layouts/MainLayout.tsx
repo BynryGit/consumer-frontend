@@ -25,6 +25,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
     "/forgot-password",
     "/reset-password",
     "/",
+    "/signup",
   ].includes(location.pathname);
   const { toast } = useToast();
 

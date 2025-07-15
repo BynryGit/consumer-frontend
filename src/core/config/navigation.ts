@@ -10,7 +10,7 @@ export const SIDE_NAVBAR_AS_PER_MODULE = {
       child: [],
     },
     {
-      link: "/cx/consumer-management/",
+      link: "/billing",
       label: "Billing & Payments",
       shortLabel: "billing-payments",
       active: "",
@@ -19,7 +19,7 @@ export const SIDE_NAVBAR_AS_PER_MODULE = {
       child: [],
     },
     {
-      link: "/cx/consumer-onboarding/",
+      link: "/usage-consumption",
       label: "Usage & Consumption",
       shortLabel: "usage-consumption",
       active: "",
@@ -28,7 +28,7 @@ export const SIDE_NAVBAR_AS_PER_MODULE = {
       child: [],
     },
     {
-      link: "/cx/services/",
+      link: "/notification",
       label: "Notifications",
       shortLabel: "notifications",
       active: "",
@@ -37,7 +37,7 @@ export const SIDE_NAVBAR_AS_PER_MODULE = {
       child: [],
     },
     {
-      link: "/cx/complaints/",
+      link: "/serviceRequest",
       label: "Service Requests",
       shortLabel: "service-requests",
       active: "",
@@ -46,7 +46,7 @@ export const SIDE_NAVBAR_AS_PER_MODULE = {
       child: [],
     },
     {
-      link: "/cx/disconnections/",
+      link: "/request-tracker",
       label: "Request Tracker",
       shortLabel: "request-tracker",
       active: "",
@@ -55,7 +55,7 @@ export const SIDE_NAVBAR_AS_PER_MODULE = {
       child: [],
     },
     {
-      link: "/cx/payments/",
+      link: "/profile",
       label: "Profile",
       shortLabel: "profile",
       active: "",
@@ -64,7 +64,7 @@ export const SIDE_NAVBAR_AS_PER_MODULE = {
       child: [],
     },
     {
-      link: "/cx/outstanding-payments/",
+      link: "/preferences",
       label: "Preferences",
       shortLabel: "preferences",
       active: "",
@@ -73,7 +73,7 @@ export const SIDE_NAVBAR_AS_PER_MODULE = {
       child: [],
     },
     {
-      link: "/cx/settings/",
+      link: "/faqs",
       label: "FAQs",
       shortLabel: "faqs",
       active: "", 
@@ -82,7 +82,7 @@ export const SIDE_NAVBAR_AS_PER_MODULE = {
       child: [],
     },
      {
-      link: "/cx/settings/",
+      link: "/contactUs",
       label: "Contact Us",
       shortLabel: "contact-us",
       active: "", 

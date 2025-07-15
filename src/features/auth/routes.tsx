@@ -1,51 +1,54 @@
-import { RouteObject } from 'react-router-dom';
+import { RouteObject, useNavigate } from 'react-router-dom';
 import SignInComponent from './components/Login';
-import DashboardComponent from './components/Dashboard';
-import DashboardHome from './DashboardHome';
+import DashboardComponent from '../dashboard/components/Dashboard';
+import ForgotPassword from './components/ForgotPassword';
+import SignUp from './components/SignUp';
 
 export interface AuthRoute extends Omit<RouteObject, 'children'> {
   auth?: boolean;
   children?: AuthRoute[];
 }
 
+const SignUpRoute = () => {
+  const navigate = useNavigate();
+  return <SignUp onSwitchToSignIn={() => navigate('/login')} />;
+};
+
+const ForgotPasswordRoute = () => {
+  const navigate = useNavigate();
+  return <ForgotPassword onSwitchToSignIn={() => navigate('/login')} />;
+};
+
+const SignInRoute = () => {
+  const navigate = useNavigate();
+  return (
+    <SignInComponent
+      onSwitchToSignUp={() => navigate('/signup')}
+      onSwitchToForgotPassword={() => navigate('/forgot-password')}
+    />
+  );
+};
+
 export const authRoutes: AuthRoute[] = [
   {
     path: '/login',
-    element: <SignInComponent />,
+    element: <SignInRoute />,
     auth: false, // Public route
   },
   {
-    path: '/dashboard',
-    element: <DashboardHome />,
-    auth: true, // Protected route - requires authentication
+    path: '/forgot-password',
+    element: <ForgotPasswordRoute />,
+    auth: false,
+  },
+  {
+    path: '/signup',
+    element: <SignUpRoute />,
+    auth: false,
   },
   {
     path: '/',
-    element: <SignInComponent />, // Redirect to login by default
+    element: <SignInRoute />, // Redirect to login by default
     auth: false,
   },
 ];
 
-// Optional: Route configuration with nested structure
-export const appRoutes: AuthRoute[] = [
-  {
-    path: '/',
-    children: [
-      {
-        index: true,
-        element: <SignInComponent />,
-        auth: false,
-      },
-      {
-        path: 'login',
-        element: <SignInComponent />,
-        auth: false,
-      },
-      {
-        path: 'dashboard',
-        element: <DashboardHome />,
-        auth: true,
-      },
-    ],
-  },
-];

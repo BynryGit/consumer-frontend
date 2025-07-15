@@ -7,9 +7,10 @@ import { Button } from '../../shared/ui/button';
 import UsageTrends from './components/UsageTrends';
 import TipsInsights from './components/TipsInsights';
 import QuickActions from './components/QuickActions';
-import AccountOverview from './components/AccountOverview';
+
 import { RefreshCw } from 'lucide-react';
 import DashboardCards from './components/Dashboard';
+import AccountOverview from './components/AccountOverview';
 
 // Sample data for charts - updated to include total cost for each month
 const usageData = [ 
