@@ -3,6 +3,7 @@ import SignInComponent from './components/Login';
 import DashboardComponent from '../dashboard/components/Dashboard';
 import ForgotPassword from './components/ForgotPassword';
 import SignUp from './components/SignUp';
+import { AuthGuard } from './components/AuthGuard';
 
 export interface AuthRoute extends Omit<RouteObject, 'children'> {
   auth?: boolean;
@@ -33,7 +34,7 @@ export const authRoutes: AuthRoute[] = [
   {
     path: '/login',
     element: <SignInRoute />,
-    auth: false, // Public route
+    auth: false, // Public route  
   },
   {
     path: '/forgot-password',
@@ -42,12 +43,12 @@ export const authRoutes: AuthRoute[] = [
   },
   {
     path: '/signup',
-    element: <SignUpRoute />,
+    element:(<AuthGuard> <SignUpRoute /></AuthGuard>),
     auth: false,
   },
   {
     path: '/',
-    element: <SignInRoute />, // Redirect to login by default
+    element: (<AuthGuard><SignInRoute /></AuthGuard>), // Redirect to login by default
     auth: false,
   },
 ];

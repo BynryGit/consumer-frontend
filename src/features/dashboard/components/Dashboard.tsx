@@ -114,7 +114,7 @@ const DashboardCards = ({
         </CardContent>
         <CardFooter className="pt-0">
           <Button variant="outline" size="sm" className="w-full" asChild>
-            <Link to="/usage">
+            <Link to="/usage-consumption">
               View Details <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -139,6 +139,13 @@ const DashboardCards = ({
             </div>
           </div>
         </CardContent>
+        <CardFooter className="pt-0">
+          <Button variant="outline" size="sm" className="w-full" asChild>
+            <Link to="/usage-consumption">
+              View Details <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </CardFooter>
       </Card>
 
       {/* Recent Requests */}
@@ -173,7 +180,7 @@ const DashboardCards = ({
         </CardContent>
         <CardFooter className="pt-0">
           <Button variant="outline" size="sm" className="w-full" asChild>
-            <Link to="/service/tracker">View All Requests</Link>
+            <Link to="/request-tracker">View All Requests</Link>
           </Button>
         </CardFooter>
       </Card>
