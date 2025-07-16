@@ -22,7 +22,7 @@ const QuickActions = () => {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-4">
         <CardTitle>Quick Actions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">

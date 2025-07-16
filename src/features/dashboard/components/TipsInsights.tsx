@@ -70,7 +70,7 @@ const TipsInsights = () => {
           </p>
         </div>
         <Button variant="outline" size="sm" asChild>
-          <Link to="/usage?tab=tips" className="flex items-center gap-1">
+          <Link to="/usage-consumption?tab=tips" className="flex items-center gap-1">
             View All <ArrowRight className="h-3 w-3" />
           </Link>
         </Button>
@@ -89,7 +89,7 @@ const TipsInsights = () => {
                     <div className="flex items-center justify-between">
                       
                       <Button variant="outline" size="sm" asChild>
-                        <Link to={`/usage?tab=tips&tipId=${tip.id}`}>Learn More</Link>
+                        <Link to={`/usage-consumption?tab=tips&tipId=${tip.id}`}>Learn More</Link>
                       </Button>
                     </div>
                   </div>
