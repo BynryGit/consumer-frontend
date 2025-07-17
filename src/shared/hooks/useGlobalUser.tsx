@@ -1,6 +1,7 @@
 // hooks/shared/useGlobalUser.ts
 
-import { authApi } from "@features/auth";
+
+// import { authApi } from "@features/auth/api";
 import { UserProfile } from "@features/auth/types";
 import { useSmartQuery } from "@shared/api/queries/hooks";
 import { QueryKeyFactory } from "@shared/api/queries/queryKeyFactory";
@@ -23,9 +24,9 @@ export const useGlobalUserProfile = () => {
       }
 
       // Fallback to API
-      const profile = await authApi.getUserProfile();
-      localStorage.setItem(CACHED_PROFILE_KEY, JSON.stringify(profile));
-      return profile;
+      // const profile = await authApi.getUserProfile();
+      // localStorage.setItem(CACHED_PROFILE_KEY, JSON.stringify(profile));
+      // return profile;
     },
    
   );

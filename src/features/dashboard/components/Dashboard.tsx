@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@shared/ui/card';
 import { Button } from '@shared/ui/button';
-import { Progress } from '@shared/ui/progress';
 import { Badge } from '@shared/ui/badge';
-import { Droplet, Flame, Lightbulb, Clock, DollarSign, TrendingDown, AlertTriangle, ArrowRight, Bell, TrendingUp, FileText } from 'lucide-react';
+import {
+  Droplet,
+  Flame,
+  Lightbulb,
+  DollarSign,
+  TrendingDown,
+  ArrowRight,
+  FileText,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
+
 interface BillData {
   currentTotal: number;
   previousMonth: number;
   dueDate: string;
   paymentStatus: string;
-  nextEstimatedBill: number;  
+  nextEstimatedBill: number;
   currentMonth: string;
   breakdown: Array<{
     name: string;
@@ -29,48 +37,57 @@ interface DashboardCardsProps {
   gasAvg: number;
 }
 
-const DashboardCards = ({ 
-  billData, 
-  electricityUsage, 
+const DashboardCards = ({
+  billData,
+  electricityUsage,
   electricityAvg,
   waterUsage,
   waterAvg,
   gasUsage,
-  gasAvg
+  gasAvg,
 }: DashboardCardsProps) => {
   const [autoPayEnabled, setAutoPayEnabled] = useState(false);
-  
+
   const dueDate = new Date(billData?.dueDate);
   const today = new Date();
-  const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  
+  const daysUntilDue = Math.ceil(
+    (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
   const electricityPercent = Math.round((electricityUsage / electricityAvg) * 100);
   const waterPercent = Math.round((waterUsage / waterAvg) * 100);
   const gasPercent = Math.round((gasUsage / gasAvg) * 100);
-  
-  
-  // Sample recent requests data
+
   const recentRequests = [
     { id: 'REQ-001', type: 'Service Call', status: 'In Progress', date: '2025-01-15' },
     { id: 'REQ-002', type: 'Bill Query', status: 'Resolved', date: '2025-01-10' },
     { id: 'REQ-003', type: 'Connection', status: 'Pending', date: '2025-01-08' },
   ];
-  
+
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-      {/* Current Bill - Most Important */}
-      <Card className="hover:shadow-md transition-shadow border-l-4 border-l-primary">
+      {/* Current Bill */}
+      <Card className="hover:shadow-md transition-shadow border-l-4 border-l-primary flex flex-col h-full">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Current Bill</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Current Bill
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-grow">
           <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant={daysUntilDue <= 3 ? "destructive" : daysUntilDue <= 7 ? "default" : "secondary"} className="text-xs">
-                  Due in {daysUntilDue} days
-                </Badge>
-              </div>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge
+                variant={
+                  daysUntilDue <= 3
+                    ? 'destructive'
+                    : daysUntilDue <= 7
+                    ? 'default'
+                    : 'secondary'
+                }
+                className="text-xs"
+              >
+                Due in {isNaN(daysUntilDue) ? 'N/A' : `${daysUntilDue} days`}
+              </Badge>
             </div>
             <DollarSign className="h-8 w-8 text-primary p-1 bg-primary/10 rounded-full" />
           </div>
@@ -83,11 +100,13 @@ const DashboardCards = ({
       </Card>
 
       {/* Usage Summary */}
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="hover:shadow-md transition-shadow flex flex-col h-full">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">This Month's Usage</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            This Month's Usage
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-grow">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -121,21 +140,21 @@ const DashboardCards = ({
         </CardFooter>
       </Card>
 
-      {/* Savings Tracker */}
-      <Card className="hover:shadow-md transition-shadow">
+      {/* Monthly Savings */}
+      <Card className="hover:shadow-md transition-shadow flex flex-col h-full">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Savings</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Monthly Savings
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-grow">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold text-green-600">
-              </div>
+              <div className="text-2xl font-bold text-green-600"></div>
               <p className="text-xs text-muted-foreground">vs last month</p>
             </div>
             <div className="flex flex-col items-center">
               <TrendingDown className="h-6 w-6 text-green-500" />
-
             </div>
           </div>
         </CardContent>
@@ -149,14 +168,14 @@ const DashboardCards = ({
       </Card>
 
       {/* Recent Requests */}
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="hover:shadow-md transition-shadow flex flex-col h-full">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Recent Requests
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-grow">
           <div className="space-y-3">
             {recentRequests.map((request) => (
               <div key={request.id} className="flex items-center justify-between">
@@ -164,11 +183,13 @@ const DashboardCards = ({
                   <span className="text-sm font-medium">{request.type}</span>
                   <span className="text-xs text-muted-foreground">{request.id}</span>
                 </div>
-                <Badge 
+                <Badge
                   variant={
-                    request.status === 'Resolved' ? 'default' : 
-                    request.status === 'In Progress' ? 'secondary' : 
-                    'outline'
+                    request.status === 'Resolved'
+                      ? 'default'
+                      : request.status === 'In Progress'
+                      ? 'secondary'
+                      : 'outline'
                   }
                   className="text-xs"
                 >
