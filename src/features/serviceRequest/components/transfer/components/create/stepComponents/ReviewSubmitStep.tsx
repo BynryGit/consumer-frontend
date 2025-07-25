@@ -1,5 +1,3 @@
-
-// import { useCreateTransferRequest } from "@features/cx/transfer/hooks";
 import { StepHelpers } from "@shared/components/Stepper";
 import { toast } from "@shared/hooks/use-toast";
 import { Badge } from "@shared/ui/badge";
@@ -16,6 +14,9 @@ import {
   User,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FileMetadata } from "../create";
+import { useCreateTransferRequest } from "@features/serviceRequest/hooks";
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 interface ReviewSubmitStepProps {
   remoteUtilityId: number;
   storageKey: string;
@@ -28,45 +29,65 @@ interface ReviewSubmitStepProps {
   fileMetadata: FileMetadata[];
   documentsFormData: any;
 }
-export interface FileMetadata {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  needsReupload?: boolean;
+
+interface LocalConsumerDetails {
+  id?: number;
+  consumerNo?: string;
+  remoteUtilityId?: number;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  contactNumber?: string;
+  addressMap?: { addressLine?: string };
+  territoryData?: {
+    service?: {
+      region?: string;
+      area?: string;
+      country?: string;
+      county?: string;
+      division?: string;
+      zone?: string;
+      state?: string;
+      subArea?: string;
+    };
+  };
+  [key: string]: any;
 }
+
 export function ReviewSubmitStep({
-  remoteUtilityId,
-  storageKey,
   stepHelpers,
   currentStepIndex = 0,
-  onNext,
   onPrevious,
-  setValidationError,
   fileObjects,
   fileMetadata,
-  documentsFormData,
 }: ReviewSubmitStepProps) {
-  console.log("fileObjects", fileObjects);
+ const { remoteUtilityId} = getLoginDataFromStorage();
   const [formData, setFormData] = useState<any>({});
   const dataLoadedRef = useRef(false);
-  // const createTransferRequestMutation = useCreateTransferRequest();
-  // Helper function to save step data using stepHelpers
+  const createTransferRequestMutation = useCreateTransferRequest();
+
+  // Get consumer details from localStorage
+  const consumerDetailsRaw = localStorage.getItem("consumerDetails");
+  let consumerDetails: LocalConsumerDetails = {};
+  if (consumerDetailsRaw) {
+    try {
+      consumerDetails = JSON.parse(consumerDetailsRaw)?.result || {};
+    } catch (e) {
+      consumerDetails = {};
+    }
+  }
+
   const saveStepData = useCallback(
     (data: any) => {
       if (!stepHelpers) return;
-
       try {
         const stepData = {
           ...data,
           timestamp: new Date().toISOString(),
           stepIndex: currentStepIndex,
         };
-
         stepHelpers.setStepData(currentStepIndex, stepData);
-        console.log("Step data saved via stepHelpers:", stepData);
       } catch (error) {
-        console.error("Failed to save step data via stepHelpers:", error);
         toast({
           title: "Failed to save progress",
           description: "Your progress may not be saved. Please try again.",
@@ -77,59 +98,32 @@ export function ReviewSubmitStep({
     [stepHelpers, currentStepIndex]
   );
 
-  // Helper function to get step data using stepHelpers
-  const getStepData = useCallback(() => {
-    if (!stepHelpers) return null;
-
-    try {
-      return stepHelpers.getStepData(currentStepIndex);
-    } catch (error) {
-      console.error("Failed to get step data via stepHelpers:", error);
-      return null;
-    }
-  }, [stepHelpers, currentStepIndex]);
-
-  // Helper function to get all step data
   const getAllStepData = useCallback(() => {
     if (!stepHelpers) return {};
-
     try {
-      // Assuming we have multiple steps, gather data from all previous steps
-      const allStepsData = {
-        customer: stepHelpers.getStepData(0) || {},
-        transferDetails: stepHelpers.getStepData(1) || {},
-        documentation: stepHelpers.getStepData(2) || {},
-        review: stepHelpers.getStepData(3) || {},
+      return {
+        transferDetails: stepHelpers.getStepData(0) || {},
+        documentation: stepHelpers.getStepData(1) || {},
+        review: stepHelpers.getStepData(2) || {},
       };
-
-      return allStepsData;
     } catch (error) {
-      console.error("Failed to get all step data via stepHelpers:", error);
       return {};
     }
   }, [stepHelpers]);
 
-  console.log("stepHelpers:", getAllStepData());
-
-  // Load saved data from stepHelpers on component mount
   useEffect(() => {
     if (stepHelpers && !dataLoadedRef.current) {
       try {
-        // Get all step data for review
         const allStepsData = getAllStepData();
-        const savedStepData = getStepData();
-
-        console.log("Loaded all step data from stepHelpers:", allStepsData);
-
-        // Combine all data for review
+        const savedStepData = stepHelpers.getStepData(currentStepIndex);
+        
         const combinedData = {
           ...allStepsData,
           reviewData: savedStepData || {},
         };
 
         setFormData(combinedData);
-
-        // Save the review step initialization
+        
         saveStepData({
           allStepsReviewed: true,
           reviewInitializedAt: new Date().toISOString(),
@@ -138,28 +132,16 @@ export function ReviewSubmitStep({
 
         dataLoadedRef.current = true;
       } catch (error) {
-        console.error("Failed to load step data from stepHelpers:", error);
         dataLoadedRef.current = true;
       }
     }
-  }, [
-    stepHelpers,
-    currentStepIndex,
-    getStepData,
-    getAllStepData,
-    saveStepData,
-  ]);
+  }, [stepHelpers, currentStepIndex, getAllStepData, saveStepData]);
 
   // Extract data from the form data
   const customer = formData.customer || {};
   const transferDetails = formData.transferDetails || {};
   const newCustomer = transferDetails?.newCustomer || {};
   const documents = formData.documentation?.documents || [];
-
-  console.log("documents", documents);
-
-  // Debug log for the entire transferDetails object
-  console.log("transferDetails:", transferDetails);
 
   const handleFormSubmit = (data) => {
     // Check if there are files that need re-upload
@@ -173,30 +155,17 @@ export function ReviewSubmitStep({
       return;
     }
 
-    console.log("Form data being processed:", data);
-
     // Create FormData object for file upload
     const formData = new FormData();
 
     // Extract data with proper fallbacks and validation
     const allStepData = getAllStepData();
-    const selectedCustomer =
-      data.customer?.consumerMetadata || {};
     const transferDetails = data.transferDetails || {};
     const newCustomer = transferDetails.newCustomer || {};
     const documents = data.documentation?.documents || [];
 
-    // Debug logs with better structure
-    console.log("=== DATA EXTRACTION DEBUG ===");
-    console.log("All step data:", allStepData);
-    console.log("Selected customer:", selectedCustomer);
-    console.log("Transfer details:", transferDetails);
-    console.log("New customer:", newCustomer);
-    console.log("Documents:", documents);
-    console.log("=== END DATA EXTRACTION DEBUG ===");
-
     // Validate required fields before proceeding
-    if (!selectedCustomer.id) {
+    if (!consumerDetails.id) {
       toast({
         title: "Error: Missing customer information",
         description: "Customer ID is required for the transfer request.",
@@ -223,122 +192,87 @@ export function ReviewSubmitStep({
       return;
     }
 
-    console.log("cosnumer-->", selectedCustomer)
-
-    // Add form fields with proper validation and fallbacks
-    formData.append("source", "0");
+    // Add form fields matching the curl payload structure
+    formData.append("source", "1");
     formData.append("request_type", "Transfer");
-    formData.append("consumer", selectedCustomer.id?.toString() || "");
-    formData.append("remote_utility_id", remoteUtilityId?.toString() || "");
-    formData.append("account_number", selectedCustomer?.accountNumber || "");
-    formData.append("consumer_name", selectedCustomer?.name || "");
-    formData.append("phone", selectedCustomer?.phone || "");
-    formData.append("email", selectedCustomer?.email),
-    formData.append("address", selectedCustomer?.address || "N/A")
+    formData.append("consumer", consumerDetails.id?.toString() || "");
+    formData.append("remote_utility_id", remoteUtilityId);
+    formData.append("account_number", consumerDetails.consumerNo || "");
     formData.append(
-      "utility_support_request",
-      transferDetails.transferType || ""
+      "consumer_name",
+      consumerDetails.firstName && consumerDetails.lastName
+        ? `${consumerDetails.firstName} ${consumerDetails.lastName}`.trim()
+        : ""
     );
+    formData.append("phone", consumerDetails.contactNumber || "");
+    formData.append("email", consumerDetails.email || "");
+    formData.append("address", consumerDetails.addressMap?.addressLine || "N/A");
+    formData.append("utility_support_request", transferDetails.transferType || "");
     formData.append("request_date", transferDetails.effectiveDate || "");
 
     // Get files from multiple possible sources
-    const allStepDataFiles = getAllStepData();
-    const documentationStepData = stepHelpers?.getStepData?.(2) || {};
-
+    const documentationStepData = stepHelpers?.getStepData?.(1) || {};
     let filesFromStepData = [];
 
-    // Try different possible file locations
-    if (
-      documentationStepData.files &&
-      Array.isArray(documentationStepData.files)
-    ) {
+    if (documentationStepData.files && Array.isArray(documentationStepData.files)) {
       filesFromStepData = documentationStepData.files;
-    } else if (
-      documentationStepData.fileObjects &&
-      Array.isArray(documentationStepData.fileObjects)
-    ) {
+    } else if (documentationStepData.fileObjects && Array.isArray(documentationStepData.fileObjects)) {
       filesFromStepData = documentationStepData.fileObjects;
-    } else if (
-      fileObjects &&
-      Array.isArray(fileObjects) &&
-      fileObjects.length > 0
-    ) {
+    } else if (fileObjects && Array.isArray(fileObjects) && fileObjects.length > 0) {
       filesFromStepData = fileObjects;
     }
-
-    console.log("=== FILE DEBUG INFO ===");
-    console.log("Documentation step data:", documentationStepData);
-    console.log("Files from step data:", filesFromStepData);
-    console.log("fileObjects prop:", fileObjects);
-    console.log("Files array length:", filesFromStepData.length);
-    console.log("=== END FILE DEBUG ===");
 
     // Validate files exist
     if (!filesFromStepData || filesFromStepData.length === 0) {
       toast({
         title: "Error: No files found",
-        description:
-          "No files were found to upload. Please go back and upload the required documents.",
+        description: "No files were found to upload. Please go back and upload the required documents.",
         variant: "destructive",
       });
       return;
     }
 
-    // Build billing_address_data in the required order and types
-    const codes = transferDetails.premiseHierarchyCodes || {};
-    const unitNumber = transferDetails.unit;
-    const billingAddress = transferDetails.streetAddress;
-    const zipCode = transferDetails.zipCode;
-    const billing_address_data = [
-      ...(unitNumber ? [{ territory_type: "UNIT", territory_code: unitNumber }] : []),
-      ...(billingAddress ? [{ territory_type: "ADDRESS", territory_code: billingAddress }] : []),
-      ...(zipCode ? [{ territory_type: "ZIPCODE", territory_code: zipCode }] : []),
-      ...(codes.premise ? [{ territory_type: "PREMISE", territory_code: codes.premise }] : []),
-      ...(codes.subArea ? [{ territory_type: "SUBAREA", territory_code: codes.subArea }] : []),
-      ...(codes.area ? [{ territory_type: "AREA", territory_code: codes.area }] : []),
-      ...(codes.division ? [{ territory_type: "DIVISION", territory_code: codes.division }] : []),
-      ...(codes.zone ? [{ territory_type: "ZONE", territory_code: codes.zone }] : []),
-      ...(codes.county ? [{ territory_type: "CITY", territory_code: codes.county }] : []),
-      ...(codes.state ? [{ territory_type: "STATE", territory_code: codes.state }] : []),
-      ...(codes.country ? [{ territory_type: "COUNTRY", territory_code: codes.country }] : []),
-      ...(codes.region ? [{ territory_type: "REGION", territory_code: codes.region }] : []),
-    ];
+    // Build billing_address_data - empty array if no new billing address
+    let billing_address_data = [];
+    
+    if (transferDetails.changeBillingAddress === "yes") {
+      const codes = transferDetails.premiseHierarchyCodes || {};
+      const unitNumber = transferDetails.unit;
+      const billingAddress = transferDetails.streetAddress;
+      const zipCode = transferDetails.zipCode;
+      
+      billing_address_data = [
+        ...(unitNumber ? [{ territory_type: "UNIT", territory_code: unitNumber }] : []),
+        ...(billingAddress ? [{ territory_type: "ADDRESS", territory_code: billingAddress }] : []),
+        ...(zipCode ? [{ territory_type: "ZIPCODE", territory_code: zipCode }] : []),
+        ...(codes.premise ? [{ territory_type: "PREMISE", territory_code: codes.premise }] : []),
+        ...(codes.subArea ? [{ territory_type: "SUBAREA", territory_code: codes.subArea }] : []),
+        ...(codes.area ? [{ territory_type: "AREA", territory_code: codes.area }] : []),
+        ...(codes.division ? [{ territory_type: "DIVISION", territory_code: codes.division }] : []),
+        ...(codes.zone ? [{ territory_type: "ZONE", territory_code: codes.zone }] : []),
+        ...(codes.county ? [{ territory_type: "CITY", territory_code: codes.county }] : []),
+        ...(codes.state ? [{ territory_type: "STATE", territory_code: codes.state }] : []),
+        ...(codes.country ? [{ territory_type: "COUNTRY", territory_code: codes.country }] : []),
+        ...(codes.region ? [{ territory_type: "REGION", territory_code: codes.region }] : []),
+      ];
+    }
 
-    // Create the additional_data structure with proper data extraction
+    // Create the additional_data structure matching the curl payload exactly
     const additionalData = {
       old_consumer_data: {
-        first_name:
-          selectedCustomer.name?.split(" ")[0] ||
-          selectedCustomer.customerName?.split(" ")[0] ||
-          selectedCustomer.first_name ||
-          selectedCustomer.firstName ||
-          "",
-        last_name:
-          selectedCustomer.name?.split(" ").slice(1).join(" ") ||
-          selectedCustomer.customerName?.split(" ").slice(1).join(" ") ||
-          selectedCustomer.last_name ||
-          selectedCustomer.lastName ||
-          "",
-        email:
-          selectedCustomer.contactEmail ||
-          selectedCustomer.email ||
-          selectedCustomer.contact_email ||
-          null,
-        contact_number:
-          selectedCustomer.contactPhone ||
-          selectedCustomer.phone ||
-          null,
+        first_name: consumerDetails.firstName || "",
+        last_name: consumerDetails.lastName || "",  
+        email: consumerDetails.email || null,
+        contact_number: consumerDetails.contactNumber || null,
       },
       new_consumer_data: {
         first_name: newCustomer.firstName || "",
         last_name: newCustomer.lastName || "",
         email: newCustomer.email || null,
-        contact_number:
-          newCustomer.phoneNumber || newCustomer.contactNumber || null,
+        contact_number: newCustomer.phoneNumber || newCustomer.contactNumber || null,
         document: documents.map((doc, index) => ({
-          document_type: doc.categoryCode,
-          document_subtype:
-            doc.subCategoryCode ,
+          document_type: doc.categoryCode || doc.type || "",
+          document_subtype: doc.subCategoryCode || doc.subCategory || "",
           file_key: `file${index + 1}`,
           status: 0,
         })),
@@ -346,35 +280,20 @@ export function ReviewSubmitStep({
       },
       relationship: newCustomer.relationshipId || 1,
       change_billing_address: transferDetails.changeBillingAddress === "yes",
-      transfer_outstanding_balance:
-        transferDetails.financialResponsibility === "transfer",
+      transfer_outstanding_balance: transferDetails.financialResponsibility === "transfer",
       special_instructions: transferDetails.specialInstructions || "",
-      utility_support_request_version: transferDetails.version,
+      utility_support_request_version: transferDetails.version || "Version-1",
     };
-
-    console.log("=== ADDITIONAL DATA DEBUG ===");
-    console.log(
-      "Final additional_data:",
-      JSON.stringify(additionalData, null, 2)
-    );
-    console.log("=== END ADDITIONAL DATA DEBUG ===");
 
     // Add the additional_data JSON to FormData
     formData.append("additional_data", JSON.stringify(additionalData));
 
-    // Add files with validation
+    // Add files with validation - matching curl structure (file1, file2, etc.)
     filesFromStepData.forEach((file, index) => {
       const fileKey = `file${index + 1}`;
-
       if (file instanceof File) {
         formData.append(fileKey, file);
-        console.log(`✅ Added file with key: ${fileKey}`, {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        });
       } else {
-        console.error(`❌ Invalid file object at index ${index}:`, file);
         toast({
           title: "Error: Invalid file",
           description: `File at position ${index + 1} is not valid.`,
@@ -385,51 +304,48 @@ export function ReviewSubmitStep({
     });
 
     // Final validation - check all required FormData fields
-    const requiredFields = [
-      "source",
-      "request_type",
-      "consumer",
-      "remote_utility_id",
-      "utility_support_request",
-      "request_date",
-    ];
-    const missingFields = [];
-
-    for (const field of requiredFields) {
-      const value = formData.get(field);
-      if (!value || value === "") {
-        missingFields.push(field);
-      }
-    }
+    const requiredFields = ["source", "request_type", "consumer", "remote_utility_id", "utility_support_request", "request_date"];
+    const missingFields = requiredFields.filter(field => !formData.get(field));
 
     if (missingFields.length > 0) {
-      console.error("Missing required fields:", missingFields);
       toast({
         title: "Error: Missing required fields",
-        description: `The following fields are missing: ${missingFields.join(
-          ", "
-        )}`,
+        description: `The following fields are missing: ${missingFields.join(", ")}`,
         variant: "destructive",
       });
       return;
     }
 
-    console.log("=== FINAL FORMDATA DEBUG ===");
-    console.log("FormData entries:");
-    for (let [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        console.log(`${key}: File(${value.name}, ${value.size} bytes)`);
-      } else {
-        console.log(`${key}:`, value);
-      }
-    }
-    console.log("=== END FORMDATA DEBUG ===");
-
     // Submit the form
-    // createTransferRequestMutation.mutate({ data: formData });
+    if (!createTransferRequestMutation?.mutate) {
+      toast({
+        title: "❌ Hook Error",
+        description: "Transfer request hook is not available",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    // Reset step data after successful submission
-    stepHelpers?.resetAllData();
+    createTransferRequestMutation.mutate(
+      { data: formData },
+      {
+        onSuccess: () => {
+          toast({
+            title: "✅ Success",
+            description: "Transfer request submitted successfully",
+            variant: "default",
+          });
+          stepHelpers?.resetAllData();
+        },
+        onError: (error) => {
+          toast({
+            title: "❌ Submission Failed",
+            description: `Transfer request failed: ${error.message || 'Unknown error'}`,
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   return (
@@ -448,7 +364,7 @@ export function ReviewSubmitStep({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {transferDetails.transferTypeLabel}
+                {transferDetails.transferTypeLabel || 'Not Set'}
               </div>
               <p className="text-sm text-muted-foreground">Transfer Type</p>
             </div>
@@ -485,8 +401,8 @@ export function ReviewSubmitStep({
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span className="text-sm font-medium text-gray-600">Name</span>
-                <span >
-                  {customer.customerName || "Not specified"}
+                <span>
+                  {consumerDetails.firstName} {consumerDetails.lastName || ""}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -494,7 +410,7 @@ export function ReviewSubmitStep({
                   Account Number
                 </span>
                 <Badge variant="outline">
-                  {customer.accountNumber || "Not specified"}
+                  {consumerDetails.consumerNo || "Not provided"}
                 </Badge>
               </div>
               <div className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
@@ -502,7 +418,14 @@ export function ReviewSubmitStep({
                   Service Address
                 </span>
                 <span className="text-right max-w-xs">
-                  {customer.serviceAddress || "Not specified"}
+                  {consumerDetails.territoryData?.service?.region},
+                  {consumerDetails.territoryData?.service?.area},
+                  {consumerDetails.territoryData?.service?.country},
+                  {consumerDetails.territoryData?.service?.county},
+                  {consumerDetails.territoryData?.service?.division},
+                  {consumerDetails.territoryData?.service?.zone},
+                  {consumerDetails.territoryData?.service?.state},
+                  {consumerDetails.territoryData?.service?.subArea}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
@@ -529,19 +452,19 @@ export function ReviewSubmitStep({
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span className="text-sm font-medium text-gray-600">Name</span>
-                <span >
+                <span>
                   {newCustomer.firstName} {newCustomer.lastName}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span className="text-sm font-medium text-gray-600">Email</span>
-                <span >
+                <span>
                   {newCustomer.email || "Not specified"}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span className="text-sm font-medium text-gray-600">Phone</span>
-                <span >
+                <span>
                   {newCustomer.phoneNumber || "Not specified"}
                 </span>
               </div>
@@ -575,13 +498,11 @@ export function ReviewSubmitStep({
                   <h4 className="font-medium">Billing Address</h4>
                   <p className="text-sm text-muted-foreground">
                     {transferDetails.changeBillingAddress === "yes"
-                      ? transferDetails.billingAddress ||
-                        "New address"
+                      ? transferDetails.billingAddress || "New address"
                       : "Using existing service address"}
                   </p>
                 </div>
               </div>
-              {/* Only show Address Details if new billing address is set */}
               {transferDetails.changeBillingAddress === "yes" && (
                 <div className="mt-4 p-4 border rounded-lg bg-gray-50">
                   <h4 className="font-medium mb-2 text-gray-800">Address Details</h4>
@@ -779,9 +700,7 @@ export function ReviewSubmitStep({
                     outstanding balance of ${customer.balance?.toFixed(2)}
                     starting from the effective date of{" "}
                     {transferDetails.effectiveDate
-                      ? new Date(
-                          transferDetails.effectiveDate
-                        ).toLocaleDateString()
+                      ? new Date(transferDetails.effectiveDate).toLocaleDateString()
                       : "the transfer"}
                     .
                   </p>
@@ -804,12 +723,22 @@ export function ReviewSubmitStep({
           )}
         </CardContent>
       </Card>
+
+      {/* Action Buttons */}
       <div className="flex justify-between pt-4">
         <Button variant="outline" onClick={onPrevious}>
           Back
         </Button>
-        <Button onClick={() => handleFormSubmit(formData)}>
-          Submit Request
+        <Button 
+          onClick={() => handleFormSubmit(formData)}
+          className="flex items-center gap-2"
+        >
+
+            <>
+              <CheckCircle className="h-4 w-4" />
+              Submit Request
+            </>
+
         </Button>
       </div>
     </div>

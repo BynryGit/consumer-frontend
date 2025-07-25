@@ -1,4 +1,8 @@
-// // Add your feature-specific types here
-// export interface usage-consumptioState {
-//   // Define your state types
-// }
+export interface ThresholdPayload {
+  consumer_no: any;
+  remote_utility_id: any;
+  thresholds: {
+    electricity: any;
+    water: any;
+  };
+}

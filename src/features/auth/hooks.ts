@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { authApi } from "./api";
-import type { ConsumerWebLoginPayload, UserProfile } from "./types";
+import type { ConsumerWebLoginPayload, forgotPassword, UserProfile } from "./types";
 import { QueryKeyFactory } from "@shared/api/queries/queryKeyFactory";
 import { globalQueryClient } from "@shared/api/queries/queryClients";
 import { toast } from "sonner";
@@ -114,7 +114,7 @@ export const useAuth = (): UseAuthReturn => {
       const response = await authApi.login({ email, password });
       localStorage.setItem("auth_token", response.user.token);
       setUser(response.user);
-
+console.log("Responssssssss",response)
       const profile = await authApi.getUserProfile();
 
       // Save in globalQueryClient (because profile is shared data)
@@ -204,6 +204,12 @@ export const useConsumerWebLogin = () => {
   );
 };
 
+export const useForgotPassword=()=>{
+  return useSmartMutation(
+    (payload: { email: string }) => authApi.forgotPassword(payload.email),
+  )
+}
+
 export const useConsumerWebLoginStatus = () => {
   return useSmartQuery(
     QueryKeyFactory.module.cx.login.consumerWebLoginStatus(),
@@ -225,4 +231,5 @@ export const useUserUtility = (params: { tenant_alias: string }) => {
       refetchInterval: false,
     }
   );
+
 };

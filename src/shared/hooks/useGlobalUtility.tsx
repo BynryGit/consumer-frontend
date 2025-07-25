@@ -1,6 +1,6 @@
 // hooks/shared/useGlobalUser.ts
 
-import { authApi } from "@features/auth";
+// import { authApi } from "@features/auth";
 import { UserProfile } from "@features/auth/types";
 import { coreApi } from "@features/core/api";
 import { useSmartQuery } from "@shared/api/queries/hooks";

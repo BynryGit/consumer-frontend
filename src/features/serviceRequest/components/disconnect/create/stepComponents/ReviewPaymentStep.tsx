@@ -1,10 +1,12 @@
-// import { useCreateDisconnectionRequest } from "@features/cx/disconnect/hooks";
+import { useCreateDisconnectionRequest } from "@features/serviceRequest/hooks";
 import { StepHelpers } from "@shared/components/Stepper";
+import { toast } from "@shared/hooks/use-toast";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import { Label } from "@shared/ui/label";
 import { RadioGroup, RadioGroupItem } from "@shared/ui/radio-group";
 import { format } from "date-fns";
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import {
   Bell,
   Calendar,
@@ -16,7 +18,7 @@ import {
   Send,
   User,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 interface ReviewPaymentStepProps {
   remoteUtilityId: number;
@@ -27,6 +29,30 @@ interface ReviewPaymentStepProps {
   onPrevious?: () => void;
   setValidationError?: (error: string) => void;
   clearValidationError?: () => void;
+}
+
+interface LocalConsumerDetails {
+  id?: number;
+  consumerNo?: string;
+  remoteUtilityId?: number;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  contactNumber?: string;
+  addressMap?: { addressLine?: string };
+  territoryData?: {
+    service?: {
+      region?: string;
+      area?: string;
+      country?: string;
+      county?: string;
+      division?: string;
+      zone?: string;
+      state?: string;
+      subArea?: string;
+    };
+  };
+  [key: string]: any;
 }
 
 interface ReviewData {
@@ -40,6 +66,7 @@ interface ReviewData {
     id: number;
   };
   request?: {
+    reasonVersion:string,
     requestType: string;
     utilitySupportRequest: string;
     priority: string;
@@ -53,154 +80,185 @@ interface ReviewData {
 }
 
 export function ReviewPaymentStep({
-  remoteUtilityId,
-  storageKey,
   stepHelpers,
   currentStepIndex = 2,
-  onNext,
   onPrevious,
   setValidationError,
   clearValidationError,
 }: ReviewPaymentStepProps) {
-  const [reviewData, setReviewData] = useState<ReviewData>({});
+  const { remoteUtilityId } = getLoginDataFromStorage();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const dataLoadedRef = useRef(false);
-  // const { mutate: createDisconnectionRequest } =
-  //   useCreateDisconnectionRequest();
+  const { mutate: createDisconnectionRequest } = useCreateDisconnectionRequest();
 
-  // Helper function to save step data using stepHelpers
+  // Consolidated function to get consumer details from localStorage
+  const getConsumerDetails = useCallback((): LocalConsumerDetails => {
+    try {
+      const consumerDetailsRaw = localStorage.getItem("consumerDetails");
+      if (!consumerDetailsRaw) return {};
+      
+      const parsed = JSON.parse(consumerDetailsRaw);
+      return parsed?.result || {};
+    } catch (error) {
+      console.error("Failed to parse consumer details:", error);
+      return {};
+    }
+  }, []);
+
+  const consumerDetails = useMemo(() => getConsumerDetails(), [getConsumerDetails]);
+
+  // Helper function to get step data with error handling
+  const getStepData = useCallback(
+    (stepIndex: number) => {
+      if (!stepHelpers) return {};
+      
+      try {
+        return stepHelpers.getStepData(stepIndex) || {};
+      } catch (error) {
+        console.error(`Failed to get step data for step ${stepIndex}:`, error);
+        return {};
+      }
+    },
+    [stepHelpers]
+  );
+
+  // Helper function to save step data
   const saveStepData = useCallback(
     (data: any) => {
       if (!stepHelpers) return;
-
+      
       try {
         const stepData = {
           ...data,
           timestamp: new Date().toISOString(),
           stepIndex: currentStepIndex,
         };
-
         stepHelpers.setStepData(currentStepIndex, stepData);
-        console.log("Review step data saved:", stepData);
       } catch (error) {
-        console.error("Failed to save review step data:", error);
+        toast({
+          title: "Failed to save progress",
+          description: "Your progress may not be saved. Please try again.",
+          variant: "destructive",
+        });
       }
     },
     [stepHelpers, currentStepIndex]
   );
 
-  // Helper function to get step data using stepHelpers
-  const getStepData = useCallback(
-    (stepIndex: number) => {
-      if (!stepHelpers) return null;
+  // Helper function to format service address
+  const formatServiceAddress = useCallback((territoryData: any) => {
+    if (!territoryData?.service) return "";
+    
+    const { service } = territoryData;
+    const addressParts = [
+      service.region,
+      service.area,
+      service.country,
+      service.county,
+      service.division,
+      service.zone,
+      service.state,
+      service.subArea,
+    ].filter(Boolean);
+    
+    return addressParts.join(", ");
+  }, []);
 
-      try {
-        return stepHelpers.getStepData(stepIndex);
-      } catch (error) {
-        console.error(`Failed to get step data for step ${stepIndex}:`, error);
-        return null;
-      }
-    },
-    [stepHelpers]
-  );
+  // Memoized review data
+  const reviewData = useMemo((): ReviewData => {
+    const requestData = getStepData(0);
+    const notificationData = getStepData(1);
 
-  // Helper function to get all steps data
-  const getAllStepsData = useCallback(() => {
-    const customerData = getStepData(0); // Customer info step
-    const requestData = getStepData(1); // Request details step
-    const notificationData = getStepData(2); // Current step or notification step if exists
+    const compiledData: ReviewData = {};
 
-    return { customerData, requestData, notificationData };
-  }, [getStepData]);
+    // Customer data from localStorage
+    compiledData.customer = {
+      id: consumerDetails.id || 0,
+      name: `${consumerDetails.firstName || ""} ${consumerDetails.lastName || ""}`.trim(),
+      accountNumber: consumerDetails.consumerNo || "",
+      type: "Standard",
+      email: consumerDetails.email || "",
+      phone: consumerDetails.contactNumber || "",
+      address: formatServiceAddress(consumerDetails.territoryData) || consumerDetails.addressMap?.addressLine || "",
+    };
 
-  // Load data from all previous steps
-  useEffect(() => {
-    if (stepHelpers && !dataLoadedRef.current) {
-      try {
-        const { customerData, requestData, notificationData } =
-          getAllStepsData();
-
-        console.log("Loading review data from all steps:", {
-          customerData,
-          requestData,
-          notificationData,
-        });
-
-        const compiledReviewData: ReviewData = {};
-
-        // Load customer data
-        if (customerData) {
-          compiledReviewData.customer = {
-            id: customerData.selectedConsumerId,
-            name: customerData.customerName || "",
-            accountNumber: customerData.accountNumber || "",
-            type:
-              customerData.consumerMetadata?.categoryDisplay ||
-              customerData.selectedCustomer?.customerType ||
-              "Standard",
-            email: customerData.contactEmail || "",
-            phone: customerData.contactPhone || "",
-            address: customerData.serviceAddress || "",
-          };
-        }
-
-        // Load request details data
-        if (requestData) {
-          compiledReviewData.request = {
-            requestType: requestData.requestType || "disconnection",
-            utilitySupportRequest: requestData.reason || "",
-            reason: requestData.reason || "",
-            reasonLabel: requestData.reasonLabel || "",
-            timeSlotLabel: requestData.timeSlotLabel || "",
-            priority: requestData.priority || "medium",
-            scheduledDate: requestData.scheduledDate
-              ? new Date(requestData.scheduledDate)
-              : null,
-            timeSlot: requestData.timeSlot || "",
-            consumerRemark: requestData.consumerRemark || "",
-          };
-        }
-
-        setReviewData(compiledReviewData);
-        dataLoadedRef.current = true;
-      } catch (error) {
-        console.error("Failed to load review data:", error);
-        dataLoadedRef.current = true;
-      }
+    // Request data from step
+    if (requestData) {
+      compiledData.request = {
+        reasonVersion:requestData.reasonVersion,
+        requestType: requestData.requestType || "disconnection",
+        utilitySupportRequest: requestData.reason || "",
+        reason: requestData.reason || "",
+        reasonLabel: requestData.reasonLabel || "",
+        timeSlotLabel: requestData.timeSlotLabel || "",
+        priority: requestData.priority || "medium",
+        scheduledDate: requestData.scheduledDate ? new Date(requestData.scheduledDate) : null,
+        timeSlot: requestData.timeSlot || "",
+        consumerRemark: requestData.consumerRemark || "",
+      };
     }
-  }, [stepHelpers, currentStepIndex, getAllStepsData]);
 
-  const handleSubmit = async () => {
+    return compiledData;
+  }, [getStepData, consumerDetails, formatServiceAddress]);
+
+  // Helper function to get priority color
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high": return "text-red-600";
+      case "medium": return "text-orange-600";
+      default: return "text-blue-600";
+    }
+  };
+
+  // Helper function to get priority badge styles
+  const getPriorityBadgeStyles = (priority: string) => {
+    switch (priority) {
+      case "high": return "bg-red-50 text-red-700 border-red-200";
+      case "medium": return "bg-amber-50 text-amber-700 border-amber-200";
+      default: return "bg-blue-50 text-blue-700 border-blue-200";
+    }
+  };
+
+  const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
 
     try {
+      // Validate required fields
+      if (!consumerDetails.id) {
+        toast({
+          title: "Error: Missing customer information",
+          description: "Customer ID is required for the disconnection request.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!reviewData?.request?.reason) {
+        toast({
+          title: "Error: Missing reason",
+          description: "Disconnection reason is required for the request.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const serviceAddress = formatServiceAddress(consumerDetails.territoryData) || consumerDetails.addressMap?.addressLine || "";
+      const consumerName = `${consumerDetails.firstName || ""} ${consumerDetails.lastName || ""}`.trim();
+
+      // Create payload for submission
       const payload = {
-        requestDate: new Date().toISOString(),
-        consumerRemark: reviewData?.request?.consumerRemark || "",
-        requestType: "Disconnect Permanent",
-        source: 1, // Default source
-        reason: reviewData?.request?.reason || "",
-        priority: reviewData?.request?.priority || "medium",
-        scheduledDate: reviewData?.request?.scheduledDate || "",
-        reasonLabel: reviewData?.request?.reasonLabel || "",
-        timeSlotLabel: reviewData?.request?.timeSlotLabel || "",
-        timeSlot: reviewData?.request?.timeSlot || "",
-        consumer: reviewData?.customer?.id || "",
-        remoteUtilityId: remoteUtilityId,
-        utilitySupportRequest: reviewData?.request?.utilitySupportRequest || 0, // Will be set by backend
-        additionalData: {
-          preferredTimeSlot: reviewData?.request?.timeSlot ? 1 : 0, // Convert to number
+        request_date: new Date().toISOString(),
+        consumer_remark: reviewData?.request?.consumerRemark || "",
+        request_type: "Disconnect Permanent",
+        source: 1,  
+        consumer: consumerDetails.id || 0,
+        remote_utility_id: remoteUtilityId,
+        utility_support_request: reviewData?.request?.reason || "",
+        additional_data: {
+           utility_support_request_version: reviewData?.request?.reasonVersion,
+          preferred_time_slot: reviewData?.request?.timeSlot ? 1 : 0,
         },
-        serviceAddress: reviewData?.customer?.address || "",
-        contactPhone: reviewData?.customer?.phone || "",
-        contactEmail: reviewData?.customer?.email || "",
-        contactName: reviewData?.customer?.name || "",
-        account_number: reviewData?.customer?.accountNumber || "",
-        consumer_name: reviewData?.customer?.name || "",
-        consumer_email: reviewData?.customer?.email || "",
-        consumer_phone: reviewData?.customer?.phone || "",
-        consumer_address: reviewData?.customer?.address || "",
       };
+
       // Save final review data
       saveStepData({
         reviewData,
@@ -208,24 +266,48 @@ export function ReviewPaymentStep({
         submittedAt: new Date().toISOString(),
         isStepComplete: true,
       });
-      // Clear any errors
-      if (clearValidationError) {
-        clearValidationError();
-      }
-      // Create and submit payload
-      console.log("Submitting disconnection request payload:", payload);
 
-      // createDisconnectionRequest(payload);
-      stepHelpers?.resetAllData();
+      // Clear any errors
+      clearValidationError?.();
+
+      createDisconnectionRequest(payload, {
+        onSuccess: () => {
+          toast({
+            title: "✅ Success",
+            description: "Disconnection request submitted successfully",
+            variant: "default",
+          });
+          stepHelpers?.resetAllData();
+        },
+        onError: (error) => {
+          toast({
+            title: "❌ Submission Failed",
+            description: `Disconnection request failed: ${error.message || 'Unknown error'}`,
+            variant: "destructive",
+          });
+        },
+      });
     } catch (error) {
-      console.error("Failed to submit request:", error);
-      if (setValidationError) {
-        setValidationError("Failed to submit request. Please try again.");
-      }
+      toast({
+        title: "❌ Submission Error",
+        description: "Failed to submit request. Please try again.",
+        variant: "destructive",
+      });
+      setValidationError?.("Failed to submit request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [
+    consumerDetails,
+    reviewData,
+    remoteUtilityId,
+    formatServiceAddress,
+    saveStepData,
+    clearValidationError,
+    createDisconnectionRequest,
+    stepHelpers,
+    setValidationError
+  ]);
 
   return (
     <div className="space-y-6">
@@ -239,7 +321,7 @@ export function ReviewPaymentStep({
         <div className="grid grid-cols-3 gap-8">
           <div className="text-center">
             <div className="text-2xl font-semibold text-blue-600 mb-1 capitalize">
-              {"Disconnection"}
+              Disconnection
             </div>
             <div className="text-sm text-gray-500">Request Type</div>
           </div>
@@ -254,15 +336,7 @@ export function ReviewPaymentStep({
           </div>
 
           <div className="text-center">
-            <div
-              className={`text-2xl font-semibold mb-1 capitalize ${
-                reviewData.request?.priority === "high"
-                  ? "text-red-600"
-                  : reviewData.request?.priority === "medium"
-                  ? "text-orange-600"
-                  : "text-blue-600"
-              }`}
-            >
+            <div className={`text-2xl font-semibold mb-1 capitalize ${getPriorityColor(reviewData.request?.priority || "medium")}`}>
               {reviewData.request?.priority || "Medium"}
             </div>
             <div className="text-sm text-gray-500">Priority</div>
@@ -272,45 +346,43 @@ export function ReviewPaymentStep({
 
       {/* Customer and Request Information Row */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Customer Information */}
+        {/* Current Account Holder */}
         <div className="bg-orange-50 border-l-4 border-orange-400 rounded-r-lg p-6">
           <div className="flex items-center gap-2 mb-4">
             <User className="h-5 w-5 text-orange-600" />
-            <h4 className="font-medium text-gray-900">Customer Information</h4>
+            <h4 className="font-medium text-gray-900">Current Account Holder</h4>
           </div>
 
           <div className="space-y-4">
             <div>
               <div className="text-sm font-medium text-gray-900 mb-1">Name</div>
               <div className="text-gray-700">
-                {reviewData.customer?.name || "N/A"}
+                {consumerDetails.firstName} {consumerDetails.lastName || ""}
               </div>
             </div>
 
             <div>
-              <div className="text-sm font-medium text-gray-900 mb-1">
-                Account Number
-              </div>
+              <div className="text-sm font-medium text-gray-900 mb-1">Account Number</div>
               <div className="text-gray-700">
-                {reviewData.customer?.accountNumber || "N/A"}
+                {consumerDetails.consumerNo || "Not provided"}
               </div>
             </div>
 
             <div>
-              <div className="text-sm font-medium text-gray-900 mb-1">Type</div>
-              <Badge variant="outline" className="text-xs">
-                {reviewData.customer?.type || "Standard"}
-              </Badge>
+              <div className="text-sm font-medium text-gray-900 mb-1">Service Address</div>
+              <div className="text-gray-700">
+                {formatServiceAddress(consumerDetails.territoryData) || consumerDetails.addressMap?.addressLine || "Not provided"}
+              </div>
             </div>
 
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Mail className="h-3 w-3" />
-                {reviewData.customer?.email || "N/A"}
+                {consumerDetails.email || "N/A"}
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Phone className="h-3 w-3" />
-                {reviewData.customer?.phone || "N/A"}
+                {consumerDetails.contactNumber || "N/A"}
               </div>
             </div>
           </div>
@@ -326,45 +398,27 @@ export function ReviewPaymentStep({
           <div className="space-y-4">
             <div>
               <div className="text-sm font-medium text-gray-900 mb-1">Type</div>
-              <Badge
-                variant="outline"
-                className="capitalize bg-blue-50 text-blue-700 border-blue-200"
-              >
+              <Badge variant="outline" className="capitalize bg-blue-50 text-blue-700 border-blue-200">
                 {reviewData.request?.requestType || "disconnection"}
               </Badge>
             </div>
 
             <div>
-              <div className="text-sm font-medium text-gray-900 mb-1">
-                Reason
-              </div>
+              <div className="text-sm font-medium text-gray-900 mb-1">Reason</div>
               <div className="text-gray-700">
                 {reviewData.request?.reasonLabel || "Not specified"}
               </div>
             </div>
 
             <div>
-              <div className="text-sm font-medium text-gray-900 mb-1">
-                Priority
-              </div>
-              <Badge
-                variant="outline"
-                className={`capitalize ${
-                  reviewData.request?.priority === "high"
-                    ? "bg-red-50 text-red-700 border-red-200"
-                    : reviewData.request?.priority === "medium"
-                    ? "bg-amber-50 text-amber-700 border-amber-200"
-                    : "bg-blue-50 text-blue-700 border-blue-200"
-                }`}
-              >
+              <div className="text-sm font-medium text-gray-900 mb-1">Priority</div>
+              <Badge variant="outline" className={`capitalize ${getPriorityBadgeStyles(reviewData.request?.priority || "medium")}`}>
                 {reviewData.request?.priority || "medium"}
               </Badge>
             </div>
 
             <div>
-              <div className="text-sm font-medium text-gray-900 mb-1">
-                Time Slot
-              </div>
+              <div className="text-sm font-medium text-gray-900 mb-1">Time Slot</div>
               <div className="text-gray-700">
                 {reviewData.request?.timeSlotLabel || "Not set"}
               </div>
@@ -373,28 +427,23 @@ export function ReviewPaymentStep({
         </div>
       </div>
 
-      {/* Service Address */}
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <FileText className="h-5 w-5 text-slate-600" />
-          <h4 className="font-medium text-gray-900">Service Address</h4>
-        </div>
+      {/* Additional Information */}
+      {reviewData.request?.consumerRemark && (
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <FileText className="h-5 w-5 text-slate-600" />
+            <h4 className="font-medium text-gray-900">Additional Information</h4>
+          </div>
 
-        <div className="text-gray-700 mb-4">
-          {reviewData.customer?.address || "N/A"}
-        </div>
-
-        {reviewData.request?.consumerRemark && (
-          <div className="pt-4 border-t border-slate-200">
-            <div className="text-sm font-medium text-gray-900 mb-2">
-              Additional Notes
-            </div>
+          <div>
+            <div className="text-sm font-medium text-gray-900 mb-2">Additional Notes</div>
             <div className="text-gray-700 bg-white p-3 rounded border">
               {reviewData.request.consumerRemark}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
       {/* Notifications */}
       <div className="bg-purple-50 border-l-4 border-purple-400 rounded-r-lg p-6">
         <div className="flex items-center gap-2 mb-4">
@@ -402,20 +451,15 @@ export function ReviewPaymentStep({
           <h4 className="font-medium text-gray-900">Notifications</h4>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <RadioGroup defaultValue="customer">
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="customer" id="notifyCustomer" />
-              <Label
-                htmlFor="notifyCustomer"
-                className="flex items-center gap-2"
-              >
-                <Mail className="h-4 w-4 text-blue-600" />
-                Send acknowledgment to customer
-              </Label>
-            </div>
-          </RadioGroup>
-        </div>
+        <RadioGroup defaultValue="customer">
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="customer" id="notifyCustomer" />
+            <Label htmlFor="notifyCustomer" className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-blue-600" />
+              Send acknowledgment to customer
+            </Label>
+          </div>
+        </RadioGroup>
       </div>
 
       {/* Action Buttons */}
@@ -437,7 +481,7 @@ export function ReviewPaymentStep({
         >
           {isSubmitting ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
               <span>Submitting...</span>
             </>
           ) : (

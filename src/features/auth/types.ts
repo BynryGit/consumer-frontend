@@ -114,20 +114,37 @@ export interface ConsumerWebLoginPayload {
   // Add other login fields as needed
 }
 
+export interface forgotPassword{
+   email?: string;
+}
+
 export interface ConsumerWebLoginResponse {
-  access_token: string;
-  refresh_token: string;
-  user: {
-    id: string;
-    username: string;
-    email: string;
-    consumer_number: string;
+  user: any;
+  consumerId: any;
+  consumerNo(arg0: string, consumerNo: any): unknown;
+  // Standard OAuth fields
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  token_type?: string;
+  message?: string;
+  
+  // Actual API response structure
+  result: {
+    user: {
+      id: number;
+      email: string;
+      token: string;
+      username?: string;
+    };
+    consumer_id: number;
+    consumer_no: string;
+    remote_utility_id: number;
     first_name: string;
     last_name: string;
+    mobile_no: string;
+    status: string;
   };
-  expires_in: number;
-  token_type: string;
-  message?: string;
 }
 
 export interface UserUtilityResponse {

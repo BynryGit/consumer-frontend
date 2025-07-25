@@ -74,7 +74,7 @@ const CreditNoteDialog = ({ creditNote, isOpen, onClose }: CreditNoteDialogProps
   };
 
   const usagePercentage = creditNote.amount > 0 ? 
-    ((creditNote.amount - creditNote.remaining) / creditNote.amount * 100).toFixed(1) : 
+    ((creditNote.amount - creditNote.remaining) / creditNote.amount * 100) : 
     '0.0';
 
   // Sample credit applications data - in real app this would come from props or API
@@ -125,11 +125,11 @@ const CreditNoteDialog = ({ creditNote, isOpen, onClose }: CreditNoteDialogProps
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Original Credit Amount</label>
-                  <p className="text-2xl font-bold text-green-600">${creditNote.amount.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-green-600">${creditNote.amount}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Remaining Balance</label>
-                  <p className="text-2xl font-bold text-green-600">${creditNote.remaining.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-green-600">${creditNote.remaining}</p>
                 </div>
               </div>
               
@@ -137,7 +137,7 @@ const CreditNoteDialog = ({ creditNote, isOpen, onClose }: CreditNoteDialogProps
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Applied Amount</label>
                   <p className="text-lg font-semibold text-blue-600">
-                    ${(creditNote.amount - creditNote.remaining).toFixed(2)}
+                    ${(creditNote.amount - creditNote.remaining)}
                   </p>
                 </div>
                 <div>
@@ -215,7 +215,7 @@ const CreditNoteDialog = ({ creditNote, isOpen, onClose }: CreditNoteDialogProps
                             {application.description}
                           </TableCell>
                           <TableCell className="font-semibold">
-                            ${application.amount.toFixed(2)}
+                            ${application.amount}
                           </TableCell>
                           <TableCell className="text-sm">
                             {application.appliedBy}

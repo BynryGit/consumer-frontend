@@ -1,18 +1,15 @@
-import React, { useState } from 'react';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@shared/ui/select'; 
+import React, { useMemo, useState } from 'react';
 import { Badge } from '@shared/ui/badge';
-import { ListFilter } from 'lucide-react';
 import GenericTable from '@shared/components/GenericTable';
 import { TableColumn } from '@shared/types/table';
+import { useConsumerStatus, useRequestData, useRequestType } from '../hooks';
+import { useSearchParams } from 'react-router-dom';
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
+import { RequestTrackerFilterPanel } from './RequestTrackerFilterPanel';
 
 // Request interface
 interface Request {
+  requestId: string;
   id: string;
   subject: string;
   type: string;
@@ -22,6 +19,17 @@ interface Request {
   lastUpdated: string;
 }
 
+// Request filters interface
+interface RequestFilters {
+  consumer_id: string;
+  remote_utility_id: string;
+  page: any;
+  limit: any;
+  search_data?: string;
+  status?: string;
+  request_type?: string;
+}
+
 interface RequestTrackerTableProps {
   onViewRequest: (request: Request) => void;
 }
@@ -29,132 +37,122 @@ interface RequestTrackerTableProps {
 export const RequestTrackerTable: React.FC<RequestTrackerTableProps> = ({ 
   onViewRequest 
 }) => {
-  // Mock data - keeping data in table component only
-  const mockRequests: Request[] = [
-    {
-      id: 'SR-345621',
-      subject: 'Power outage on Main Street',
-      type: 'service',
-      status: 'open',
-      priority: 'high',
-      createdAt: '2025-04-08T14:30:00',
-      lastUpdated: '2025-04-08T14:30:00'
-    },
-    {
-      id: 'SR-346892',
-      subject: 'Installation of new electrical meter',
-      type: 'service',
-      status: 'rejected',
-      priority: 'medium',
-      createdAt: '2025-04-07T10:15:00',
-      lastUpdated: '2025-04-07T16:30:00'
-    },
-    {
-      id: 'CR-342189',
-      subject: 'Billing dispute for March statement',
-      type: 'complaint',
-      status: 'in_progress',
-      priority: 'medium',
-      createdAt: '2025-04-06T09:15:00',
-      lastUpdated: '2025-04-07T11:30:00'
-    },
-    {
-      id: 'DR-341007',
-      subject: 'Request disconnection due to relocation',
-      type: 'disconnection',
-      status: 'waiting',
-      priority: 'low',
-      createdAt: '2025-04-05T16:45:00',
-      lastUpdated: '2025-04-06T10:20:00'
-    },
-    {
-      id: 'RR-339654',
-      subject: 'Reconnect service after payment',
-      type: 'reconnection',
-      status: 'resolved',
-      priority: 'medium',
-      createdAt: '2025-04-03T11:30:00',
-      lastUpdated: '2025-04-04T15:45:00'
-    },
-    {
-      id: 'TR-337201',
-      subject: 'Transfer service to new apartment',
-      type: 'transfer',
-      status: 'closed',
-      priority: 'high',
-      createdAt: '2025-04-01T08:20:00',
-      lastUpdated: '2025-04-03T09:10:00'
-    },
-    {
-      id: 'SR-344123',
-      subject: 'Water pressure issue in apartment building',
-      type: 'service',
-      status: 'in_progress',
-      priority: 'high',
-      createdAt: '2025-04-02T09:15:00',
-      lastUpdated: '2025-04-08T10:30:00'
-    },
-    {
-      id: 'CR-343456',
-      subject: 'Overcharged for gas usage in February',
-      type: 'complaint',
-      status: 'waiting',
-      priority: 'low',
-      createdAt: '2025-03-28T14:20:00',
-      lastUpdated: '2025-04-01T16:45:00'
-    }
-  ];
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [filteredData, setFilteredData] = useState<Request[]>(mockRequests);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  // Get utility and consumer id from login utils
+  const { remoteUtilityId, consumerId } = getLoginDataFromStorage();
 
-  // Handle search functionality
-  const handleSearch = (searchTerm: string) => {
-    let filtered = mockRequests;
-    
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(request => 
-        request.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.id.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  // Compute filters using useMemo
+  const filters = useMemo((): RequestFilters => {
+    const urlFilters: RequestFilters = {
+      consumer_id: consumerId,
+      remote_utility_id: remoteUtilityId,
+      page: 1,  
+      limit: 50
+    };
+
+    // Parse search query
+    const queryParam = searchParams.get("query");
+    if (queryParam) {
+      urlFilters.search_data = queryParam;
     }
-    
-    // Apply status filter
-    if (statusFilter) {
-      filtered = filtered.filter(request => request.status === statusFilter);
+
+    // Parse status filter
+    const statusParam = searchParams.get("status");
+    if (statusParam) {
+      urlFilters.status = statusParam;
     }
+
+    // Parse request type filter
+    const requestTypeParam = searchParams.get("request_type");
+    if (requestTypeParam) {
+      urlFilters.request_type = requestTypeParam;
+    }
+
+    return urlFilters;
+  }, [searchParams, remoteUtilityId, consumerId]);
+
+  const { data, isLoading } = useRequestData(filters);
+
+  const transformedData = useMemo(() => {
+    if (!data?.results) return [];
     
-    setFilteredData(filtered);
+    return data.results.map((apiRequest: any) => ({
+      requestId: apiRequest.id,
+      id: apiRequest.requestNo,
+      type: apiRequest.requestType,
+      status: apiRequest.statusDisplay,
+      createdAt: apiRequest.createdDate,
+      lastUpdated: apiRequest.lastModifiedDate
+    }));
+  }, [data]);
+
+  const handleSearch = (searchTerm: string, paramName: "search_data") => {
+    const params = new URLSearchParams(searchParams);
+
+    if (searchTerm.trim()) {
+      params.set("query", searchTerm);
+    } else {
+      params.delete("query");
+    }
+
+    setSearchParams(params);
   };
 
-  // Handle status filter change
-  const handleStatusFilterChange = (status: string | null) => {
-    setStatusFilter(status);
-    let filtered = mockRequests;
-    
-    if (status) {
-      filtered = filtered.filter(request => request.status === status);
+  const handleApplyFilters = (newFilters: { status?: string; requestType?: string }) => {
+    const params = new URLSearchParams(searchParams);
+
+    // Update status filter
+    if (newFilters.status) {
+      params.set("status", newFilters.status);
+    } else {
+      params.delete("status");
     }
-    
-    setFilteredData(filtered);
+
+    // Update request type filter
+    if (newFilters.requestType) {
+      params.set("request_type", newFilters.requestType);
+    } else {
+      params.delete("request_type");
+    }
+
+    setSearchParams(params);
   };
+
+  const handleResetFilters = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("status");
+    params.delete("request_type");
+    setSearchParams(params);
+  };
+
+  // Current filter values for the filter panel
+  const currentFilters = useMemo(() => ({
+    status: searchParams.get("status") || '',
+    requestType: searchParams.get("request_type") || '',
+  }), [searchParams]);
 
   // Status badge styling
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'open':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Open</Badge>;
-      case 'in_progress':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">In Progress</Badge>;
-      case 'waiting':
-        return <Badge className="bg-purple-100 text-purple-800 border-purple-200">Waiting</Badge>;
-      case 'resolved':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Resolved</Badge>;
-      case 'rejected':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Rejected</Badge>;
-      case 'closed':
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Closed</Badge>;
+      case 'CREATED':
+        return <Badge className="bg-purple-100 text-purple-800 border-purple-200">CREATED</Badge>;
+      case 'APPROVED':
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">APPROVED</Badge>;
+      case 'COMPLETED':
+        return <Badge className="bg-green-100 text-green-800 border-green-200">COMPLETED</Badge>;
+      case 'REJECTED':
+        return <Badge className="bg-red-100 text-red-800 border-red-200">REJECTED</Badge>;
+      case 'IN PROGRESS':
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">IN PROGRESS</Badge>;
+      case 'CANCELED':
+        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">CANCELED</Badge>;
+      case 'PENDING':
+        return <Badge className="bg-orange-100 text-orange-800 border-orange-200">PENDING</Badge>;
+      case 'ON HOLD':
+        return <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200">ON HOLD</Badge>;
+      case 'CLOSED':
+        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">CLOSED</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -162,29 +160,22 @@ export const RequestTrackerTable: React.FC<RequestTrackerTableProps> = ({
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'service': return 'Service';
-      case 'complaint': return 'Complaint';
-      case 'disconnection': return 'Disconnection';
-      case 'reconnection': return 'Reconnection';
-      case 'transfer': return 'Transfer';
+      case 'Service': return 'Service';
+      case 'Complaint': return 'Complaint';
+      case 'Disconnect Permanent': return 'Disconnect Permanent';
+      case 'Reconnection': return 'Reconnection';
+      case 'Transfer': return 'Transfer';
+      case 'Pause': return 'Pause';
+      case 'Resume': return 'Resume';
+      case 'Budget Bill': return 'Budget Bill';
+      case 'Adjust Bill': return 'Adjust Bill';
+      case 'Meter Reads': return 'Meter Reads';
+      case 'Outage': return 'Outage';
       default: return type;
     }
   };
 
-  const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">High</Badge>;
-      case 'medium':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Medium</Badge>;
-      case 'low':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Low</Badge>;
-      default:
-        return <Badge variant="outline">{priority}</Badge>;
-    }
-  };
-
-  // Define table columns - keeping only original columns
+  // Define table columns
   const columns: TableColumn<Request>[] = [
     {
       key: 'id',
@@ -227,59 +218,26 @@ export const RequestTrackerTable: React.FC<RequestTrackerTableProps> = ({
     }
   ];
 
-  // Filter panel component
-  const filterPanel = (
-    <div className="flex items-center gap-2">
-      <ListFilter className="h-4 w-4 text-muted-foreground" />
-      <Select
-        value={statusFilter || "all"}
-        onValueChange={(value) => handleStatusFilterChange(value === "all" ? null : value)}
-      >
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Filter by status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Statuses</SelectItem>
-          <SelectItem value="open">Open</SelectItem>
-          <SelectItem value="in_progress">In Progress</SelectItem>
-          <SelectItem value="waiting">Waiting</SelectItem>
-          <SelectItem value="resolved">Resolved</SelectItem>
-          <SelectItem value="rejected">Rejected</SelectItem>
-          <SelectItem value="closed">Closed</SelectItem>
-        </SelectContent>
-      </Select>
-      {statusFilter && (
-        <Badge variant="secondary" className="flex items-center gap-1">
-          Status: {statusFilter}
-          <button
-            onClick={() => handleStatusFilterChange(null)}
-            className="ml-1 hover:text-destructive"
-            title="Clear filter"
-          >
-            ×
-          </button>
-        </Badge>
-      )}
-    </div>
-  );
-
-  // Update filtered data when component mounts
-  React.useEffect(() => {
-    setFilteredData(mockRequests);
-  }, []);
-
- 
   return (
     <GenericTable<Request>
-      data={filteredData}
+      data={transformedData}
       columns={columns}
       rowKey="id"
       actions={actions}
       actionsType="icons"
       searchPlaceholder="Search requests by ID or subject..."
+      searchParamName="query"
+      searchDebounceMs={300}
       onSearch={handleSearch}
-      filters={filterPanel}
       emptyMessage="No requests found matching your search criteria"
+      filterPanel={
+        <RequestTrackerFilterPanel
+          currentFilters={currentFilters}
+          onApplyFilters={handleApplyFilters}
+          onResetFilters={handleResetFilters}
+          remoteUtilityId={remoteUtilityId}
+        />
+      }
     />
   );
 };

@@ -17,6 +17,8 @@ import { Alert, AlertDescription, AlertTitle } from "@shared/ui/alert";
 // } from "@features/cx/consumerManagement/hooks";
 import { getRemoteUtilityId } from "@shared/utils/getUtilityId";
 import { toast } from "sonner";
+import { useDocumentType, useKycInfo } from "@features/serviceRequest/hooks";
+import { DocumentCardComponent } from "./DocumentCardComponent";
 // import { DocumentCardComponent } from "./DocumentCardComponent";
 
 
@@ -157,69 +159,69 @@ export function TransferDocumentUploadForm({
   const dataLoadedRef = useRef(false);
 
   // Add KYC info hook for fetching existing documents in edit mode
-  // const { 
-  //   data: kycInfoData, 
-  //   isLoading: isLoadingKyc,
-  //   error: kycError 
-  // } = useKycInfo(
-  //   {
-  //     remote_utility_id: remoteUtilityId,
-  //     consumer_id: actualConsumerId,
-  //     is_kyc_info: 1
-  //   },
-  //   {
-  //     enabled: isEditMode && !!actualConsumerId
-  //   }
-  // );
+  const { 
+    data: kycInfoData, 
+    isLoading: isLoadingKyc,
+    error: kycError 
+  } = useKycInfo(
+    {
+      remote_utility_id: remoteUtilityId,
+      consumer_id: actualConsumerId,
+      is_kyc_info: 1
+    },
+    {
+      enabled: isEditMode && !!actualConsumerId
+    }
+  );
 
   // Fetch document types
-  // const {
-  //   data: documentTypeData,
-  //   isLoading: isDocumentTypeLoading,
-  //   error: documentTypeError,
-  // } = useDocumentType({
-  //   remote_utility_id: remoteUtilityId,
-  //   config_level: "document_type",
-  // });
+  const {
+    data: documentTypeData,
+    isLoading: isDocumentTypeLoading,
+    error: documentTypeError,
+  } = useDocumentType({
+    remote_utility_id: remoteUtilityId,
+    config_level: "document_type",
+  });
 
   // Memoized helper functions
-  // const getDocumentTypeCode = useCallback((documentTypeName: string) => {
-  //   const documentType = documentTypeData?.result?.find(
-  //     (type: any) => type.name.toLowerCase() === documentTypeName.toLowerCase()
-  //   );
-  //   return documentType?.code || "";
-  // }, [documentTypeData]);
+  const getDocumentTypeCode = useCallback((documentTypeName: string) => {
+    const documentType = documentTypeData?.result?.find(
+      (type: any) => type.name.toLowerCase() === documentTypeName.toLowerCase()
+    );
+    return documentType?.code || "";
+  }, [documentTypeData]);
 
-  // const getDocumentTypeObject = useCallback((documentTypeName: string) => {
-  //   return documentTypeData?.result?.find(
-  //     (type: any) => type.name.toLowerCase() === documentTypeName.toLowerCase()
-  //   );
-  // }, [documentTypeData]);
+  const getDocumentTypeObject = useCallback((documentTypeName: string) => {
+    return documentTypeData?.result?.find(
+      (type: any) => type.name.toLowerCase() === documentTypeName.toLowerCase()
+    );
+  }, [documentTypeData]);
 
   // // Initialize form with existing KYC data in edit mode
-  // useEffect(() => {
-  //   if (isEditMode && kycInfoData && !isLoadingKyc && !dataLoadedRef.current) {
-  //     const existingDocuments = transformKycDataToDocuments(kycInfoData);
+  useEffect(() => {
+    if (isEditMode && kycInfoData && !isLoadingKyc && !dataLoadedRef.current) {
+      const existingDocuments = transformKycDataToDocuments(kycInfoData);
       
-  //     if (existingDocuments.length > 0) {
-  //       setDocuments(existingDocuments);
+      if (existingDocuments.length > 0) {
+        setDocuments(existingDocuments);
         
-  //       // Create document cards based on existing documents
-  //       const newDocumentCards = createDocumentCardsFromDocuments(existingDocuments);
-  //       setDocumentCards(newDocumentCards);
+        // Create document cards based on existing documents
+        const newDocumentCards = createDocumentCardsFromDocuments(existingDocuments);
+        setDocumentCards(newDocumentCards);
         
-  //       // Set selected document types and subtypes for existing documents
-  //       if (documentTypeData?.result) {
-  //         const { selectedDocumentTypes: newSelectedTypes, selectedSubTypes: newSelectedSubTypes } = 
-  //           setupExistingDocumentSelections(existingDocuments, documentTypeData);
+        // Set selected document types and subtypes for existing documents
+        if (documentTypeData?.result) {
+          const { selectedDocumentTypes: newSelectedTypes, selectedSubTypes: newSelectedSubTypes } = 
+            setupExistingDocumentSelections(existingDocuments, documentTypeData);
           
-  //         setSelectedDocumentTypes(newSelectedTypes);
-  //         setSelectedSubTypes(newSelectedSubTypes);
-  //       }
-  //     }
-  //     dataLoadedRef.current = true;
-  //   }
-  // }, [kycInfoData, isLoadingKyc, isEditMode, documentTypeData]);
+          setSelectedDocumentTypes(newSelectedTypes);
+          setSelectedSubTypes(newSelectedSubTypes);
+        }
+      }
+      dataLoadedRef.current = true;
+    }
+  }, [kycInfoData, isLoadingKyc, isEditMode, documentTypeData]);
 
   // Initialize with initialData (for restored state from stepHelpers)
   useEffect(() => {
@@ -411,19 +413,19 @@ export function TransferDocumentUploadForm({
   }, [documents]);
 
   // Handle file upload with validation
-  // const handleFileUpload = useCallback((
-  //   file: File,
-  //   docType: string,
-  //   subType: string,
-  //   cardId: string
-  // ) => {
-  //   const documentTypeObj = getDocumentTypeObject(docType);
+  const handleFileUpload = useCallback((
+    file: File,
+    docType: string,
+    subType: string,
+    cardId: string
+  ) => {
+    const documentTypeObj = getDocumentTypeObject(docType);
     
-  //   // Get subtype code (would need to be passed from the DocumentCardComponent)
-  //   let subtypeCode = "";
+    // Get subtype code (would need to be passed from the DocumentCardComponent)
+    let subtypeCode = "";
     
-  //   uploadFile(file, docType, subType, cardId, documentTypeObj, subtypeCode);
-  // }, [getDocumentTypeObject, uploadFile]);
+    uploadFile(file, docType, subType, cardId, documentTypeObj, subtypeCode);
+  }, [getDocumentTypeObject, uploadFile]);
 
   const handleSubmit = async () => {
     // Validate that at least one document is uploaded with actual file
@@ -549,7 +551,7 @@ export function TransferDocumentUploadForm({
         </div>
       </div>
 
-      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {documentCards.map((doc, index) => (
           <DocumentCardComponent
             key={doc.id}
@@ -573,7 +575,7 @@ export function TransferDocumentUploadForm({
             canRemoveCard={documentCards.length > 1}
           />
         ))}
-      </div> */}
+      </div>
 
       {/* ADD Button */}
       <div className="flex justify-center">

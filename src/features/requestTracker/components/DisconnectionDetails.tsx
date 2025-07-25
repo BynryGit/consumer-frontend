@@ -20,51 +20,62 @@ import {
   ArrowLeft,
   MoreVertical
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import NotesTab, { Note } from '@shared/components/NotesTab';
 import TimelineTab, { TimelineItem } from '@shared/components/TimelineTab';
+import { useRequestDetail, useAddNote } from '../hooks'; // Added useAddNote import
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 
 interface DisconnectionPageProps {
-  requestId?: string;
+  DisconnectionPage?: string;
 }
 
-const DisconnectionPage = ({ requestId = "DIS-2025-0408" }: DisconnectionPageProps) => {
+const DisconnectionPage = ({DisconnectionPage}: DisconnectionPageProps) => {
   const [newNote, setNewNote] = useState('');
+  const params = useParams();
   const navigate = useNavigate();
+  const requestId = params.id;
 
+  const { remoteUtilityId } = getLoginDataFromStorage();
+  const {data} = useRequestDetail({
+      remote_utility_id: remoteUtilityId,
+    id: requestId,
+  });
+  
+  // Add the useAddNote hook
+  const addNoteMutation = useAddNote();
+  
   // Mock data for the disconnection details
   const request = {
     id: requestId,
-    subject: 'Relocation Disconnection',
-    status: 'waiting',
-    createdAt: '2025-04-08T14:30:00',
-    lastUpdated: '2025-04-08T16:45:00'
+    status:  data?.result?.statusDisplay ||"NA",
+    createdAt: data?.result?.utilitySupportRequest?.createdDate ||"NA",
   };
 
   const disconnectionDetails = {
     reasonName: 'Relocation Disconnection',
-    reasonCode: 'REL-001',
-    preferredDate: '2025-04-15',
-    preferredTime: '10:00 AM - 12:00 PM',
-    description: 'Customer relocating to new property and requires service disconnection at current address.',
+    reasonCode:  data?.result?.utilitySupportRequest?.configurationCode ||"NA",
+   preferredDate:  data?.result?.requestDate ||"NA",
+    preferredTime: data?.result?.prefferedTimeSlotDisplay ||"NA",
+    description:  data?.result?.utilitySupportRequest?.longDescription ||"NA",
     additionalInfo: 'Please ensure final meter reading is taken and all pending bills are settled before disconnection.'
   };
 
-  // Mock service information
-  const serviceInfo = {
-    water: {
-      deviceNo: 'WD-789456',
-      meterNo: 'WM-123789',
-      lastReading: '2,450 gallons',
-      lastReadingDate: '2025-04-01'
-    },
-    electricity: {
-      deviceNo: 'ED-456123',
-      meterNo: 'EM-987654',
-      lastReading: '1,850 kWh',
-      lastReadingDate: '2025-04-01'
-    }
-  };
+const consumerMappingData = data?.result?.consumer?.consumerMappingData || [];
+
+const serviceInfo: Record<string, any> = {};
+
+consumerMappingData.forEach(service => {
+  const serviceType = service?.utilityService?.toLowerCase();
+  if (serviceType) {
+    serviceInfo[serviceType] = {
+      deviceNo: service.meterDetails?.deviceNo || 'N/A',
+      meterNo: service.meterDetails?.meterNumber || 'N/A',
+      lastReading: service.meterDetails?.lastReading || 'N/A',
+      lastReadingDate: service.meterDetails?.lastReadingDate || 'N/A'
+    };
+  }
+});
 
   // Mock notes data
   const notes = [
@@ -123,10 +134,19 @@ const DisconnectionPage = ({ requestId = "DIS-2025-0408" }: DisconnectionPagePro
     }
   ];
 
-  const handleAddNote = () => {
-    if (newNote.trim()) {
-      console.log('Adding note:', newNote);
-      setNewNote('');
+  // Updated handleAddNote function to use the API
+  const handleAddNote = async (noteContent: string) => {
+    if (noteContent.trim() && requestId && remoteUtilityId) {
+      const payload = {
+        source: 1,
+        request_id: parseInt(requestId),
+        remote_utility_id: remoteUtilityId,
+        notes: {
+          note: noteContent.trim()
+        }
+      };
+      
+      await addNoteMutation.mutateAsync(payload);
     }
   };
 
@@ -148,7 +168,15 @@ const DisconnectionPage = ({ requestId = "DIS-2025-0408" }: DisconnectionPagePro
     notes: {
       label: 'Notes',
       icon: <MessageSquare className="h-4 w-4" />,
-      component: <NotesTab notes={notes} onAddNote={handleAddNote} title="Disconnection Communication" idPrefix="disconnection" />,
+      component: (
+        <NotesTab 
+          notes={notes} 
+          onAddNote={handleAddNote} 
+          title="Disconnection Communication" 
+          idPrefix="disconnection"
+          isLoading={addNoteMutation.isPending}
+        />
+      ),
       count: notes.length,
       shortLabel: 'Notes'
     },
@@ -264,65 +292,41 @@ const DisconnectionPage = ({ requestId = "DIS-2025-0408" }: DisconnectionPagePro
           </div>
 
           {/* Service Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="bg-blue-50/30 border-blue-100">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Droplets className="h-5 w-5 text-blue-600" />
-                  Water Service
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Device No</p>
-                    <p className="font-semibold">{serviceInfo.water.deviceNo}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Meter No</p>
-                    <p className="font-semibold">{serviceInfo.water.meterNo}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Last Reading</p>
-                    <p className="font-semibold">{serviceInfo.water.lastReading}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Reading Date</p>
-                    <p className="font-semibold">{serviceInfo.water.lastReadingDate}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card className="bg-yellow-50/30 border-yellow-100">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Zap className="h-5 w-5 text-yellow-600" />
-                  Electricity Service
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Device No</p>
-                    <p className="font-semibold">{serviceInfo.electricity.deviceNo}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Meter No</p>
-                    <p className="font-semibold">{serviceInfo.electricity.meterNo}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Last Reading</p>
-                    <p className="font-semibold">{serviceInfo.electricity.lastReading}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Reading Date</p>
-                    <p className="font-semibold">{serviceInfo.electricity.lastReadingDate}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+  {Object.entries(serviceInfo).map(([serviceType, info]) => (
+    <Card key={serviceType} className={`bg-blue-50/30 border-blue-100`}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          {serviceType === 'water' && <Droplets className="h-5 w-5 text-blue-600" />}
+          {serviceType === 'electricity' && <Zap className="h-5 w-5 text-yellow-600" />}
+          {serviceType === 'hot water' && <Droplets className="h-5 w-5 text-red-600" />}
+          {serviceType.charAt(0).toUpperCase() + serviceType.slice(1)} Service
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Device No</p>
+            <p className="font-semibold">{info.deviceNo}</p>
           </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Meter No</p>
+            <p className="font-semibold">{info.meterNo}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Last Reading</p>
+            <p className="font-semibold">{info.lastReading}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Reading Date</p>
+            <p className="font-semibold">{info.lastReadingDate}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  ))}
+</div>
 
           {/* Tabs Section using your shared tab service */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -333,7 +337,7 @@ const DisconnectionPage = ({ requestId = "DIS-2025-0408" }: DisconnectionPagePro
                 notes: 'notes',
                 timeline: 'timeline'
               }}
-              tabsListClassName="mb-6"
+             tabsListClassName="grid grid-cols-2 w-full"
               tabsListFullWidth={true}
               idPrefix="disconnection"
             />

@@ -1,4 +1,5 @@
-// Add your feature-specific types here
-export interface faqsState {
-  // Define your state types
+export interface AddHelpfullPayload {
+  is_helpful: any;
+  code: string;
+  remote_utility_id: number;
 }

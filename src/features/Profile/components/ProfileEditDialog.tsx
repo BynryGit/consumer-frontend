@@ -8,11 +8,13 @@ import {
   DialogFooter,
 } from "@shared/ui/dialog";
 import { Button } from "@shared/ui/button";
-import { Mail, Phone, MapPin, Save } from "lucide-react";
+import { User, Save, Loader2 } from "lucide-react";
 import { FormField, FormService } from "@shared/services/FormServices";
 import { DynamicForm } from "@shared/components/DynamicForm";
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
+import { useUpdateConsumer } from "../hooks";
 
-interface ProfileEditDialogProps {
+interface ProfileEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentData: {
@@ -28,15 +30,17 @@ interface ProfileEditDialogProps {
   onSave: (data: any) => void;
 }
 
-const ProfileEditDialog = ({
+const ProfileEditModal = ({
   isOpen,
   onClose,
   currentData,
   onSave,
-}: ProfileEditDialogProps) => {
+}: ProfileEditModalProps) => {
   const { toast } = useToast();
+  const updateConsumerMutation = useUpdateConsumer();
+  const isLoading = updateConsumerMutation.isPending;
 
-  // Define form fields with proper classes and grouping
+  // Define form fields
   const formFields: FormField[] = [
     {
       name: "email",
@@ -44,16 +48,12 @@ const ProfileEditDialog = ({
       type: "email",
       required: true,
       placeholder: "your.email@example.com",
-      //   prefix: <Mail className="h-4 w-4 text-muted-foreground" />,
-      group: "contact",
-      groupOrder: 1,
+      fullWidth: true,
       classes: {
-        helperText: "text-xs text-gray-500 mt-1",
-        container: "w-full mb-4 relative",
+        container: "w-full mb-4",
         label: "block text-sm font-medium text-gray-700 mb-2",
-        input:
-          "w-full h-10 px-3 pr-10 mb-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-gray-50",
-        error: "text-red-600 text-sm ",
+        input: "w-full h-10 px-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white",
+        error: "text-red-600 text-sm mt-1",
       },
     },
     {
@@ -62,145 +62,128 @@ const ProfileEditDialog = ({
       type: "phone",
       required: true,
       placeholder: "+91 98765 43210",
-      //   prefix: <Phone className="h-4 w-4 text-muted-foreground" />,
-      group: "contact",
-      groupOrder: 2,
+      fullWidth: true,
       classes: {
-        helperText: "text-xs text-gray-500 mt-1",
-        container: "w-full mb-4 relative",
+        container: "w-full mb-4",
         label: "block text-sm font-medium text-gray-700 mb-2",
-        input:
-          "w-full h-10 px-3 pr-10 mb-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-gray-50",
-        error: "text-red-600 text-sm ",
+        input: "w-full h-10 px-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white",
+        error: "text-red-600 text-sm mt-1",
       },
     },
     {
-      name: "billingAddress.street",
+      name: "street",
       label: "Street Address",
-      type: "text",
+      type: "textarea",
       required: true,
       placeholder: "Enter your street address",
       minLength: 5,
-      group: "address",
-      groupOrder: 1,
       fullWidth: true,
+      rows: 2,
       classes: {
-        helperText: "text-xs text-gray-500 mt-1",
-        container: "w-full mb-4 relative",
+        container: "w-full mb-4 col-span-2",
         label: "block text-sm font-medium text-gray-700 mb-2",
-        input:
-          "w-full h-10 px-3 pr-10 mb-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-gray-50",
-        error: "text-red-600 text-sm ",
+        textarea: "w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white resize-none",
+        error: "text-red-600 text-sm mt-1",
       },
     },
     {
-      name: "billingAddress.city",
+      name: "city",
       label: "City",
       type: "text",
       required: true,
       placeholder: "Enter your city",
       minLength: 2,
-      group: "address",
       classes: {
-        helperText: "text-xs text-gray-500 mt-1",
-        container: "w-full mb-4 relative",
+        container: "w-full mb-4",
         label: "block text-sm font-medium text-gray-700 mb-2",
-        input:
-          "w-full h-10 px-3 pr-10 mb-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-gray-50",
-        error: "text-red-600 text-sm ",
+        input: "w-full h-10 px-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white",
+        error: "text-red-600 text-sm mt-1",
       },
     },
     {
-      name: "billingAddress.state",
+      name: "state",
       label: "State",
       type: "text",
       required: true,
       placeholder: "Enter your state",
       minLength: 2,
-      group: "address",
-      groupOrder: 3,
       classes: {
-        helperText: "text-xs text-gray-500 mt-1",
-        container: "w-full mb-4 relative",
+        container: "w-full mb-4",
         label: "block text-sm font-medium text-gray-700 mb-2",
-        input:
-          "w-full h-10 px-3 pr-10 mb-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-gray-50",
-        error: "text-red-600 text-sm ",
+        input: "w-full h-10 px-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white",
+        error: "text-red-600 text-sm mt-1",
       },
     },
     {
-      name: "billingAddress.pincode",
+      name: "pincode",
       label: "PIN Code",
       type: "text",
       required: true,
       placeholder: "Enter PIN code",
       minLength: 5,
+      maxLength: 6,
       pattern: "^[0-9]{5,6}$",
-      group: "address",
-      groupOrder: 4,
       classes: {
-        helperText: "text-xs text-gray-500 mt-1",
-        container: "w-full mb-4 relative",
+        container: "w-full mb-4",
         label: "block text-sm font-medium text-gray-700 mb-2",
-        input:
-          "w-full h-10 px-3 pr-10 mb-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-gray-50",
-        error: "text-red-600 text-sm ",
+        input: "w-full h-10 px-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white",
+        error: "text-red-600 text-sm mt-1",
       },
     },
   ];
 
-  // Create form using your FormService
+  // Create form
   const form = FormService.createForm({
     fields: formFields,
-    mode: "onBlur",
-    resetOnSubmit: false,
+    mode: "onChange",
+    validateOnMount: false,
   });
 
-  // Populate form with current data when dialog opens
+  // Populate form when modal opens
   React.useEffect(() => {
     if (isOpen && currentData) {
-      // Flatten the nested address structure for the form
-      const flattenedData = {
+      const formData = {
         email: currentData.email,
         phone: currentData.phone,
-        "billingAddress.street": currentData.billingAddress.street,
-        "billingAddress.city": currentData.billingAddress.city,
-        "billingAddress.state": currentData.billingAddress.state,
-        "billingAddress.pincode": currentData.billingAddress.pincode,
+        street: currentData.billingAddress.street,
+        city: currentData.billingAddress.city,
+        state: currentData.billingAddress.state,
+        pincode: currentData.billingAddress.pincode,
       };
-
-      // Use FormService to populate the form
-      FormService.populateForm(form, flattenedData, formFields);
+      FormService.populateForm(form, formData, formFields);
     }
   }, [isOpen, currentData, form]);
 
   const handleSubmit = async (data: any) => {
     try {
-      // Create payload using FormService
-      const payload = FormService.createPayload(data, formFields);
+      const { remoteUtilityId, consumerId } = getLoginDataFromStorage();
+      const formPayload = FormService.createPayload(data, formFields);
 
-      // Restructure the flattened data back to nested format
-      const restructuredData = {
-        email: payload.email,
-        phone: payload.phone,
-        billingAddress: {
-          street: payload["billingAddress.street"],
-          city: payload["billingAddress.city"],
-          state: payload["billingAddress.state"],
-          pincode: payload["billingAddress.pincode"],
+      const apiPayload = {
+        consumer_details: {
+          primary_consumer: {
+            email: formPayload.email,
+            contact_number: formPayload.phone,
+          },
+        },
+        remote_utility_id: remoteUtilityId,
+        service_address_data: {
+          unit: "10",
+          address: formPayload.street,
+          city: formPayload.city,
+          area: formPayload.state,
+          sub_area: "Rahatani",
+          premise: "West Coast#1_USA#1_California#1_San Diego#1_South#1_North#2_Kalewadi#11_Rahatani#1_Test premise#2",
+          zipcode: formPayload.pincode,
         },
       };
 
-      onSave(restructuredData);
-
-      toast({
-        title: "Profile Updated",
-        description: "Your profile information has been successfully updated.",
+      await updateConsumerMutation.mutateAsync({
+        consumerId: consumerId,
+        payload: apiPayload,
       });
-
       onClose();
     } catch (error) {
-      console.error("Error saving profile:", error);
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
@@ -218,39 +201,46 @@ const ProfileEditDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Edit Profile Information</DialogTitle>
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-md bg-primary/10">
+              <User className="h-4 w-4 text-primary" />
+            </div>
+            <DialogTitle>Edit Profile Information</DialogTitle>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-2">
-          {/* Single DynamicForm with custom rendering for layout */}
+        <div className="space-y-4">
           <DynamicForm
             fields={formFields}
             form={form}
-            gridColumns={3}
-            responsiveColumns={{ sm: 2, md:2}}
             onSubmit={handleSubmit}
+            loading={isLoading}
+            gridColumns={2}
+            responsiveColumns={{ sm: 1, md: 2 }}
             config={{
               showSubmitButton: false,
               showResetButton: false,
               layout: "vertical",
             }}
-            className="space-y-6"
-            renderCustomFooter={() => null}
           />
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={handleCancel}>
+          <Button type="button" variant="outline" onClick={handleCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            className="flex items-center gap-2"
-            onClick={form.handleSubmit(handleSubmit)}
-            disabled={FormService.hasErrors(form)}
-          >
-            <Save className="h-4 w-4" />
-            Save Changes
+          <Button onClick={form.handleSubmit(handleSubmit)} disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -258,4 +248,4 @@ const ProfileEditDialog = ({
   );
 };
 
-export default ProfileEditDialog;
+export default ProfileEditModal;
