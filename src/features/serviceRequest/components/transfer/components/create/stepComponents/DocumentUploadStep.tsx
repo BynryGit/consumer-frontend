@@ -6,6 +6,7 @@ import { FileText } from "lucide-react";
 import { StepHelpers } from "@shared/components/Stepper";
 import { toast } from "@shared/hooks/use-toast";
 import { Button } from "@shared/ui/button";
+import { DocumentUploadForm } from "@shared/components/DocumentUploadForm";
 // import { DocumentUploadForm } from "@features/cx/shared/components/DocumentUploadForm";
 
 interface Document {
@@ -302,14 +303,14 @@ export function DocumentUploadStep({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* <DocumentUploadForm
+          <DocumentUploadForm
             initialData={documents}
             consumerId={consumerId}
             onSave={handleDocumentSave}
             onDataChange={onDataChange}
             isEditMode={isEditMode}
             showSubmitButton={false}
-          /> */}
+          />
         </CardContent>
       </Card>
       <div className="flex justify-between pt-4">

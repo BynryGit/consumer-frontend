@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Badge } from '@shared/ui/badge';
 import { Button } from '@shared/ui/button';
 import { Textarea } from '@shared/ui/textarea';
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/ui/card';
 import { Tabs } from '@shared/ui/tabs'; // Your shared tab service
 import { 
   CalendarDays, 
-  Clock, 
+  Clock,  
   DollarSign, 
   CheckCircle, 
   MessageSquare, 
@@ -22,38 +23,51 @@ import {
   MoreVertical,
   Wrench
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import NotesTab, { Note } from '@shared/components/NotesTab';
 import TimelineTab, { TimelineItem } from '@shared/components/TimelineTab';
+import { useRequestDetail, useAddNote } from '../hooks'; // Added useAddNote import
 
 interface ServiceRequestPageProps {
-  requestId?: string;
+  serviceId?: string;
 }
 
-const ServiceRequestPage = ({ requestId = "SRV-2025-0408" }: ServiceRequestPageProps) => {
+const ServiceRequestPage = ({ serviceId }: ServiceRequestPageProps) => {
   const [newNote, setNewNote] = useState('');
-  const navigate = useNavigate();
+   const params = useParams();
+   const navigate = useNavigate();
+   const requestId = params.id;
+ 
+   const { remoteUtilityId } = getLoginDataFromStorage();
+   const { data } = useRequestDetail({
+     remote_utility_id: remoteUtilityId,
+    id: requestId,
+   });
+   
+   // Add the useAddNote hook
+   const addNoteMutation = useAddNote();
+   
+   console.log("dattaaaaaaaaaaa", data);
 
   // Mock data for the service request details
   const request = {
     id: requestId,
-    subject: 'Electrical Installation',
-    status: 'in_progress',
-    createdAt: '2025-04-08T14:30:00',
-    lastUpdated: '2025-04-08T16:45:00'
-  };
+    status:  data?.result?.statusDisplay ||"NA",
+    createdAt: data?.result?.utilitySupportRequest?.createdDate ||"NA",
+    lastUpdated: data?.result?.lastModifiedDate ||"NA",
+  };  
 
   const serviceDetails = {
-    serviceName: 'Electrical Installation',
-    serviceCode: 'EI-2025',
-    category: 'Installation',
-    subCategory: 'Electrical Work',
-    serviceDescription: 'Professional electrical outlet installation and wiring upgrade for residential property',
+    serviceName: data?.result?.utilitySupportRequest?.name ||"NA",
+    serviceCode: data?.result?.utilitySupportRequest?.configurationCode ||"NA",
+  category: data?.result?.utilitySupportRequest?.supportRequestType ||"NA",
+    subCategory: data?.result?.utilitySupportRequest?.supportRequestSubtype ||"NA",
+    serviceDescription:  data?.result?.utilitySupportRequest?.longDescription ||"NA",
     additionalInfo: 'Please ensure access to main electrical panel is available during service visit',
-    preferredDate: '2025-04-10',
-    preferredTime: '2:00 PM - 4:00 PM',
-    serviceFees: '$150.00',
-    paymentStatus: 'Pending',
+    preferredDate:  data?.result?.requestDate ||"NA",
+    preferredTime: data?.result?.prefferedTimeSlotDisplay ||"NA",
+    serviceFees:  data?.result?.utilitySupportRequest?.extraData?.serviceCharge ||"NA",
+    paymentStatus: data?.result?.additionalData?.transactionStatusDisplay ||"NA",
     rejectionReason: request.status === 'rejected' ? 'Service request rejected due to incomplete documentation. Please provide proof of property ownership and electrical permit before resubmitting.' : null
   };
 
@@ -113,10 +127,19 @@ const ServiceRequestPage = ({ requestId = "SRV-2025-0408" }: ServiceRequestPageP
     }
   ];
 
-  const handleAddNote = () => {
-    if (newNote.trim()) {
-      console.log('Adding note:', newNote);
-      setNewNote('');
+  // Updated handleAddNote function to use the API
+  const handleAddNote = async (noteContent: string) => {
+    if (noteContent.trim() && requestId && remoteUtilityId) {
+      const payload = {
+        source: 1,
+        request_id: parseInt(requestId),
+        remote_utility_id: remoteUtilityId,
+        notes: {
+          note: noteContent.trim()
+        }
+      };
+      
+      await addNoteMutation.mutateAsync(payload);
     }
   };
 
@@ -153,7 +176,15 @@ const ServiceRequestPage = ({ requestId = "SRV-2025-0408" }: ServiceRequestPageP
     notes: {
       label: 'Notes',
       icon: <MessageSquare className="h-4 w-4" />,
-      component: <NotesTab notes={notes} onAddNote={handleAddNote} title="Service Request Communication" idPrefix="service-request" />,
+      component: (
+        <NotesTab 
+          notes={notes} 
+          onAddNote={handleAddNote} 
+          title="Service Request Communication" 
+          idPrefix="service-request"
+          isLoading={addNoteMutation.isPending}
+        />
+      ),
       count: notes.length,
       shortLabel: 'Notes'
     },
@@ -333,7 +364,7 @@ const ServiceRequestPage = ({ requestId = "SRV-2025-0408" }: ServiceRequestPageP
                 notes: 'notes',
                 timeline: 'timeline'
               }}
-              tabsListClassName="mb-6"
+              tabsListClassName="grid grid-cols-2 w-full"
               tabsListFullWidth={true}
               idPrefix="service"
             />

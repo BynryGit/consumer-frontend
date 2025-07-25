@@ -1,4 +1,3 @@
-
 import { X } from "lucide-react";
 import React, { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
@@ -20,13 +19,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 
   const location = useLocation();
   const { renderBreadcrumbs } = useBaseComponent();
+  
+  // Updated to include tenant-based routes
   const hideSideAndTopNav = [
     "/login",
     "/forgot-password",
     "/reset-password",
     "/",
     "/signup",
-  ].includes(location.pathname);
+    "/setup-password"
+  ].includes(location.pathname) || 
+  // Also hide for tenant-specific routes
+  location.pathname.match(/^\/(login|forgot-password|signup|setup-password)\/[^\/]+$/);
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -70,4 +75,4 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   );
 };
 
-export default MainLayout; 
+export default MainLayout;

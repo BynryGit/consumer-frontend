@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@shared/ui/button';
-import { Checkbox } from '@shared/ui/checkbox';
-import { Label } from '@shared/ui/label';
 import { Building2, Mail, User, Key, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConsumerWebLogin, useUserUtility } from '../hooks';
 import AuthLayout from './AuthLayout';
 import { DynamicForm } from "@shared/components/DynamicForm";
 import { FormField, FormService } from "@shared/services/FormServices";
-import { EyeIcon, EyeOffIcon, Lock } from "lucide-react";
+import { setAuthToken } from '@shared/auth/authUtils';
+import { useConsumerDetails } from '@features/serviceRequest/hooks';
+
 // Types for API response
 interface UtilityProvider {
   id: number;
@@ -30,23 +30,33 @@ interface ConsumerWebLoginPayload {
 }
 
 interface SignInProps {
+  tenant?: string; // Add tenant prop
   onSwitchToSignUp: () => void;
   onSwitchToForgotPassword: () => void;
 }
 
-const SignIn = ({ onSwitchToSignUp, onSwitchToForgotPassword }: SignInProps) => {
+const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: SignInProps) => {
   const navigate = useNavigate();
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [serviceProviderID, setServiceProviderID] = useState<number>(0);
   const [passwordVisible, setPasswordVisible] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(false);
-const [showPassword, setShowPassword] = useState(false);
-  // API hooks
+  const [showPassword, setShowPassword] = useState(false);
+  const [consumerDetailsParams, setConsumerDetailsParams] = useState<{
+    remote_utility_id: any;
+    consumer_no: string;
+  } | null>(null);
+
+  // API hooks - now using dynamic tenant
   const { data: utilitiesData, isLoading: isLoadingUtilities, error: utilitiesError } = useUserUtility({
-    tenant_alias: "smart3600"
+    tenant_alias: tenant // Use tenant from props/URL
   });
 
   const loginMutation = useConsumerWebLogin();
+
+  const { data: consumerDetailsData, isLoading: isLoadingConsumerDetails } = useConsumerDetails(
+    consumerDetailsParams || { remote_utility_id: null, consumer_no: '' }
+  );
 
   // Extract utilities from API response
   const utilities: UtilityProvider[] = utilitiesData?.result || [];
@@ -68,7 +78,6 @@ const [showPassword, setShowPassword] = useState(false);
       placeholder: isLoadingUtilities ? "Loading service providers..." : "Select your service provider",
       options: utilityOptions,
       disabled: isLoadingUtilities,
-      // icon: <Building2 className="h-4 w-4" />,
       classes: {
         container: "w-full",
         label: "text-sm font-medium",
@@ -83,7 +92,6 @@ const [showPassword, setShowPassword] = useState(false);
       type: "text",
       required: true,
       placeholder: "Enter your email or account number",
-      // icon: <User className="h-4 w-4" />,
       classes: {
         container: "w-full",
         label: "text-sm font-medium",
@@ -100,7 +108,6 @@ const [showPassword, setShowPassword] = useState(false);
       placeholder: "Enter your password",
       minLength: 5,
       maxLength: 50,
-      // icon: <Key className="h-4 w-4" />,
       classes: {
         helperText: "text-xs text-gray-500 mt-1",
         container: "w-full mb-4 relative",
@@ -139,51 +146,88 @@ const [showPassword, setShowPassword] = useState(false);
     }
   }, [passwordVisible]);
 
+  // Store consumer details in localStorage when data is received
+  useEffect(() => {
+    if (consumerDetailsData) {
+      localStorage.setItem('consumerDetails', JSON.stringify(consumerDetailsData));
+      console.log('✅ Consumer details saved to localStorage:', consumerDetailsData);
+    }
+  }, [consumerDetailsData]);
+
+  // Store current tenant in localStorage for persistence
+  useEffect(() => {
+    if (tenant) {
+      localStorage.setItem('currentTenant', tenant);
+      console.log('✅ Current tenant saved:', tenant);
+    }
+  }, [tenant]);
+
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
   };
 
-  const handleFormSubmit = async (data: any) => {
-    if (!data.service_provider) {
-      toast.error('Please select a Service Provider.');
-      return;
-    }
+const handleFormSubmit = async (data: any) => {
+  if (!data.service_provider) {
+    toast.error('Please select a Service Provider.');
+    return;
+  }
 
-    const selectedUtility = utilities.find(u => u.id.toString() === data.service_provider);
-    if (!selectedUtility) {
-      toast.error('Invalid service provider selected.');
-      return;
-    }
+  const selectedUtility = utilities.find(u => u.id.toString() === data.service_provider);
+  if (!selectedUtility) {
+    toast.error('Invalid service provider selected.');
+    return;
+  }
 
-    const payload: ConsumerWebLoginPayload = {
-      user: {
-        username: data.username,
-        password: data.password,
-      },
-      remote_utility_id: selectedUtility.id,
-    };
-
-    try {
-      const result = await loginMutation.mutateAsync(payload);
-      
-      toast.success('Login successful!');
-      console.log('Login successful:', result);
-      
-      // Store authentication data if needed
-      if (rememberMe) {
-        localStorage.setItem('rememberMe', 'true');
-        localStorage.setItem('username', data.username);
-        localStorage.setItem('serviceProvider', data.service_provider);
-      }
-      
-      // Navigate to dashboard after successful login
-      navigate('/dashboard');
-      
-    } catch (error) {
-      toast.error('Login failed. Please check your credentials.');
-      console.error('Login error:', error);
-    }
+  const payload: ConsumerWebLoginPayload = {
+    user: {
+      username: data.username,
+      password: data.password,
+    },
+    remote_utility_id: selectedUtility.id,
   };
+
+  try {
+    const result = await loginMutation.mutateAsync(payload);
+    
+    // ✅ FIXED: Extract and save the auth token properly
+    const token = result?.result?.user?.token;
+    if (token) {
+      setAuthToken(token);
+      console.log('✅ Auth token saved successfully');
+    } else {
+      console.error('❌ No token found in login response');
+      toast.error('Login failed: No authentication token received');
+      return;
+    }
+    
+    toast.success('Login successful!');
+    console.log('Login successful:', result);
+    
+    // Optional: Keep this if you need the full result for other purposes
+    localStorage.setItem('loginResult', JSON.stringify(result));
+    
+    // Store authentication data if needed
+    if (rememberMe) {
+      localStorage.setItem('rememberMe', 'true');
+      localStorage.setItem('username', data.username);
+      localStorage.setItem('serviceProvider', data.service_provider);
+    }
+    
+    // Set parameters to trigger useConsumerDetails hook
+    const consumerNo = "AXM012";
+    setConsumerDetailsParams({
+      remote_utility_id: selectedUtility.id,
+      consumer_no: consumerNo
+    });
+    
+    // Navigate to dashboard after successful login
+    navigate('/dashboard');
+    
+  } catch (error) {
+    toast.error('Login failed. Please check your credentials.');
+    console.error('Login error:', error);
+  }
+};
 
   const handleFieldChange = (fieldName: string, value: any) => {
     if (fieldName === 'service_provider') {
@@ -203,7 +247,7 @@ const [showPassword, setShowPassword] = useState(false);
   };
 
   const handleForgotPassword = () => {
-    navigate('/forgot-password');
+    onSwitchToForgotPassword();
   };
 
   // Load remembered credentials on component mount
@@ -232,15 +276,15 @@ const [showPassword, setShowPassword] = useState(false);
   return (
     <AuthLayout 
       title="Welcome Back" 
-      subtitle="Sign in to your account to continue"
+      subtitle={`Sign in to your account to continue (${tenant})`} // Show current tenant
     >
       <div className="space-y-2">
+       
         {/* Dynamic Form */}
         <DynamicForm
             fields={formFields.map((f) =>
               f.name === "password" ? { ...f, type: showPassword ? "text" : "password" } : f
             )}
-          // fields={formFields}
           form={signInForm}
           onSubmit={handleFormSubmit}
           onFieldChange={handleFieldChange}
@@ -267,7 +311,6 @@ const [showPassword, setShowPassword] = useState(false);
             Forgot password?
           </button>
           </div>
-         
         </div>
 
         {/* Login Button */}

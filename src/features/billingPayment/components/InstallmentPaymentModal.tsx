@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -15,11 +14,12 @@ import { RadioGroup, RadioGroupItem } from '@shared/ui/radio-group';
 import { Label } from '@shared/ui/label';
 import { useToast } from '@shared/hooks/use-toast';
 import { CreditCard, Calendar, DollarSign, FileText, AlertTriangle } from 'lucide-react';
+import { usePayBill } from '../hooks';
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 
 interface Installment {
   id: number;
   installmentNumber: number;
-  itemName: string;
   dueDate: string;
   amount: number;
   status: string;
@@ -30,38 +30,76 @@ interface InstallmentPaymentModalProps {
   installment: Installment | null;
   isOpen: boolean;
   onClose: () => void;
+  onPaymentSuccess?: () => void; // Callback to refetch data
 }
 
-const InstallmentPaymentModal = ({ installment, isOpen, onClose }: InstallmentPaymentModalProps) => {
+const InstallmentPaymentModal = ({ 
+  installment, 
+  isOpen, 
+  onClose, 
+  onPaymentSuccess 
+}: InstallmentPaymentModalProps) => {
   const [paymentMethod, setPaymentMethod] = useState('online');
-  const [isProcessing, setIsProcessing] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
   const { toast } = useToast();
+  const { remoteUtilityId, consumerId } = getLoginDataFromStorage();
+  
+  const { mutate: payBill, isPending: isProcessing } = usePayBill();
 
   const handlePayment = async () => {
     if (!installment) return;
 
-    setIsProcessing(true);
-    
-    toast({
-      title: "Processing Payment",
-      description: `Processing installment #${installment.installmentNumber} payment...`,
-    });
+    const paymentPayload = {
+      amount: installment.amount.toString(),
+      payment_mode: "Online",
+      payment_channel: "Web",
+      payment_pay_type: 6, // Installment type
+      payment_pay_type_display: "Installment",
+      consumer: parseInt(consumerId),
+      remote_utility_id: parseInt(remoteUtilityId),
+      payment_installment: installment.id,
+      status: "CREDIT",
+      is_active: true,
+      is_deleted: false,
+      is_payment_consiled: false,
+      source: 0,
+      payment_received_status: 0,
+      extra_data: {
+        reference_no: `INS-${installment.id}-${Date.now()}`,
+        bill_amount: installment.amount,
+        payment_amount: installment.amount,
+        outstanding_amount: 0,
+        excess_refund: 0,
+        additional_notes: "Installment Payment"
+      }
+    };
 
-    setTimeout(() => {
-      setIsProcessing(false);
-      setPaymentComplete(true);
-      
-      toast({
-        title: "Payment Successful!",
-        description: `Installment #${installment.installmentNumber} payment of $${installment.amount} has been processed successfully.`,
-      });
-    }, 2000);
+    payBill(paymentPayload, {
+      onSuccess: (response) => {
+        setPaymentComplete(true);
+        toast({
+          title: "Payment Successful!",
+          description: `Installment #${installment.installmentNumber} payment of $${installment.amount} has been processed successfully.`,
+        });
+        
+        // Call the callback to refetch payment agreement data
+        if (onPaymentSuccess) {
+          onPaymentSuccess();
+        }
+      },
+      onError: (error) => {
+        toast({
+          title: "Payment Failed",
+          description: "There was an error processing your payment. Please try again.",
+          variant: "destructive",
+        });
+        console.error('Payment error:', error);
+      }
+    });
   };
 
   const handleClose = () => {
     setPaymentComplete(false);
-    setIsProcessing(false);
     setPaymentMethod('online');
     onClose();
   };
@@ -112,10 +150,6 @@ const InstallmentPaymentModal = ({ installment, isOpen, onClose }: InstallmentPa
                 <span className="font-medium">${installment.amount}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Service:</span>
-                <span className="font-medium">{installment.itemName}</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-muted-foreground">Payment Method:</span>
                 <span className="font-medium">Online Payment</span>
               </div>
@@ -132,14 +166,10 @@ const InstallmentPaymentModal = ({ installment, isOpen, onClose }: InstallmentPa
                   <span className="font-medium">#{installment.installmentNumber}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Service</span>
-                  <Badge variant="outline">{installment.itemName}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Due Date</span>
                   <span className="flex items-center gap-1 text-sm">
                     <Calendar className="h-3 w-3" />
-                    {new Date(installment.dueDate).toLocaleDateString()}
+                    {installment.dueDate !== 'NA' ? new Date(installment.dueDate).toLocaleDateString() : 'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">

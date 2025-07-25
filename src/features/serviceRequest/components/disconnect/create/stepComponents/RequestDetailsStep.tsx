@@ -1,8 +1,4 @@
-// import {
-//   useTimeSlotChoices,
-//   useUtilityRequestConfiguration,
-// } from "@features/cx/disconnect/hooks";
-
+import { useTimeSlotChoices, useUtilityRequestConfiguration } from "@features/serviceRequest/hooks";
 import { DynamicForm } from "@shared/components/DynamicForm";
 import { StepHelpers } from "@shared/components/Stepper";
 import { FormField, FormService } from "@shared/services/FormServices";
@@ -16,6 +12,7 @@ export interface CreateDisconnectionRequestPayload {
   requestType: string;
   reason: string;
   reasonLabel: string;
+  reasonVersion: string;
   timeSlotLabel: string;
   priority: string;
   scheduledDate: string;
@@ -68,16 +65,16 @@ export function RequestDetailsStep({
   const savedStepDataRef = useRef<any>(null);
 
   // Fetch utility request configuration for reasons
-  // const { data: utilityConfigData, isLoading: isConfigLoading } =
-  //   useUtilityRequestConfiguration({
-  //     remoteUtilityId,
-  //     requestType: "Disconnect Permanent", // For disconnection requests
-  //     disablePagination: true,
-  //   });
+  const { data: utilityConfigData, isLoading: isConfigLoading } =
+    useUtilityRequestConfiguration({
+      remoteUtilityId,
+      requestType: "Disconnect Permanent", // For disconnection requests
+      disablePagination: true,
+    });
 
-  // // Fetch time slot choices
-  // const { data: timeSlotData, isLoading: isTimeSlotLoading } =
-  //   useTimeSlotChoices();
+  // Fetch time slot choices
+  const { data: timeSlotData, isLoading: isTimeSlotLoading } =
+    useTimeSlotChoices();
 
   // Helper function to save step data using stepHelpers
   const saveStepData = useCallback(
@@ -133,11 +130,11 @@ export function RequestDetailsStep({
       type: "select",
       required: true,
       placeholder: "Select a reason",
-      // options:
-      //   utilityConfigData?.result?.map((config) => ({
-      //     label: config.name,
-      //     value: config.id.toString(),
-      //   })) || [],
+      options:
+        utilityConfigData?.result?.map((config) => ({
+          label: config.name,
+          value: config.id.toString(),
+        })) || [],
       helperText: "Select the primary reason for this request",
       showHelperTooltip: true,
       tooltipText: "This helps prioritize and route the request appropriately.",
@@ -178,11 +175,11 @@ export function RequestDetailsStep({
       label: "Preferred Time Slot",
       type: "select",
       placeholder: "Select time slot",
-      // options:
-      //   timeSlotData?.result?.map((slot) => ({
-      //     label: slot.value,
-      //     value: slot.key.toString(),
-      //   })) || [],
+      options:
+        timeSlotData?.result?.map((slot) => ({
+          label: slot.value,
+          value: slot.key.toString(),
+        })) || [],
       helperText: "Select your preferred time window",
       classes: {
         container: "mb-6",
@@ -229,6 +226,8 @@ export function RequestDetailsStep({
         requestType: "disconnection",
         utilitySupportRequest: 0,
         reason: "",
+        reasonLabel: "",
+        reasonVersion: "",
         priority: "medium",
         scheduledDate: null,
         timeSlot: "",
@@ -264,6 +263,8 @@ export function RequestDetailsStep({
             requestType: savedStepData.requestType || "disconnection",
             utilitySupportRequest: savedStepData.utilitySupportRequest || 0,
             reason: savedStepData.reason || "",
+            reasonLabel: savedStepData.reasonLabel || "",
+            reasonVersion: savedStepData.reasonVersion || "",
             priority: savedStepData.priority || "medium",
             scheduledDate: savedStepData.scheduledDate || null,
             timeSlot: savedStepData.timeSlot || "",
@@ -275,7 +276,6 @@ export function RequestDetailsStep({
             contactName: savedStepData.contactName || "",
             contactId: savedStepData.contactId || null,
             contactType: savedStepData.contactType || "",
-            reasonLabel: savedStepData.reasonLabel || "",
             timeSlotLabel: savedStepData.timeSlotLabel || "",
           };
 
@@ -377,104 +377,104 @@ export function RequestDetailsStep({
   ]);
 
   // Update form when configuration data is loaded
-  // useEffect(() => {
-  //   if (utilityConfigData?.result && isStepDataLoaded) {
-  //     // Get saved step data to preserve any saved options
-  //     const savedStepData = savedStepDataRef.current;
+  useEffect(() => {
+    if (utilityConfigData?.result && isStepDataLoaded) {
+      // Get saved step data to preserve any saved options
+      const savedStepData = savedStepDataRef.current;
 
-  //     // Update the reason field options when configuration data is available
-  //     const reasonField = requestFields.find(
-  //       (field) => field.name === "reason"
-  //     );
-  //     if (reasonField) {
-  //       const apiOptions = utilityConfigData.result.map((config) => ({
-  //         label: config.name,
-  //         value: config.id.toString(),
-  //       }));
+      // Update the reason field options when configuration data is available
+      const reasonField = requestFields.find(
+        (field) => field.name === "reason"
+      );
+      if (reasonField) {
+        const apiOptions = utilityConfigData.result.map((config) => ({
+          label: config.name,
+          value: config.id.toString(),
+        }));
 
-  //       // If we have saved data with a reason label, preserve it
-  //       if (savedStepData?.reasonLabel && savedStepData?.reason) {
-  //         const savedOption = {
-  //           label: savedStepData.reasonLabel,
-  //           value: savedStepData.reason,
-  //         };
-  //         const optionExists = apiOptions.some(
-  //           (option) => option.value === savedStepData.reason
-  //         );
+        // If we have saved data with a reason label, preserve it
+        if (savedStepData?.reasonLabel && savedStepData?.reason) {
+          const savedOption = {
+            label: savedStepData.reasonLabel,
+            value: savedStepData.reason,
+          };
+          const optionExists = apiOptions.some(
+            (option) => option.value === savedStepData.reason
+          );
 
-  //         if (!optionExists) {
-  //           reasonField.options = [...apiOptions, savedOption];
-  //         } else {
-  //           reasonField.options = apiOptions;
-  //         }
-  //       } else {
-  //         reasonField.options = apiOptions;
-  //       }
-  //     }
-  //   }
-  // }, [utilityConfigData, isStepDataLoaded, requestFields]);
+          if (!optionExists) {
+            reasonField.options = [...apiOptions, savedOption];
+          } else {
+            reasonField.options = apiOptions;
+          }
+        } else {
+          reasonField.options = apiOptions;
+        }
+      }
+    }
+  }, [utilityConfigData, isStepDataLoaded, requestFields]);
 
   // Update form when time slot data is loaded
-  // useEffect(() => {
-  //   if (timeSlotData?.result && isStepDataLoaded) {
-  //     // Get saved step data to preserve any saved options
-  //     const savedStepData = savedStepDataRef.current;
+  useEffect(() => {
+    if (timeSlotData?.result && isStepDataLoaded) {
+      // Get saved step data to preserve any saved options
+      const savedStepData = savedStepDataRef.current;
 
-  //     // Update the time slot field options when time slot data is available
-  //     const timeSlotField = requestFields.find(
-  //       (field) => field.name === "timeSlot"
-  //     );
-  //     if (timeSlotField) {
-  //       const apiOptions = timeSlotData.result.map((slot) => ({
-  //         label: slot.value,
-  //         value: slot.key.toString(),
-  //       }));
+      // Update the time slot field options when time slot data is available
+      const timeSlotField = requestFields.find(
+        (field) => field.name === "timeSlot"
+      );
+      if (timeSlotField) {
+        const apiOptions = timeSlotData.result.map((slot) => ({
+          label: slot.value,
+          value: slot.key.toString(),
+        }));
 
-  //       // If we have saved data with a time slot label, preserve it
-  //       if (savedStepData?.timeSlotLabel && savedStepData?.timeSlot) {
-  //         const savedOption = {
-  //           label: savedStepData.timeSlotLabel,
-  //           value: savedStepData.timeSlot,
-  //         };
-  //         const optionExists = apiOptions.some(
-  //           (option) => option.value === savedStepData.timeSlot
-  //         );
+        // If we have saved data with a time slot label, preserve it
+        if (savedStepData?.timeSlotLabel && savedStepData?.timeSlot) {
+          const savedOption = {
+            label: savedStepData.timeSlotLabel,
+            value: savedStepData.timeSlot,
+          };
+          const optionExists = apiOptions.some(
+            (option) => option.value === savedStepData.timeSlot
+          );
 
-  //         if (!optionExists) {
-  //           timeSlotField.options = [...apiOptions, savedOption];
-  //         } else {
-  //           timeSlotField.options = apiOptions;
-  //         }
-  //       } else {
-  //         timeSlotField.options = apiOptions;
-  //       }
-  //     }
-  //   }
-  // }, [timeSlotData, isStepDataLoaded, requestFields]);
+          if (!optionExists) {
+            timeSlotField.options = [...apiOptions, savedOption];
+          } else {
+            timeSlotField.options = apiOptions;
+          }
+        } else {
+          timeSlotField.options = apiOptions;
+        }
+      }
+    }
+  }, [timeSlotData, isStepDataLoaded, requestFields]);
 
-  // // Re-populate form with saved values after options are loaded
-  // useEffect(() => {
-  //   if (isStepDataLoaded && !isConfigLoading && !isTimeSlotLoading) {
-  //     const savedStepData = savedStepDataRef.current;
-  //     if (savedStepData) {
-  //       // Re-populate the form with saved values to ensure dropdowns show correct selections
-  //       const formDataToSet = {
-  //         reason: savedStepData.reason || "",
-  //         timeSlot: savedStepData.timeSlot || "",
-  //         scheduledDate: savedStepData.scheduledDate || null,
-  //         consumerRemark: savedStepData.consumerRemark || "",
-  //         // Add other fields as needed
-  //       };
+  // Re-populate form with saved values after options are loaded
+  useEffect(() => {
+    if (isStepDataLoaded && !isConfigLoading && !isTimeSlotLoading) {
+      const savedStepData = savedStepDataRef.current;
+      if (savedStepData) {
+        // Re-populate the form with saved values to ensure dropdowns show correct selections
+        const formDataToSet = {
+          reason: savedStepData.reason || "",
+          timeSlot: savedStepData.timeSlot || "",
+          scheduledDate: savedStepData.scheduledDate || null,
+          consumerRemark: savedStepData.consumerRemark || "",
+          // Add other fields as needed
+        };
 
-  //       // Only set values that exist in saved data
-  //       Object.entries(formDataToSet).forEach(([key, value]) => {
-  //         if (value !== null && value !== undefined && value !== "") {
-  //           requestForm.setValue(key as any, value);
-  //         }
-  //       });
-  //     }
-  //   }
-  // }, [isStepDataLoaded, isConfigLoading, isTimeSlotLoading, requestForm]);
+        // Only set values that exist in saved data
+        Object.entries(formDataToSet).forEach(([key, value]) => {
+          if (value !== null && value !== undefined && value !== "") {
+            requestForm.setValue(key as any, value);
+          }
+        });
+      }
+    }
+  }, [isStepDataLoaded, isConfigLoading, isTimeSlotLoading, requestForm]);
 
   // Handle form submission
   const handleFormSubmit = useCallback(
@@ -509,11 +509,11 @@ export function RequestDetailsStep({
         (option) => option.value === data.timeSlot
       );
 
-      // const selectedReasonObject = utilityConfigData?.result?.find(
-      //   (reason) => reason.id?.toString() === data.reason
-      // );
+      const selectedReasonObject = utilityConfigData?.result?.find(
+        (reason) => reason.id?.toString() === data.reason
+      );
 
-      // console.log("selectedReasonObject", selectedReasonObject);
+      console.log("selectedReasonObject", selectedReasonObject);
 
       // Save final step data with completion status
       saveStepData({
@@ -524,8 +524,9 @@ export function RequestDetailsStep({
         scheduledDate: data.scheduledDate,
         timeSlot: data.timeSlot,
         reasonLabel: selectedReasonOption?.label || "",
+        reasonVersion: selectedReasonObject?.version || "",
         timeSlotLabel: selectedTimeSlotOption?.label || "",
-        // priority: selectedReasonObject?.extraData?.priorityLevelDisplay || "",
+        priority: selectedReasonObject?.extraData?.priorityLevelDisplay || "",
         source: 1,
         remoteUtilityId: remoteUtilityId,
         utilitySupportRequest: Number(data.reason),
@@ -551,6 +552,7 @@ export function RequestDetailsStep({
       requestForm,
       requestFields,
       remoteUtilityId,
+      utilityConfigData,
     ]
   );
 
@@ -567,7 +569,7 @@ export function RequestDetailsStep({
         lastUpdated: new Date().toISOString(),
       };
 
-      // Save label for dropdown fields
+      // Save label and version for reason field
       if (fieldName === "reason") {
         const reasonField = requestFields.find(
           (field) => field.name === "reason"
@@ -575,9 +577,16 @@ export function RequestDetailsStep({
         const selectedOption = reasonField?.options?.find(
           (option) => option.value === value
         );
+        
+        // Find the reason object from utilityConfigData to get version
+        const selectedReasonObject = utilityConfigData?.result?.find(
+          (reason) => reason.id?.toString() === value
+        );
+
         updatedData = {
           ...updatedData,
           reasonLabel: selectedOption?.label || "",
+          reasonVersion: selectedReasonObject?.version || "",
         };
       }
 
@@ -597,7 +606,7 @@ export function RequestDetailsStep({
       // Save updated data using stepHelpers
       saveStepData(updatedData);
     },
-    [requestForm, saveStepData, requestFields]
+    [requestForm, saveStepData, requestFields, utilityConfigData]
   );
 
   // Custom render for the form groups with styled sections
@@ -640,37 +649,6 @@ export function RequestDetailsStep({
           Details
         </h3>
       </div>
-
-      {/* Customer Info Summary */}
-      {customerData && (
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertCircle className="h-4 w-4 text-blue-600" />
-            <h4 className="font-medium text-blue-800">Customer Information</h4>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-            <div>
-              <span className="font-medium text-gray-700">Name:</span>
-              <span className="ml-1 text-gray-900">
-                {customerData.customerName}
-              </span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Account:</span>
-              <span className="ml-1 text-gray-900">
-                {customerData.accountNumber}
-              </span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Phone:</span>
-              <span className="ml-1 text-gray-900">
-                {customerData.contactPhone}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Dynamic Form */}
       <DynamicForm
         fields={requestFields}

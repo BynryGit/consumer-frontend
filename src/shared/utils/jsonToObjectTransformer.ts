@@ -364,3 +364,23 @@ export {
  * - Gracefully handles missing or malformed data
  * - Optional strict mode for type validation
  */
+
+// Helper function to convert FormData to JSON
+export const formDataToJson = (formData: FormData): Record<string, any> => {
+  const json: Record<string, any> = {};
+  
+  for (const [key, value] of formData.entries()) {
+    // Handle multiple values for the same key
+    if (json[key]) {
+      if (Array.isArray(json[key])) {
+        json[key].push(value);
+      } else {
+        json[key] = [json[key], value];
+      }
+    } else {
+      json[key] = value;
+    }
+  }
+  
+  return json;
+};

@@ -1,6 +1,7 @@
 import {
   ConsumerWebLoginPayload,
   ConsumerWebLoginResponse,
+  forgotPassword,
   LoginCredentials,
   LoginResponse,
   UserProfile,
@@ -14,6 +15,7 @@ import {
 } from "@shared/api/clients/apiClientFactory";
 import { ApiEndpoints } from "@shared/api/api-endpoints";
 import axios from "axios";
+import ForgotPassword from "./components/ForgotPassword";
 
 // Add your feature-specific API calls here
 export const authApi = {
@@ -24,7 +26,7 @@ export const authApi = {
     return response.data;
   },
 
-  forgotPassword: async (email: string): Promise<void> => {
+  forgotPassword: async (email: any): Promise<void> => {
     const response = await authApiClient.post(
       API_ENDPOINTS.auth.forgotPassword,
       {
@@ -64,6 +66,16 @@ export const authApi = {
     return response.data;
   },
 
+   ForgotPassword:async(
+    payload:forgotPassword
+   ):Promise<any>=>{
+    const response=await authApiClient.post<any>(
+      "user/auth/forgot-password",
+      payload
+    );
+    return response.data;
+   },
+
   // Consumer Web Login - GET (check login status or get login info)
   getConsumerWebLogin: async (): Promise<any> => {
     const response = await cxApiClient.get(`consumer-web/login/`);
@@ -77,31 +89,8 @@ export const authApi = {
     );
     return response.data;
   },
+ 
 };
 
-export const forgotPassword = async (payload: {
-  email: string;
-}): Promise<any> => {
-  const url = ApiEndpoints.createUrl("auth", "auth/forgot-password");
-  const response = await authApiClient.post(url, payload);
-  return response.data;
-};
 
-// api/auth.ts
 
-export const resetPassword = async (
-  payload: { password: string; email: any },
-  queryParams: { et: string; code: string }
-): Promise<any> => {
-  const url = ApiEndpoints.createUrlWithQueryParameters(
-    "auth",
-    "auth/reset-password",
-    (query) => {
-      query.push("et", queryParams.et);
-      query.push("code", queryParams.code);
-    }
-  );
-
-  const response = await authApiClient.post(url, payload);
-  return response.data;
-};

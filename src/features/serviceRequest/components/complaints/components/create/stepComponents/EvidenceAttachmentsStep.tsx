@@ -1,4 +1,5 @@
 // import { formatFileSize, validateFile } from "@features/cx/shared/utils/file";
+import { formatFileSize, validateFile } from "@shared/utils/file";
 import { DynamicForm } from "@shared/components/DynamicForm";
 import { StepHelpers } from "@shared/components/Stepper";
 import { toast } from "@shared/hooks/use-toast";
@@ -188,35 +189,35 @@ export function EvidenceAttachmentsStep({
     const newFiles: FileData[] = [];
     const errors: string[] = [];
 
-    // Array.from(files).forEach((file) => {
-    //   const validationError = validateFile(file);
-    //   if (validationError) {
-    //     errors.push(validationError);
-    //     return;
-    //   }
+    Array.from(files).forEach((file) => {
+      const validationError = validateFile(file);
+      if (validationError) {
+        errors.push(validationError);
+        return;
+      }
 
-    //   // Check for duplicates
-    //   const isDuplicate = selectedFiles.some(
-    //     (f) => f.name === file.name && f.size === file.size
-    //   );
-    //   if (isDuplicate) {
-    //     errors.push(`File "${file.name}" is already selected`);
-    //     return;
-    //   }
+      // Check for duplicates
+      const isDuplicate = selectedFiles.some(
+        (f) => f.name === file.name && f.size === file.size
+      );
+      if (isDuplicate) {
+        errors.push(`File "${file.name}" is already selected`);
+        return;
+      }
 
-    //   const fileData: FileData = {
-    //     id: `${file.name}-${Date.now()}-${Math.random()
-    //       .toString(36)
-    //       .substr(2, 9)}`,
-    //     file, // Store actual File object in memory
-    //     name: file.name,
-    //     size: file.size,
-    //     type: file.type,
-    //     needsReupload: false, // New uploads don't need re-upload
-    //   };
+      const fileData: FileData = {
+        id: `${file.name}-${Date.now()}-${Math.random()
+          .toString(36)
+          .substr(2, 9)}`,
+        file, // Store actual File object in memory
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        needsReupload: false, // New uploads don't need re-upload
+      };
 
-    //   newFiles.push(fileData);
-    // });
+      newFiles.push(fileData);
+    });
 
     if (errors.length > 0) {
       toast({
@@ -638,9 +639,9 @@ export function EvidenceAttachmentsStep({
                         </span>
                       )}
                     </div>
-                    {/* <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500">
                       {formatFileSize(fileData.size)}
-                    </p> */}
+                    </p>
                     {fileData.needsReupload && (
                       <p className="text-xs text-orange-600 mt-1">
                         File from previous session - please re-upload to include

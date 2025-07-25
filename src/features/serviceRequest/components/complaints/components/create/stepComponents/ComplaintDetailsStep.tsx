@@ -1,5 +1,6 @@
 // ComplaintDetailsStep.tsx
 // import { useComplaintConfigurations } from "@features/cx/complaints/hooks";
+import { useComplaintConfigurations } from "@features/serviceRequest/hooks";
 import { StepHelpers } from "@shared/components/Stepper";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
@@ -40,12 +41,12 @@ export function ComplaintDetailsStep({
 }: ComplaintDetailsStepProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  // // Use the utility request configuration hook
-  // const {
-  //   data: complaintConfigs,
-  //   isLoading,
-  //   error,
-  // } = useComplaintConfigurations(remoteUtilityId);
+  // Use the utility request configuration hook
+  const {
+    data: complaintConfigs,
+    isLoading,
+    error,
+  } = useComplaintConfigurations(702);
 
   // Get selected complaint from step helpers
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
@@ -91,23 +92,23 @@ export function ComplaintDetailsStep({
     return "blue"; // default color
   };
 
-  // // Transform API data to match component expectations
-  // const transformedComplaints = useMemo(() => {
-  //   return (
-  //     complaintConfigs?.map((config) => ({
-  //       id: String(config.configurationCode || config.id),
-  //       name: config.name,
-  //       description: config.longDescription || config.supportRequestTypeDisplay,
-  //       severityLevel: config.extraData?.severityLevelDisplay,
-  //       color: getComplaintColor(config.productCode),
-  //       utilityComplaint: config.productCode.join(", "),
-  //       complaintType: config.supportRequestTypeDisplay,
-  //       category: config.supportRequestTypeDisplay,
-  //       productCode: config.productCode,
-  //       ...config,
-  //     })) || []
-  //   );
-  // }, [complaintConfigs]);
+  // Transform API data to match component expectations
+  const transformedComplaints = useMemo(() => {
+    return (
+      complaintConfigs?.map((config) => ({
+        id: String(config.configurationCode || config.id),
+        name: config.name,
+        description: config.longDescription || config.supportRequestTypeDisplay,
+        severityLevel: config.extraData?.severityLevelDisplay,
+        color: getComplaintColor(config.productCode),
+        utilityComplaint: config.productCode.join(", "),
+        complaintType: config.supportRequestTypeDisplay,
+        category: config.supportRequestTypeDisplay,
+        productCode: config.productCode,
+        ...config,
+      })) || []
+    );
+  }, [complaintConfigs]);
 
   const handleComplaintSelect = (complaint: any) => {
     console.log("Complaint being selected:", complaint);
@@ -154,24 +155,24 @@ export function ComplaintDetailsStep({
     onNext();
   };
 
-  // if (error) {
-  //   return (
-  //     <div className="space-y-6">
-  //       <div className="text-center py-8">
-  //         <p className="text-destructive">
-  //           Error loading complaints. Please try again.
-  //         </p>
-  //         <Button
-  //           variant="outline"
-  //           onClick={() => window.location.reload()}
-  //           className="mt-4"
-  //         >
-  //           Retry
-  //         </Button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <p className="text-destructive">
+            Error loading complaints. Please try again.
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => window.location.reload()}
+            className="mt-4"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -204,7 +205,7 @@ export function ComplaintDetailsStep({
       </div>
 
       {/* Complaint Cards */}
-      {/* {!isLoading && (
+      {!isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {transformedComplaints.map((complaint) => (
             <Card
@@ -256,9 +257,9 @@ export function ComplaintDetailsStep({
             </Card>
           ))}
         </div>
-      )} */}
+      )}
 
-      {/* {!isLoading && transformedComplaints.length === 0 && (
+      {!isLoading && transformedComplaints.length === 0 && (
         <div className="text-center py-8">
           <p className="text-muted-foreground">
             {searchTerm
@@ -266,7 +267,7 @@ export function ComplaintDetailsStep({
               : "No complaints available at the moment."}
           </p>
         </div>
-      )} */}
+      )}
 
       {/* Navigation */}
       <div className="flex justify-between pt-4">

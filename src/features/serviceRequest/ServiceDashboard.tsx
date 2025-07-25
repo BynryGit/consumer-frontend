@@ -31,7 +31,7 @@ const ServiceDashboard = () => {
       icon: PlusCircle,
       iconColor: 'text-primary',
       buttonText: 'Create Request',
-      link: '/service/new'
+      link: '/service/newservice'
     },
     {
       id: 'complaint',
@@ -60,15 +60,15 @@ const ServiceDashboard = () => {
       buttonText: 'Disconnect Service',
       link: '/service/disconnect'
     },
-    {
-      id: 'reconnect',
-      title: 'Request Reconnection',
-      description: 'Reconnect your service',
-      icon: Power,
-      iconColor: 'text-cyan-500',
-      buttonText: 'Reconnect Service',
-      link: '/service/reconnect'
-    }
+    // {
+    //   id: 'reconnect',
+    //   title: 'Request Reconnection',
+    //   description: 'Reconnect your service',
+    //   icon: Power,
+    //   iconColor: 'text-cyan-500',
+    //   buttonText: 'Reconnect Service',
+    //   link: '/service/reconnect'
+    // }
   ];
 
   const processSteps = [
@@ -112,10 +112,10 @@ const ServiceDashboard = () => {
         <h1 className="text-3xl font-bold">Service & Support</h1>
         <p className="text-muted-foreground mt-2">
           Submit service requests, track their status, and manage appointments
-        </p>
+        </p>  
       </div>
       
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
         {serviceCards.map((card) => {
           const IconComponent = card.icon;
           return (

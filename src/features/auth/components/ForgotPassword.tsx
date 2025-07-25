@@ -1,10 +1,10 @@
-
-import React, { useState } from 'react';
-import { Button } from '@shared/ui/button';
-import { Mail, ArrowLeft } from 'lucide-react';
-import AuthLayout from './AuthLayout';
-import { DynamicForm } from '@shared/components/DynamicForm';
-import { FormField, FormService } from '@shared/services/FormServices';
+import React, { useState } from "react";
+import { Button } from "@shared/ui/button";
+import { Mail, ArrowLeft } from "lucide-react";
+import AuthLayout from "./AuthLayout";
+import { DynamicForm } from "@shared/components/DynamicForm";
+import { FormField, FormService } from "@shared/services/FormServices";
+import { useForgotPassword } from "../hooks";
 
 interface ForgotPasswordProps {
   onSwitchToSignIn: () => void;
@@ -12,17 +12,17 @@ interface ForgotPasswordProps {
 
 const ForgotPassword = ({ onSwitchToSignIn }: ForgotPasswordProps) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
-
+  const forgotMutation = useForgotPassword();
   // Define form fields
   const formFields: FormField[] = [
     {
-      name: 'email',
-      label: 'Email Address',
-      type: 'email',
+      name: "email",
+      label: "Email Address",
+      type: "email",
       required: true,
-      placeholder: 'Enter your email address',
-    //   icon: <Mail className="h-4 w-4" />,
-       classes: {
+      placeholder: "Enter your email address",
+      //   icon: <Mail className="h-4 w-4" />,
+      classes: {
         container: "w-full",
         label: "text-sm font-medium",
         input:
@@ -35,21 +35,25 @@ const ForgotPassword = ({ onSwitchToSignIn }: ForgotPasswordProps) => {
   // Create form instance
   const forgotForm = FormService.createForm({
     fields: formFields,
-    mode: 'onChange',
+    mode: "onChange",
     validateOnMount: false,
   });
 
-  const handleSubmit = (data: any) => {
-    // Simulate password reset request
+  const handleSubmit = async (data: any) => {
+  try {
+    const payload = { email: data.email };
+    await forgotMutation.mutateAsync(payload);
     setIsSubmitted(true);
-  };
-
+  } catch (error) {
+    console.error("Reset link request failed", error);
+  }
+};
   const email = forgotForm.getValues().email;
 
   if (isSubmitted) {
     return (
-      <AuthLayout 
-        title="Check Your Email" 
+      <AuthLayout
+        title="Check Your Email"
         subtitle="We've sent a password reset link to your email address"
       >
         <div className="text-center space-y-6">
@@ -57,9 +61,10 @@ const ForgotPassword = ({ onSwitchToSignIn }: ForgotPasswordProps) => {
             <Mail className="h-8 w-8 text-green-600" />
           </div>
           <p className="text-muted-foreground">
-            If an account with email <strong>{email}</strong> exists, you will receive a password reset link shortly.
+            If an account with email <strong>{email}</strong> exists, you will
+            receive a password reset link shortly.
           </p>
-          <Button 
+          <Button
             onClick={onSwitchToSignIn}
             variant="outline"
             className="w-full h-12"
@@ -73,8 +78,8 @@ const ForgotPassword = ({ onSwitchToSignIn }: ForgotPasswordProps) => {
   }
 
   return (
-    <AuthLayout 
-      title="Reset Password" 
+    <AuthLayout
+      title="Reset Password"
       subtitle="Enter your email address and we'll send you a reset link"
     >
       <DynamicForm
@@ -82,8 +87,8 @@ const ForgotPassword = ({ onSwitchToSignIn }: ForgotPasswordProps) => {
         form={forgotForm}
         onSubmit={handleSubmit}
         config={{
-          layout: 'vertical',
-          spacing: 'medium',
+          layout: "vertical",
+          spacing: "medium",
           showSubmitButton: false,
         }}
       />
@@ -94,6 +99,7 @@ const ForgotPassword = ({ onSwitchToSignIn }: ForgotPasswordProps) => {
       >
         Send Reset Link
       </Button>
+
       <div className="text-center mt-4">
         <button
           type="button"

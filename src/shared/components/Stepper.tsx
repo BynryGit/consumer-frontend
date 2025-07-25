@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -96,30 +96,66 @@ export const Stepper = ({
   enableApiSave = false, // Enable API saving functionality
   saveOnStepChange = false, // Auto-save when changing steps
   trackDirtyState = false, // Track if step data has changed
-  // NEW: Control draft mode - when true, no localStorage operations
-  showDraftResume = false,
+  showDraftResume = false, // Control draft mode - when true, shows draft resume banner
+  enableDraftMode = false, // NEW: Enable/disable draft mode functionality entirely
+  allowStepClick = false, // NEW: Allow/disable direct step clicking - default true
 }) => {
-  const [currentStep, setCurrentStep] = useState(-1); // Start with -1 to indicate not initialized
+  // Core state
+  const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState(new Set());
   const [skippedSteps, setSkippedSteps] = useState(new Set());
+  const [stepData, setStepData] = useState({});
+  
+  // UI state
   const [validationErrors, setValidationErrors] = useState({});
   const [isValidating, setIsValidating] = useState(false);
-  const [stepData, setStepData] = useState({});
+  const [saveStatus, setSaveStatus] = useState("idle");
+  
+  // Draft mode state
+  const [isDraftMode, setIsDraftMode] = useState(enableDraftMode && !showDraftResume);
+  const [showDraftBanner, setShowDraftBanner] = useState(enableDraftMode && showDraftResume);
+  const [hasStoredProgress, setHasStoredProgress] = useState(false);
   const [draftStep, setDraftStep] = useState(0);
+  
+  // Dirty tracking state
   const [dirtySteps, setDirtySteps] = useState(new Set());
   const [originalStepData, setOriginalStepData] = useState({});
-  const [saveStatus, setSaveStatus] = useState("idle"); // 'idle', 'saving', 'saved', 'error'
-  const [isDraftMode, setIsDraftMode] = useState(!showDraftResume); // Track if we're in draft mode (inverted logic)
-  const [showDraftBanner, setShowDraftBanner] = useState(true); // Always show banner initially
-  const [hasStoredProgress, setHasStoredProgress] = useState(false); // Track if localStorage has data
+  
+  // Initialization state
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Helper function to get nested property value
-  const getNestedValue = (obj: any, path: string): any => {
+  // Memoized utility functions to prevent re-renders
+  const getStepSlug = useCallback((stepIndex) => {
+    if (!steps || steps.length === 0 || stepIndex < 0 || stepIndex >= steps.length) {
+      return "step-1";
+    }
+    return steps[stepIndex]?.slug || `step-${stepIndex + 1}`;
+  }, [steps]);
+
+  const getStepFromSlug = useCallback((slug) => {
+    if (!steps || steps.length === 0) return 0;
+    if (!slug) return 0;
+    const index = steps.findIndex((step) => step.slug === slug);
+    return index >= 0 ? index : 0;
+  }, [steps]);
+
+  // Get current step from URL - memoized to prevent unnecessary recalculations
+  const getCurrentStepFromURL = useCallback(() => {
+    if (!enableRouting || typeof window === "undefined") return 0;
+    
+    const hash = window.location.hash.replace("#", "");
+    if (!hash) return 0;
+    
+    const stepIndex = getStepFromSlug(hash);
+    return stepIndex >= 0 && stepIndex < steps.length ? stepIndex : 0;
+  }, [enableRouting, getStepFromSlug, steps.length]);
+
+  // Helper functions
+  const getNestedValue = useCallback((obj: any, path: string): any => {
     return path.split(".").reduce((current, key) => current?.[key], obj);
-  };
+  }, []);
 
-  // Helper function to set nested property value
-  const setNestedValue = (obj: any, path: string, value: any): void => {
+  const setNestedValue = useCallback((obj: any, path: string, value: any): void => {
     const keys = path.split(".");
     const lastKey = keys.pop();
     const target = keys.reduce((current, key) => {
@@ -131,568 +167,45 @@ export const Stepper = ({
     if (lastKey) {
       target[lastKey] = value;
     }
-  };
+  }, []);
 
-  // Create step helpers object
-  const createStepHelpers = (): StepHelpers => ({
-    // Storage operations
-    getStepData: <T extends StepDataBase = StepDataBase>(
-      stepIndex: number
-    ): T | undefined => {
-      return stepData[stepIndex] as T;
-    },
-
-    setStepData: <T extends StepDataBase = StepDataBase>(
-      stepIndex: number,
-      data: Partial<T>
-    ): void => {
-      updateStepData(stepIndex, data);
-    },
-
-    clearStepData: (stepIndex: number): void => {
-      setStepData((prev) => {
-        const newData = { ...prev };
-        delete newData[stepIndex];
-        return newData;
-      });
-    },
-
-    getAllStepData: (): Record<number, StepDataBase> => {
-      return { ...stepData };
-    },
-
-    // Cross-step operations
-    getDataFromStep: <T = any,>(
-      stepIndex: number,
-      fieldPath: string
-    ): T | undefined => {
-      const data = stepData[stepIndex];
-      if (!data) return undefined;
-      return getNestedValue(data, fieldPath) as T;
-    },
-
-    setDataToStep: <T = any,>(
-      stepIndex: number,
-      fieldPath: string,
-      value: T
-    ): void => {
-      const currentData = stepData[stepIndex] || {};
-      const newData = { ...currentData };
-      setNestedValue(newData, fieldPath, value);
-      updateStepData(stepIndex, newData);
-    },
-
-    copyDataBetweenSteps: (
-      fromStep: number,
-      toStep: number,
-      fieldMapping?: Record<string, string>
-    ): void => {
-      const sourceData = stepData[fromStep];
-      if (!sourceData) return;
-
-      const targetData = stepData[toStep] || {};
-      const newTargetData = { ...targetData };
-
-      if (fieldMapping) {
-        // Copy specific fields with mapping
-        Object.entries(fieldMapping).forEach(([sourceField, targetField]) => {
-          const value = getNestedValue(sourceData, sourceField);
-          if (value !== undefined) {
-            setNestedValue(newTargetData, targetField, value);
-          }
-        });
-      } else {
-        // Copy all fields
-        Object.assign(newTargetData, sourceData);
-      }
-
-      updateStepData(toStep, newTargetData);
-    },
-
-    // Validation and state
-    hasStepData: (stepIndex: number): boolean => {
-      return (
-        stepIndex in stepData &&
-        Object.keys(stepData[stepIndex] || {}).length > 0
-      );
-    },
-
-    isStepDataEmpty: (stepIndex: number): boolean => {
-      const data = stepData[stepIndex];
-      return !data || Object.keys(data).length === 0;
-    },
-
-    getStepCompletionStatus: (stepIndex: number) => {
-      return getStepStatus(stepIndex);
-    },
-
-    // Data aggregation
-    collectDataFromSteps: <T = any,>(
-      stepIndexes: number[],
-      fieldPath: string
-    ): T[] => {
-      return stepIndexes
-        .map((stepIndex) => getNestedValue(stepData[stepIndex], fieldPath))
-        .filter((value) => value !== undefined) as T[];
-    },
-
-    aggregateStepData: <
-      T extends Record<string, any> = Record<string, any>
-    >(): T => {
-      const aggregated = {} as T;
-      Object.values(stepData).forEach((data) => {
-        Object.assign(aggregated, data);
-      });
-      return aggregated;
-    },
-
-    // Utility
-    exportStepperData: (): StepperStorageFormat => {
-      return {
-        currentStep,
-        completedSteps: Array.from(completedSteps) as number[],
-        skippedSteps: Array.from(skippedSteps) as number[],
-        stepData,
-        timestamp: Date.now(),
-        version: "1.0.0",
-      };
-    },
-
-    importStepperData: (data: StepperStorageFormat): void => {
-      setCurrentStep(data.currentStep || 0);
-      setCompletedSteps(new Set(data.completedSteps || []));
-      setSkippedSteps(new Set(data.skippedSteps || []));
-      setStepData(data.stepData || {});
-      // You might want to validate version compatibility here
-    },
-
-    resetAllData: (): void => {
-      startFresh();
-    },
-  });
-  const getStepSlug = (stepIndex) => {
-    if (
-      !steps ||
-      steps.length === 0 ||
-      stepIndex < 0 ||
-      stepIndex >= steps.length
-    ) {
-      return "step-1";
-    }
-    return steps[stepIndex]?.slug || `step-${stepIndex + 1}`;
-  };
-
-  // Get step index from slug
-  const getStepFromSlug = (slug) => {
-    if (!steps || steps.length === 0) return -1; // Return -1 for invalid when no steps
-    if (!slug) return -1; // Return -1 for empty slug
-    const index = steps.findIndex((step) => step.slug === slug);
-    console.log(`Looking for slug "${slug}", found index:`, index);
-    return index; // Return actual index or -1 if not found
-  };
-
-  // Update URL
-  const updateURL = useCallback(
-    (stepIndex) => {
-      if (enableRouting && typeof window !== "undefined") {
-        const slug = getStepSlug(stepIndex);
-        const newHash = `#${slug}`;
-
-        // Only update if the hash has actually changed
-        if (window.location.hash !== newHash) {
-          window.location.hash = newHash;
-          console.log("Hash updated to:", newHash);
-        }
-      }
-    },
-    [enableRouting, steps]
-  );
-
-  // Handle browser back/forward and hash changes
-  useEffect(() => {
-    if (!enableRouting || typeof window === "undefined") return;
-
-    const handleHashChange = () => {
-      const hash = window.location.hash;
-      const slug = hash.replace("#", "");
-
-      console.log("Hash changed to:", hash, "slug:", slug);
-
-      if (slug) {
-        const stepIndex = getStepFromSlug(slug);
-        if (stepIndex >= 0 && stepIndex < steps.length) {
-          console.log("Hash navigation - moving to step:", stepIndex);
-          setCurrentStep(stepIndex);
-        } else {
-          console.log("Invalid slug in hash, staying on current step");
-        }
-      }
-    };
-
-    window.addEventListener("hashchange", handleHashChange);
-    return () => window.removeEventListener("hashchange", handleHashChange);
-  }, [enableRouting, steps]);
-
-  // Initialize from URL on mount - this should run AFTER steps are loaded
-  useEffect(() => {
-    // Don't run if steps aren't loaded yet or routing is disabled
-    if (!enableRouting || typeof window === "undefined" || steps.length === 0) {
-      console.log("Skipping hash initialization:", {
-        enableRouting,
-        hasWindow: typeof window !== "undefined",
-        stepsLength: steps.length,
-      });
-      return;
-    }
-
-    // Don't run if we've already initialized (currentStep is not -1)
-    if (currentStep !== -1) {
-      return;
-    }
-
-    console.log("=== INITIALIZING FROM HASH ===");
-    const hash = window.location.hash;
-    const slug = hash.replace("#", "");
-
-    console.log("Current hash:", hash);
-    console.log("Extracted slug:", slug);
-    console.log(
-      "Available steps:",
-      steps.map((s) => s.slug)
-    );
-
-    const urlStepIndex = getStepFromSlug(slug);
-    console.log("URL step index from slug:", urlStepIndex);
-
-    // Load saved progress and check if localStorage has data
-    let savedStep = null;
-    if (persistProgress && storageKey) {
-      try {
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-          const parsed: StepperStorageFormat = JSON.parse(saved);
-          console.log("Loaded saved data:", parsed);
-          setHasStoredProgress(true);
-
-          // Check version compatibility (optional)
-          if (parsed.version && parsed.version !== "1.0.0") {
-            console.warn(
-              `Storage version mismatch: expected 1.0.0, got ${parsed.version}`
-            );
-          }
-
-          // Only apply saved data if showDraftResume is true (normal mode)
-          if (showDraftResume) {
-            setCompletedSteps(new Set(parsed.completedSteps || []));
-            setSkippedSteps(new Set(parsed.skippedSteps || []));
-            setStepData(parsed.stepData || {});
-            savedStep = parsed.currentStep;
-            setDraftStep(savedStep || 0); // Set draft step for banner display
-            console.log("Saved step:", savedStep);
-          } else {
-            // In draft mode, just set draftStep for display but don't load data
-            setDraftStep(parsed.currentStep || 0);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load stepper progress:", error);
-      }
-    }
-
-    // Determine which step to show
-    let targetStep = 0;
-
-    if (slug && urlStepIndex >= 0 && urlStepIndex < steps.length) {
-      // Valid hash exists, use it
-      targetStep = urlStepIndex;
-      console.log("✅ Using HASH step:", targetStep, `(${slug})`);
-    } else if (
-      showDraftResume &&
-      savedStep !== null &&
-      savedStep >= 0 &&
-      savedStep < steps.length
-    ) {
-      // No hash or invalid hash, but we have saved progress (only if showDraftResume is true)
-      targetStep = savedStep;
-      console.log("✅ Using SAVED step:", targetStep);
-      // Update hash to match saved step
-      setTimeout(() => updateURL(targetStep), 0);
-    } else {
-      // No valid hash or saved step, start at beginning
-      targetStep = 0;
-      console.log("✅ Using DEFAULT step:", targetStep);
-      setTimeout(() => updateURL(targetStep), 0);
-    }
-
-    console.log("Setting current step to:", targetStep);
-    setCurrentStep(targetStep);
-    console.log("=== INITIALIZATION COMPLETE ===");
-  }, [
-    enableRouting,
-    persistProgress,
-    storageKey,
-    steps,
-    currentStep,
-    showDraftResume,
-  ]);
-
-  // Initialize on first load to set initial URL if routing is enabled
-  useEffect(() => {
-    if (
-      enableRouting &&
-      typeof window !== "undefined" &&
-      currentStep === 0 &&
-      steps.length > 0
-    ) {
-      // Only update URL if we're on the initial load and don't have a specific slug in URL
-      const path = window.location.pathname;
-      const slug = path.split("/").pop();
-      const hasValidSlug = steps.some((step) => step.slug === slug);
-
-      if (!hasValidSlug) {
-        updateURL(0);
-      }
-    }
-  }, [enableRouting, steps, updateURL, currentStep]);
-
-  // Load progress from localStorage (non-routing case) - ONLY if showDraftResume is true
-  useEffect(() => {
-    if (!enableRouting && showDraftResume && persistProgress && storageKey) {
-      try {
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-          const {
-            currentStep: savedStep,
-            completedSteps: savedCompleted,
-            skippedSteps: savedSkipped,
-            stepData: savedData,
-          }: StepperStorageFormat = JSON.parse(saved);
-          setCurrentStep(savedStep || 0);
-          setCompletedSteps(new Set(savedCompleted || []));
-          setSkippedSteps(new Set(savedSkipped || []));
-          setStepData(savedData || {});
-          setHasStoredProgress(true);
-        }
-      } catch (error) {
-        console.error("Failed to load stepper progress:", error);
-      }
-    }
-  }, [enableRouting, persistProgress, storageKey, showDraftResume]);
-
-  // Save progress to localStorage - ONLY if showDraftResume is true (normal mode)
+  // Save progress to localStorage
   const saveProgress = useCallback(() => {
-    if (showDraftResume && persistProgress && storageKey) {
+    console.log('💾 saveProgress called:', {
+      isDraftMode,
+      persistProgress,
+      storageKey,
+      hasStepData: Object.keys(stepData).length > 0
+    });
+    
+    if (!isDraftMode && persistProgress && storageKey) {
       try {
-        localStorage.setItem(
-          storageKey,
-          JSON.stringify({
-            currentStep,
-            completedSteps: Array.from(completedSteps),
-            skippedSteps: Array.from(skippedSteps),
-            stepData,
-            timestamp: Date.now(),
-            version: "1.0.0",
-          } as StepperStorageFormat)
-        );
+        const dataToSave = {
+          currentStep,
+          completedSteps: Array.from(completedSteps),
+          skippedSteps: Array.from(skippedSteps),
+          stepData,
+          timestamp: Date.now(),
+          version: "1.0.0",
+        } as StepperStorageFormat;
+        
+        localStorage.setItem(storageKey, JSON.stringify(dataToSave));
         setHasStoredProgress(true);
+        console.log('✅ Progress saved to localStorage:', storageKey, dataToSave);
       } catch (error) {
         console.error("Failed to save stepper progress:", error);
       }
-    }
-  }, [
-    currentStep,
-    completedSteps,
-    skippedSteps,
-    stepData,
-    persistProgress,
-    storageKey,
-    showDraftResume,
-  ]);
-
-  // Auto-save functionality - Always enabled for memory (draft mode) or localStorage (normal mode)
-  useEffect(() => {
-    if (autoSave) {
-      const timer = setTimeout(saveProgress, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [autoSave, saveProgress, stepData]);
-
-  // Resume from draft (switch to normal mode)
-  const resumeFromDraft = () => {
-    console.log("Resuming from draft...");
-    setIsDraftMode(false); // Exit draft mode (enable localStorage)
-    setShowDraftBanner(false); // Hide banner
-    // Keep current state and enable localStorage saving from now on
-  };
-
-  // Start fresh
-  const startFresh = () => {
-    console.log("Starting fresh...");
-    setCurrentStep(0);
-    setCompletedSteps(new Set());
-    setSkippedSteps(new Set());
-    setStepData({});
-    setValidationErrors({});
-    setDirtySteps(new Set());
-    setOriginalStepData({});
-    setDraftStep(0);
-    updateURL(0);
-    setIsDraftMode(!showDraftResume); // Set draft mode based on prop
-    setShowDraftBanner(false); // Hide banner after starting fresh
-    setHasStoredProgress(false);
-
-    // Clear localStorage if it exists
-    if (persistProgress && storageKey) {
-      localStorage.removeItem(storageKey);
-      console.log("localStorage cleared");
-    }
-  };
-
-  // Reset form (clear localStorage and restart)
-  const resetForm = () => {
-    console.log("Resetting form...");
-    setCurrentStep(0);
-    setCompletedSteps(new Set());
-    setSkippedSteps(new Set());
-    setStepData({});
-    setValidationErrors({});
-    setDirtySteps(new Set());
-    setOriginalStepData({});
-    setDraftStep(0);
-    updateURL(0);
-    setHasStoredProgress(false);
-
-    // Clear localStorage
-    if (persistProgress && storageKey) {
-      localStorage.removeItem(storageKey);
-      console.log("localStorage cleared from reset");
-    }
-    window.location.reload();
-  };
-
-  // Navigate to step
-  const goToStep = async (stepIndex, force = false) => {
-    if (stepIndex < 0 || stepIndex >= steps.length) return;
-
-    const step = steps[stepIndex];
-    if (!force && step.disabled) return;
-
-    // Only save if showDraftResume is true (normal mode)
-    if (
-      showDraftResume &&
-      saveOnStepChange &&
-      enableApiSave &&
-      onStepSave &&
-      currentStep !== stepIndex
-    ) {
-      const isDirty = trackDirtyState ? dirtySteps.has(currentStep) : true;
-      if (isDirty) {
-        setSaveStatus("saving");
-        try {
-          await onStepSave(currentStep, stepData[currentStep], isDirty);
-          setSaveStatus("saved");
-          if (trackDirtyState) {
-            setDirtySteps((prev) => {
-              const newDirty = new Set(prev);
-              newDirty.delete(currentStep);
-              return newDirty;
-            });
-          }
-        } catch (error) {
-          setSaveStatus("error");
-          console.error("Failed to save step data:", error);
-          // Continue navigation even if save fails
-        }
-      }
-    }
-
-    const previousStep = currentStep;
-    setCurrentStep(stepIndex);
-    updateURL(stepIndex);
-
-    if (onStepChange) {
-      onStepChange(stepIndex, previousStep, {
-        stepData: stepData[stepIndex],
-        isCompleted: completedSteps.has(stepIndex),
-        isSkipped: skippedSteps.has(stepIndex),
+    } else {
+      console.log('❌ saveProgress conditions not met:', {
+        isDraftMode,
+        persistProgress,
+        storageKey: !!storageKey
       });
     }
-  };
-
-  // Navigation functions for step components
-  const handleNext = async () => {
-    if (currentStep < steps.length - 1) {
-      setCompletedSteps((prev) => new Set([...prev, currentStep]));
-      goToStep(currentStep + 1, true);
-    } else if (onComplete) {
-      setCompletedSteps((prev) => new Set([...prev, currentStep]));
-      onComplete(
-        stepData,
-        Array.from(completedSteps),
-        Array.from(skippedSteps)
-      );
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      goToStep(currentStep - 1, true);
-    }
-  };
-
-  const handleSkip = () => {
-    if (allowSkip && steps[currentStep].optional) {
-      setSkippedSteps((prev) => new Set([...prev, currentStep]));
-      if (currentStep < steps.length - 1) {
-        goToStep(currentStep + 1, true);
-      }
-    }
-  };
-
-  const handleSave = async () => {
-    // Always allow saving (memory for draft mode, localStorage for normal mode)
-    if (enableApiSave && onStepSave) {
-      const isDirty = trackDirtyState ? dirtySteps.has(currentStep) : true;
-      if (isDirty) {
-        setSaveStatus("saving");
-        try {
-          await onStepSave(currentStep, stepData[currentStep], isDirty);
-          setSaveStatus("saved");
-          if (trackDirtyState) {
-            setDirtySteps((prev) => {
-              const newDirty = new Set(prev);
-              newDirty.delete(currentStep);
-              return newDirty;
-            });
-          }
-        } catch (error) {
-          setSaveStatus("error");
-          console.error("Failed to save step data:", error);
-        }
-      }
-    } else {
-      saveProgress();
-      setSaveStatus("saved");
-    }
-  };
-
-  // Validation functions for step components
-  const setValidationError = (error) => {
-    setValidationErrors((prev) => ({
-      ...prev,
-      [currentStep]: error,
-    }));
-  };
-
-  const clearValidationError = () => {
-    setValidationErrors((prev) => ({
-      ...prev,
-      [currentStep]: null,
-    }));
-  };
+  }, [currentStep, completedSteps, skippedSteps, stepData, persistProgress, storageKey, isDraftMode]);
 
   // Update step data
-  const updateStepData = (stepIndex, data) => {
+  const updateStepData = useCallback((stepIndex, data) => {
     setStepData((prev) => {
       const newData = { ...prev[stepIndex], ...data };
 
@@ -717,28 +230,388 @@ export const Stepper = ({
         [stepIndex]: newData,
       };
     });
-  };
+  }, [trackDirtyState, originalStepData]);
+
+  // Create step helpers - memoized to prevent re-creation
+  const stepHelpers = useMemo((): StepHelpers => ({
+    getStepData: <T extends StepDataBase = StepDataBase>(stepIndex: number): T | undefined => {
+      return stepData[stepIndex] as T;
+    },
+
+    setStepData: <T extends StepDataBase = StepDataBase>(stepIndex: number, data: Partial<T>): void => {
+      updateStepData(stepIndex, data);
+    },
+
+    clearStepData: (stepIndex: number): void => {
+      setStepData((prev) => {
+        const newData = { ...prev };
+        delete newData[stepIndex];
+        return newData;
+      });
+    },
+
+    getAllStepData: (): Record<number, StepDataBase> => {
+      return { ...stepData };
+    },
+
+    getDataFromStep: <T = any,>(stepIndex: number, fieldPath: string): T | undefined => {
+      const data = stepData[stepIndex];
+      if (!data) return undefined;
+      return getNestedValue(data, fieldPath) as T;
+    },
+
+    setDataToStep: <T = any,>(stepIndex: number, fieldPath: string, value: T): void => {
+      const currentData = stepData[stepIndex] || {};
+      const newData = { ...currentData };
+      setNestedValue(newData, fieldPath, value);
+      updateStepData(stepIndex, newData);
+    },
+
+    copyDataBetweenSteps: (fromStep: number, toStep: number, fieldMapping?: Record<string, string>): void => {
+      const sourceData = stepData[fromStep];
+      if (!sourceData) return;
+
+      const targetData = stepData[toStep] || {};
+      const newTargetData = { ...targetData };
+
+      if (fieldMapping) {
+        Object.entries(fieldMapping).forEach(([sourceField, targetField]) => {
+          const value = getNestedValue(sourceData, sourceField);
+          if (value !== undefined) {
+            setNestedValue(newTargetData, targetField, value);
+          }
+        });
+      } else {
+        Object.assign(newTargetData, sourceData);
+      }
+
+      updateStepData(toStep, newTargetData);
+    },
+
+    hasStepData: (stepIndex: number): boolean => {
+      return stepIndex in stepData && Object.keys(stepData[stepIndex] || {}).length > 0;
+    },
+
+    isStepDataEmpty: (stepIndex: number): boolean => {
+      const data = stepData[stepIndex];
+      return !data || Object.keys(data).length === 0;
+    },
+
+    getStepCompletionStatus: (stepIndex: number) => {
+      if (completedSteps.has(stepIndex)) return "completed";
+      if (skippedSteps.has(stepIndex)) return "skipped";
+      if (stepIndex === currentStep) return "active";
+      return "available";
+    },
+
+    collectDataFromSteps: <T = any,>(stepIndexes: number[], fieldPath: string): T[] => {
+      return stepIndexes
+        .map((stepIndex) => getNestedValue(stepData[stepIndex], fieldPath))
+        .filter((value) => value !== undefined) as T[];
+    },
+
+    aggregateStepData: <T extends Record<string, any> = Record<string, any>>(): T => {
+      const aggregated = {} as T;
+      Object.values(stepData).forEach((data) => {
+        Object.assign(aggregated, data);
+      });
+      return aggregated;
+    },
+
+    exportStepperData: (): StepperStorageFormat => {
+      return {
+        currentStep,
+        completedSteps: Array.from(completedSteps) as number[],
+        skippedSteps: Array.from(skippedSteps) as number[],
+        stepData,
+        timestamp: Date.now(),
+        version: "1.0.0",
+      };
+    },
+
+    importStepperData: (data: StepperStorageFormat): void => {
+      setCompletedSteps(new Set(data.completedSteps || []));
+      setSkippedSteps(new Set(data.skippedSteps || []));
+      setStepData(data.stepData || {});
+    },
+
+    resetAllData: (): void => {
+      startFresh();
+    },
+  }), [stepData, currentStep, completedSteps, skippedSteps, updateStepData, getNestedValue, setNestedValue]);
+
+  // Initialize component and load saved data
+  useEffect(() => {
+    if (steps.length === 0) return;
+
+    let savedData = null;
+    
+    // Load saved progress if enabled
+    if (enableDraftMode && persistProgress && storageKey) {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          savedData = JSON.parse(saved);
+          setHasStoredProgress(true);
+          
+          if (showDraftResume) {
+            // Load saved data in normal mode
+            setCompletedSteps(new Set(savedData.completedSteps || []));
+            setSkippedSteps(new Set(savedData.skippedSteps || []));
+            setStepData(savedData.stepData || {});
+            setDraftStep(savedData.currentStep || 0);
+          } else {
+            // In draft mode, just track draft step for display
+            setDraftStep(savedData.currentStep || 0);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load stepper progress:", error);
+      }
+    }
+
+    // Get initial step from URL (URL is source of truth)
+    let initialStep = 0; // Default fallback
+    
+    if (enableRouting && typeof window !== "undefined") {
+      const hash = window.location.hash.replace("#", "");
+      
+      if (hash) {
+        // URL has a hash, try to get step from it
+        const urlStep = getCurrentStepFromURL();
+        initialStep = urlStep;
+      } else {
+        // No hash in URL, default to step 0 and set the URL
+        initialStep = 0;
+        const slug = getStepSlug(0);
+        window.location.hash = `#${slug}`;
+      }
+    }
+    
+    setCurrentStep(initialStep);
+    setIsInitialized(true);
+  }, [steps.length, enableDraftMode, persistProgress, storageKey, showDraftResume, getCurrentStepFromURL, enableRouting, getStepSlug]);
+
+  // URL change handler - this is the ONLY place currentStep should be updated from URL
+  useEffect(() => {
+    if (!enableRouting || !isInitialized) return;
+
+    const handleHashChange = () => {
+      const urlStep = getCurrentStepFromURL();
+      
+      // Only update if different to prevent loops
+      if (urlStep !== currentStep) {
+        const previousStep = currentStep;
+        setCurrentStep(urlStep);
+        
+        // Call onStepChange callback if provided
+        if (onStepChange) {
+          onStepChange(urlStep, previousStep, {
+            stepData: stepData[urlStep],
+            isCompleted: completedSteps.has(urlStep),
+            isSkipped: skippedSteps.has(urlStep),
+          });
+        }
+      }
+    };
+
+    // Listen to hash changes
+    window.addEventListener("hashchange", handleHashChange);
+    window.addEventListener("popstate", handleHashChange);
+    
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange);
+      window.removeEventListener("popstate", handleHashChange);
+    };
+  }, [enableRouting, isInitialized, currentStep, onStepChange, stepData, completedSteps, skippedSteps, getCurrentStepFromURL]);
+
+  // Auto-save effect
+  useEffect(() => {
+    if (autoSave && isInitialized) {
+      console.log('🔄 Auto-save triggered, stepData changed:', Object.keys(stepData));
+      const timer = setTimeout(saveProgress, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [autoSave, saveProgress, stepData, isInitialized]);
+
+  // Navigation functions - these only update URL, never currentStep directly
+  const goToStep = useCallback((stepIndex) => {
+    if (stepIndex < 0 || stepIndex >= steps.length) return;
+    
+    if (enableRouting) {
+      // Only update URL - hashchange will handle currentStep update
+      const slug = getStepSlug(stepIndex);
+      window.location.hash = `#${slug}`;
+    } else {
+      // Direct navigation when routing is disabled
+      const previousStep = currentStep;
+      setCurrentStep(stepIndex);
+      
+      if (onStepChange) {
+        onStepChange(stepIndex, previousStep, {
+          stepData: stepData[stepIndex],
+          isCompleted: completedSteps.has(stepIndex),
+          isSkipped: skippedSteps.has(stepIndex),
+        });
+      }
+    }
+  }, [steps.length, enableRouting, getStepSlug, currentStep, onStepChange, stepData, completedSteps, skippedSteps]);
+
+  const handleNext = useCallback(async () => {
+    // Save current step if needed
+    if (!isDraftMode && saveOnStepChange && enableApiSave && onStepSave) {
+      const isDirty = trackDirtyState ? dirtySteps.has(currentStep) : true;
+      if (isDirty) {
+        setSaveStatus("saving");
+        try {
+          await onStepSave(currentStep, stepData[currentStep], isDirty);
+          setSaveStatus("saved");
+          if (trackDirtyState) {
+            setDirtySteps((prev) => {
+              const newDirty = new Set(prev);
+              newDirty.delete(currentStep);
+              return newDirty;
+            });
+          }
+        } catch (error) {
+          setSaveStatus("error");
+          console.error("Failed to save step data:", error);
+        }
+      }
+    }
+
+    if (currentStep < steps.length - 1) {
+      setCompletedSteps((prev) => new Set([...prev, currentStep]));
+      goToStep(currentStep + 1);
+    } else if (onComplete) {
+      setCompletedSteps((prev) => new Set([...prev, currentStep]));
+      onComplete(stepData, Array.from(completedSteps), Array.from(skippedSteps));
+    }
+  }, [currentStep, steps.length, isDraftMode, saveOnStepChange, enableApiSave, onStepSave, trackDirtyState, dirtySteps, stepData, onComplete, completedSteps, skippedSteps, goToStep]);
+
+  const handlePrevious = useCallback(() => {
+    if (currentStep > 0) {
+      goToStep(currentStep - 1);
+    }
+  }, [currentStep, goToStep]);
+
+  const handleSkip = useCallback(() => {
+    if (allowSkip && steps[currentStep]?.optional) {
+      setSkippedSteps((prev) => new Set([...prev, currentStep]));
+      if (currentStep < steps.length - 1) {
+        goToStep(currentStep + 1);
+      }
+    }
+  }, [allowSkip, steps, currentStep, goToStep]);
+
+  const handleSave = useCallback(async () => {
+    if (enableApiSave && onStepSave) {
+      const isDirty = trackDirtyState ? dirtySteps.has(currentStep) : true;
+      if (isDirty) {
+        setSaveStatus("saving");
+        try {
+          await onStepSave(currentStep, stepData[currentStep], isDirty);
+          setSaveStatus("saved");
+          if (trackDirtyState) {
+            setDirtySteps((prev) => {
+              const newDirty = new Set(prev);
+              newDirty.delete(currentStep);
+              return newDirty;
+            });
+          }
+        } catch (error) {
+          setSaveStatus("error");
+          console.error("Failed to save step data:", error);
+        }
+      }
+    } else {
+      saveProgress();
+      setSaveStatus("saved");
+    }
+  }, [enableApiSave, onStepSave, trackDirtyState, dirtySteps, currentStep, stepData, saveProgress]);
+
+  // Validation functions
+  const setValidationError = useCallback((error) => {
+    setValidationErrors((prev) => ({
+      ...prev,
+      [currentStep]: error,
+    }));
+  }, [currentStep]);
+
+  const clearValidationError = useCallback(() => {
+    setValidationErrors((prev) => ({
+      ...prev,
+      [currentStep]: null,
+    }));
+  }, [currentStep]);
+
+  // Draft mode functions
+  const resumeFromDraft = useCallback(() => {
+    setIsDraftMode(false);
+    setShowDraftBanner(false);
+  }, []);
+
+  const startFresh = useCallback(() => {
+    let initialStep = 0; // Default to first step
+    
+    // Only get from URL if routing is enabled and there's a hash
+    if (enableRouting && typeof window !== "undefined") {
+      const hash = window.location.hash.replace("#", "");
+      if (hash) {
+        initialStep = getCurrentStepFromURL();
+      } else {
+        // No hash, set URL to first step
+        const slug = getStepSlug(0);
+        window.location.hash = `#${slug}`;
+        initialStep = 0;
+      }
+    }
+    
+    setCurrentStep(initialStep);
+    setCompletedSteps(new Set());
+    setSkippedSteps(new Set());
+    setStepData({});
+    setValidationErrors({});
+    setDirtySteps(new Set());
+    setOriginalStepData({});
+    setDraftStep(0);
+    
+    setIsDraftMode(enableDraftMode && !showDraftResume);
+    setShowDraftBanner(false);
+    setHasStoredProgress(false);
+
+    if (persistProgress && storageKey) {
+      localStorage.removeItem(storageKey);
+    }
+  }, [enableRouting, getCurrentStepFromURL, getStepSlug, enableDraftMode, showDraftResume, persistProgress, storageKey]);
+
+  const resetForm = useCallback(() => {
+    startFresh();
+    window.location.reload();
+  }, [startFresh]);
 
   // Get step status
-  const getStepStatus = (stepIndex) => {
+  const getStepStatus = useCallback((stepIndex) => {
     if (completedSteps.has(stepIndex)) return "completed";
     if (skippedSteps.has(stepIndex)) return "skipped";
     if (stepIndex === currentStep) return "active";
-    if (stepIndex < currentStep) return "available";
-    return "disabled";
-  };
+    return "available";
+  }, [completedSteps, skippedSteps, currentStep]);
+
+  // Memoized current step object
+  const currentStepObj = useMemo(() => {
+    return steps && steps.length > 0 && currentStep >= 0 && currentStep < steps.length
+      ? steps[currentStep]
+      : null;
+  }, [steps, currentStep]);
 
   // Step circle component
-  const StepCircle = ({ step, index, status }) => {
-    const isClickable =
-      status === "completed" || status === "available" || status === "active";
+  const StepCircle = React.memo(({ step, index, status, completedSteps, skippedSteps, currentStep }: { step: any, index: number, status: string, completedSteps: Set<number>, skippedSteps: Set<number>, currentStep: number }) => {
+    const isClickable = allowStepClick;
 
     const getCircleClasses = () => {
-      const base =
-        "w-8 h-8 rounded-full flex items-center justify-center font-medium text-xs transition-all duration-200";
-      const clickable = isClickable
-        ? "cursor-pointer hover:scale-105"
-        : "cursor-not-allowed";
+      const base = "w-8 h-8 rounded-full flex items-center justify-center font-medium text-xs transition-all duration-200";
+      const clickable = allowStepClick ? "cursor-pointer hover:scale-105" : "cursor-default";
 
       switch (status) {
         case "completed":
@@ -747,18 +620,30 @@ export const Stepper = ({
           return `${base} ${clickable} bg-blue-600 text-white ring-2 ring-blue-200`;
         case "skipped":
           return `${base} ${clickable} bg-gray-300 text-gray-600`;
-        case "available":
-          return `${base} ${clickable} bg-gray-100 text-gray-700 border border-gray-300`;
         default:
-          return `${base} ${clickable} bg-gray-100 text-gray-400`;
+          return `${base} ${clickable} bg-gray-100 text-gray-700 border border-gray-300`;
       }
     };
+
+    const handleStepClick = () => {
+      if (allowStepClick) {
+        goToStep(index);
+      }
+    };
+
+    // Add debugging
+    React.useEffect(() => {
+      if (status === "completed") {
+        console.log(`Step ${index + 1} is marked as completed. Status: ${status}`);
+      }
+    }, [status, index]);
 
     return (
       <div className="flex flex-col items-center min-w-0">
         <div
           className={getCircleClasses()}
-          onClick={() => isClickable && goToStep(index)}
+          onClick={handleStepClick}
+          style={!allowStepClick ? { pointerEvents: 'none' } : {}}
         >
           {status === "completed" && !skippedSteps.has(index) ? (
             <Check size={12} />
@@ -779,10 +664,10 @@ export const Stepper = ({
         </div>
       </div>
     );
-  };
+  });
 
   // Connection line component
-  const ConnectionLine = ({ isCompleted }) => (
+  const ConnectionLine = React.memo(({ isCompleted }: { isCompleted: boolean }) => (
     <div className="flex-1 mx-2 mt-4">
       <div
         className={`h-px transition-colors duration-300 ${
@@ -790,16 +675,12 @@ export const Stepper = ({
         }`}
       />
     </div>
-  );
+  ));
 
-  const currentStepObj =
-    steps && steps.length > 0 && currentStep >= 0 && currentStep < steps.length
-      ? steps[currentStep]
-      : null;
   const hasError = validationErrors[currentStep];
 
-  // Show loading state if not initialized yet
-  if (currentStep === -1) {
+  // Show loading state if not initialized
+  if (!isInitialized || steps.length === 0) {
     return (
       <div className={`w-full ${className}`}>
         <div className="bg-white rounded-lg border border-gray-200 p-8">
@@ -813,8 +694,8 @@ export const Stepper = ({
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Reset Form Button - Show when showDraftResume is true and has stored progress but draft banner is hidden */}
-      {showDraftResume && hasStoredProgress && !showDraftBanner && (
+      {/* Reset Form Button */}
+      {enableDraftMode && !isDraftMode && hasStoredProgress && !showDraftBanner && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -838,19 +719,19 @@ export const Stepper = ({
         </div>
       )}
 
-      {/* Draft Resume Banner - Show when showDraftBanner is true */}
-      {showDraftBanner && (
+      {/* Draft Resume Banner */}
+      {enableDraftMode && showDraftBanner && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <RotateCcw className="text-amber-600" size={16} />
               <span className="text-sm font-medium text-amber-800">
-                {showDraftResume
+                {!isDraftMode
                   ? "Resume from where you left off?"
                   : "Working in draft mode"}
               </span>
               <span className="text-sm text-amber-600">
-                {showDraftResume
+                {!isDraftMode
                   ? `Step ${draftStep + 1}: ${steps[draftStep]?.title}`
                   : "Changes saved in memory only"}
               </span>
@@ -860,7 +741,7 @@ export const Stepper = ({
                 onClick={resumeFromDraft}
                 className="px-3 py-1 text-xs font-medium text-amber-800 bg-amber-100 rounded hover:bg-amber-200 transition-colors"
               >
-                {showDraftResume ? "Resume" : "Enable Saving"}
+                {!isDraftMode ? "Resume" : "Enable Saving"}
               </button>
               <button
                 onClick={startFresh}
@@ -874,7 +755,7 @@ export const Stepper = ({
       )}
 
       {/* Draft Mode Indicator */}
-      {isDraftMode && !showDraftBanner && (
+      {enableDraftMode && isDraftMode && !showDraftBanner && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-4">
           <div className="flex items-center space-x-2">
             <Info className="text-blue-600" size={14} />
@@ -893,22 +774,21 @@ export const Stepper = ({
 
         {/* Steps */}
         <div className="flex items-start">
-          {steps && steps.length > 0 ? (
-            steps.map((step, index) => (
-              <React.Fragment key={index}>
-                <StepCircle
-                  step={step}
-                  index={index}
-                  status={getStepStatus(index)}
-                />
-                {index < steps.length - 1 && (
-                  <ConnectionLine isCompleted={completedSteps.has(index)} />
-                )}
-              </React.Fragment>
-            ))
-          ) : (
-            <div className="text-gray-500 text-sm">Loading steps...</div>
-          )}
+          {steps.map((step, index) => (
+            <React.Fragment key={index}>
+              <StepCircle
+                step={step}
+                index={index}
+                status={getStepStatus(index)}
+                completedSteps={completedSteps as Set<number>}
+                skippedSteps={skippedSteps as Set<number>}
+                currentStep={currentStep}
+              />
+              {index < steps.length - 1 && (
+                <ConnectionLine isCompleted={completedSteps.has(index)} />
+              )}
+            </React.Fragment>
+          ))}
         </div>
       </div>
 
@@ -927,10 +807,10 @@ export const Stepper = ({
 
           <div className="p-4">
             {/* Step Title */}
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
+            <h2 className="text-lg font-medium text-gray-900 mb-1">
               {currentStepObj.title}
             </h2>
-            <h5 className="text-lg font-medium text-gray-900 mb-4">
+            <h5 className="text-sm font-medium text-gray-500 mb-4">
               {currentStepObj.description}
             </h5>
 
@@ -944,7 +824,6 @@ export const Stepper = ({
 
             {/* Step Content */}
             <div className="mb-6">
-              {/* Render step component with enhanced props */}
               {currentStepObj.component ? (
                 React.cloneElement(currentStepObj.component, {
                   // Existing props
@@ -987,12 +866,10 @@ export const Stepper = ({
 
                   // Optional features
                   onSave: handleSave,
-                  isDirty: trackDirtyState
-                    ? dirtySteps.has(currentStep)
-                    : false,
+                  isDirty: trackDirtyState ? dirtySteps.has(currentStep) : false,
                   saveStatus,
-                  isDraftMode, // Pass draft mode status to step components
-                  stepHelpers: createStepHelpers(), // Pass step helpers to step components
+                  isDraftMode,
+                  stepHelpers,
                 })
               ) : (
                 <div className="p-6 text-center text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
@@ -1003,7 +880,6 @@ export const Stepper = ({
           </div>
         </div>
       ) : (
-        // Loading state when steps are not ready
         <div className="bg-white rounded-lg border border-gray-200 p-8">
           <div className="text-center text-gray-500">
             <div className="animate-pulse">Loading step content...</div>

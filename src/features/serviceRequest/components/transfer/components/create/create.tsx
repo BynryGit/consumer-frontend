@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { Stepper } from '@shared/components/Stepper';
 import { useRemoteUtilityId } from '@shared/selectors/globalSelectors';
-// import { CustomerInformationStep } from './stepComponents/CustomerVerification';
-// import { TransferDetailsStep } from './stepComponents/TransferDetailsStep';
 import { DocumentUploadStep } from './stepComponents/DocumentUploadStep';
 import { ReviewSubmitStep } from './stepComponents/ReviewSubmitStep';
+import { TransferDetailsStep } from './stepComponents/TransferDetailsStep';
 
 
 export interface FileMetadata {
@@ -65,27 +64,18 @@ const handleFileDataChange = (data: any) => {
 
   // Memoize the steps array to prevent infinite re-renders
   const steps = useMemo(() => [
-    // {
-    //   title: 'Customer Verification',
-    //   description: 'Enter or look up customer details',
-    //   slug: 'customer-info', // Add slug for routing
-    //   component: <CustomerInformationStep remoteUtilityId={Number(remoteUtilityId)} storageKey={storageKey}/>,
-    //   optional: false,
-    //   infoTitle: 'Customer Information Help',
-    //   infoDescription: "Enter the customer's account details. You can use the 'Look Up' button to automatically populate fields if you have the account number.",
-    // },
-    // {
-    //   title: 'Transfer Details',
-    //   description: 'Enter the details of the transfer',
-    //   slug: 'transfer-details', // Add slug for routing
-    //   component: <TransferDetailsStep
-    //   remoteUtilityId={Number(remoteUtilityId)} 
-    //   storageKey={storageKey}
-    //   />,
-    //   optional: false,
-    //   infoTitle: 'Transfer Details Help',
-    //   infoDescription: 'Enter the details of the transfer.',
-    // },
+    {
+      title: 'Transfer Details',
+      description: 'Enter the details of the transfer',
+      slug: 'transfer-details', // Add slug for routing
+      component: <TransferDetailsStep
+      remoteUtilityId={Number(remoteUtilityId)} 
+      storageKey={storageKey}
+      />,
+      optional: false,
+      infoTitle: 'Transfer Details Help',
+      infoDescription: 'Enter the details of the transfer.',
+    },
     {
       title: 'Document Upload',
       description: 'Upload the required documents for the transfer',

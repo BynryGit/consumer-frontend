@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -15,6 +14,8 @@ import { RadioGroup, RadioGroupItem } from '@shared/ui/radio-group';
 import { Label } from '@shared/ui/label';
 import { useToast } from '@shared/hooks/use-toast';
 import { CreditCard, Calendar, DollarSign, FileText, X, AlertTriangle } from 'lucide-react';
+import { usePayBill } from '../hooks';
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 
 interface Bill {
   id: string;
@@ -23,70 +24,80 @@ interface Bill {
   type: string;
   status: string;
   dueDate: string;
+  serviceRequestId?: number; // Added to link to service request
 }
 
 interface PaymentModalProps {
   bill: Bill | null;
   isOpen: boolean;
   onClose: () => void;
+  onPaymentSuccess?: () => void; // Callback to refetch data
 }
 
-const PaymentModal = ({ bill, isOpen, onClose }: PaymentModalProps) => {
+const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess }: PaymentModalProps) => {
   const [paymentMethod, setPaymentMethod] = useState('online');
-  const [isProcessing, setIsProcessing] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState<'success' | 'failed' | 'cancelled' | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'success' | 'failed' | null>(null);
   const { toast } = useToast();
+  const { remoteUtilityId, consumerId } = getLoginDataFromStorage();
+  
+  const { mutate: payBill, isPending: isProcessing } = usePayBill();
 
   const handlePayment = async () => {
     if (!bill) return;
 
-    setIsProcessing(true);
-    
-    // Show redirect message
-    toast({
-      title: "Redirecting to Payment Gateway",
-      description: "Please wait while we redirect you to the secure payment portal...",
-    });
-
-    // Simulate payment processing with random outcomes
-    setTimeout(() => {
-      setIsProcessing(false);
-      
-      // Simulate different payment outcomes (for demo purposes)
-      const outcomes = ['success', 'failed', 'cancelled'];
-      const randomOutcome = outcomes[Math.floor(Math.random() * outcomes.length)] as 'success' | 'failed' | 'cancelled';
-      
-      setPaymentStatus(randomOutcome);
-      setPaymentComplete(true);
-      
-      switch (randomOutcome) {
-        case 'success':
-          toast({
-            title: "Payment Successful!",
-            description: `Your payment of $${bill.amount.toFixed(2)} for ${bill.type} has been processed successfully.`,
-          });
-          break;
-        case 'failed':
-          toast({
-            title: "Payment Failed",
-            description: "There was an issue processing your payment. Please try again or contact support.",
-            variant: "destructive",
-          });
-          break;
-        case 'cancelled':
-          toast({
-            title: "Payment Cancelled",
-            description: "Payment was cancelled by user. No charges were made.",
-          });
-          break;
+    const paymentPayload = {
+      remote_utility_id: parseInt(remoteUtilityId),
+      consumer: parseInt(consumerId),
+      consumer_support_request: bill.serviceRequestId || null,
+      amount: bill.amount,
+      payment_pay_type: 5, // Service payment type
+      payment_mode: "Online#2",
+      payment_channel: "",
+      payment_date: new Date().toISOString(),
+      status: "DEBIT",
+      source: 1,
+      payment_received_status: 0,
+      create_credit_note: false,
+      extra_data: {
+        reference_no: `SRV-${bill.id}-${Date.now()}`,
+        bill_amount: bill.amount,
+        payment_amount: bill.amount,
+        outstanding_amount: 0,
+        excess_refund: 0,
+        additional_notes: `Service payment for ${bill.type}`
       }
-    }, 2000);
+    };
+
+    payBill(paymentPayload, {
+      onSuccess: (response) => {
+        setPaymentStatus('success');
+        setPaymentComplete(true);
+        toast({
+          title: "Payment Successful!",
+          description: `Your payment of $${bill.amount.toFixed(2)} for ${bill.type} has been processed successfully.`,
+        });
+        
+        // Call the callback to refetch services data
+        if (onPaymentSuccess) {
+          onPaymentSuccess();
+        }
+      },
+      onError: (error) => {
+        setPaymentStatus('failed');
+        setPaymentComplete(true);
+        toast({
+          title: "Payment Failed",
+          description: "There was an error processing your payment. Please try again.",
+          variant: "destructive",
+        });
+        console.error('Payment error:', error);
+      }
+    });
   };
 
   const handleClose = () => {
     setPaymentComplete(false);
-    setIsProcessing(false);
     setPaymentMethod('online');
     setPaymentStatus(null);
     onClose();
@@ -115,17 +126,6 @@ const PaymentModal = ({ bill, isOpen, onClose }: PaymentModalProps) => {
           iconColor: 'text-red-600',
           titleColor: 'text-red-800',
           descriptionColor: 'text-red-600'
-        };
-      case 'cancelled':
-        return {
-          icon: <X className="h-8 w-8" />,
-          title: 'Payment Cancelled',
-          description: 'Payment was cancelled. No charges were made to your account.',
-          bgColor: 'bg-gray-50',
-          borderColor: 'border-gray-200',
-          iconColor: 'text-gray-600',
-          titleColor: 'text-gray-800',
-          descriptionColor: 'text-gray-600'
         };
       default:
         return null;

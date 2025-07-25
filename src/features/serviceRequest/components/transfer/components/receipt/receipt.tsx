@@ -1,4 +1,5 @@
-import { RequestCreationSuccess } from '@features/cx/shared/components/RequestCreationSuccess';
+
+import { RequestCreationSuccess } from '@shared/components/RequestCreationSuccess';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 function TransferRequestSuccessPage() {
@@ -18,8 +19,6 @@ function TransferRequestSuccessPage() {
     <RequestCreationSuccess 
       requestData={requestData}
       requestType="transfer"
-      onReturnToDashboard={() => navigate('/cx/transfer')}
-      onAddNewRequest={() => navigate('/cx/transfer/create')}
     />
   );
 }

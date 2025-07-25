@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Badge } from '@shared/ui/badge';
 import GenericTable from '@shared/components/GenericTable';
 import { TableColumn } from '@shared/types/table';
 import PaymentModal from '../PaymentModal';
 import { BillingKPICards } from '../billingKpiCard/BillingKpiCard';
-import { BillsFilter } from '../billFilterPanel/BillsFilter';
+import { useConsumerBillDetails } from '@features/billingPayment/hooks';
+import { useDownloadBillTemplate } from '@features/billingPayment/hooks';
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
+import { useSearchParams } from 'react-router-dom';
+import { PAGE_SIZE } from "@shared/utils/constants";
+import { toast } from "sonner";
 
 // Bill interface
 interface Bill {
   id: string;
+  downloadID: string;
   date: string;
   amount: number;
   type: string;
@@ -16,71 +22,98 @@ interface Bill {
   dueDate: string;
 }
 
-// Simulated bill data
-const bills: Bill[] = [
-  { id: 'INV-001', date: '2025-03-10', amount: 78.45, type: 'Electric', status: 'Unpaid', dueDate: '2025-04-15' },
-  { id: 'INV-002', date: '2025-03-08', amount: 42.30, type: 'Water', status: 'Paid', dueDate: '2025-04-13' },
-  { id: 'INV-003', date: '2025-02-10', amount: 105.75, type: 'Electric', status: 'Paid', dueDate: '2025-03-15' },
-  { id: 'INV-004', date: '2025-02-08', amount: 38.20, type: 'Water', status: 'Paid', dueDate: '2025-03-13' },
-  { id: 'INV-005', date: '2025-01-10', amount: 92.65, type: 'Gas', status: 'Paid', dueDate: '2025-02-15' },
-  { id: 'INV-006', date: '2025-01-08', amount: 45.10, type: 'Water', status: 'Paid', dueDate: '2025-02-13' },
-];
+// Bill filters interface
+interface BillFilters {
+  remoteUtilityId: string;
+  remoteConsumerNumber: any;
+  isPaginationRequired: any;
+  isBillSummary: any;
+  page?: number;
+  limit?: number;
+  search_data?: string;
+}
 
 const BillsTable = () => {
-  const [filteredData, setFilteredData] = useState<Bill[]>(bills);
-  const [filterType, setFilterType] = useState<string | null>(null);
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [page, setPage] = useState(1);
+  
+  const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
 
-  // Get unique bill types for filter options
-  const availableTypes = Array.from(new Set(bills.map(bill => bill.type)));
+  // Add the download hook
+  const downloadBillTemplate = useDownloadBillTemplate();
 
-  // Handle search functionality
-  const handleSearch = (searchTerm: string) => {
-    let filtered = bills;
-    
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(bill => 
-        bill.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        bill.type.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  // Compute filters using useMemo
+  const filters = useMemo((): BillFilters => {
+    const urlFilters: BillFilters = {
+      remoteUtilityId: remoteUtilityId,
+      remoteConsumerNumber: remoteConsumerNumber,
+      isPaginationRequired: "True",
+      isBillSummary: "True",
+      page: page,
+      limit: PAGE_SIZE,
+    };
+
+    // Parse search query
+    const queryParam = searchParams.get("query");
+    if (queryParam) {
+      urlFilters.search_data = queryParam;
     }
-    
-    // Apply type filter
-    if (filterType) {
-      filtered = filtered.filter(bill => bill.type === filterType);
+
+    return urlFilters;
+  }, [remoteUtilityId, remoteConsumerNumber, searchParams, page]);
+
+  // Update page when URL page param changes
+  useEffect(() => {
+    const pageParam = searchParams.get("page");
+    if (pageParam) {
+      setPage(parseInt(pageParam, 10));
     }
+  }, [searchParams]);
+
+  const { data: billDetailsData } = useConsumerBillDetails(filters);
+
+  const bills: Bill[] = useMemo(() => {
+    if (!billDetailsData?.results?.billData) return [];
     
-    setFilteredData(filtered);
+    return billDetailsData.results.billData.map((billData: any) => ({
+      downloadID: billData.id,
+      id: billData.invoiceNo,
+      date: billData.createdDate,
+      amount: billData.totalAmountPayable,
+      type: 'Combined',
+      status: parseFloat(billData.outstandingBalance) > 0 ? 'Unpaid' : 'Paid',
+      dueDate: billData.dueDate
+    }));
+  }, [billDetailsData]);
+
+  // Extract bill summary data
+  const billSummary = useMemo(() => {
+    return billDetailsData?.results?.billSummary;
+  }, [billDetailsData]);
+
+  const handleSearch = (searchTerm: string, paramName: "search_data") => {
+    const params = new URLSearchParams(searchParams);
+
+    if (searchTerm.trim()) {
+      params.set("query", searchTerm);
+    } else {
+      params.delete("query");
+    }
+
+    // Reset to page 1 when searching
+    params.set("page", "1");
+    setPage(1);
+
+    setSearchParams(params);
   };
 
-  // Handle type filter change
-  const handleFilterChange = (type: string | null) => {
-    setFilterType(type);
-    let filtered = bills;
-    
-    // Apply search term if there's an active search
-    // In a real app, you'd want to store the search term to reapply it here
-    
-    if (type) {
-      filtered = filtered.filter(bill => bill.type === type);
-    }
-    
-    setFilteredData(filtered);
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch(status) {
-      case 'Paid':
-        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Paid</Badge>;
-      case 'Unpaid':
-        return <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">Unpaid</Badge>;
-      case 'Processing':
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">Processing</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", newPage.toString());
+    setSearchParams(params);
+    setPage(newPage);
   };
 
   const handlePayNow = (bill: Bill) => {
@@ -88,12 +121,19 @@ const BillsTable = () => {
     setIsPaymentModalOpen(true);
   };
 
-  const handleViewBill = (bill: Bill) => {
-    console.log('Viewing bill:', bill.id);
-  };
-
+  // Updated download handler
   const handleDownloadBill = (bill: Bill) => {
-    console.log('Downloading bill:', bill.id);
+    downloadBillTemplate.mutate({
+      billId: bill.downloadID,
+    }, {
+      onSuccess: () => {
+        toast.success("Bill downloaded successfully");
+      },
+      onError: (error) => {
+        console.error("Download failed:", error);
+        toast.error("Failed to download bill");
+      }
+    });
   };
 
   const handlePaymentModalClose = () => {
@@ -105,52 +145,27 @@ const BillsTable = () => {
   const columns: TableColumn<Bill>[] = [
     {
       key: 'id',
-      header: 'Bill #',
+      header: 'Bill',
       sortable: true,
-      width: 'w-[100px]'
     },
     {
       key: 'date',
       header: 'Issue Date',
       sortable: true,
-      render: (value: string) => new Date(value).toLocaleDateString()
-    },
-    {
-      key: 'type',
-      header: 'Type',
-      sortable: true,
-      render: (value: string) => (
-        <Badge variant="outline" className={`utility-${value.toLowerCase()}`}>
-          {value}
-        </Badge>
-      )
     },
     {
       key: 'amount',
       header: 'Amount',
       sortable: true,
-      render: (value: number) => `$${value.toFixed(2)}`,
-      width: 'text-right'
     },
     {
       key: 'dueDate',
       header: 'Due Date',
-      render: (value: string) => new Date(value).toLocaleDateString()
     },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (value: string) => getStatusBadge(value)
-    }
   ];
 
   // Define table actions
   const actions = [
-    {
-      label: 'View Bill',
-      icon: 'Eye' as const,
-      onClick: (bill: Bill) => handleViewBill(bill)
-    },
     {
       label: 'Pay Now',
       icon: 'CreditCard' as const,
@@ -160,31 +175,36 @@ const BillsTable = () => {
     {
       label: 'Download',
       icon: 'Download' as const,
-      onClick: (bill: Bill) => handleDownloadBill(bill)
+      onClick: (bill: Bill) => handleDownloadBill(bill),
+      disabled: (bill: Bill) => downloadBillTemplate.isPending
     }
   ];
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
-      <BillingKPICards bills={bills} />
+      <BillingKPICards 
+        billSummary={billSummary}
+      />
 
-      {/* Generic Table with separated filter component */}
       <GenericTable<Bill>
-        data={filteredData}
+        data={bills}
         columns={columns}
         rowKey="id"
         actions={actions}
         actionsType="icons"
-        searchPlaceholder="Search bills by ID or type..."
+        searchPlaceholder="Search bills by invoice number, amount..."
+        searchParamName="query"
+        searchDebounceMs={300}
         onSearch={handleSearch}
-        filters={
-          <BillsFilter 
-            filterType={filterType}
-            onFilterChange={handleFilterChange}
-            availableTypes={availableTypes}
-          />
-        }
+        pagination={{
+          currentPage: page,
+          totalPages: Math.ceil((billDetailsData?.count || 0) / PAGE_SIZE),
+          totalItems: billDetailsData?.count || 0,
+          itemsPerPage: PAGE_SIZE,
+          startItem: (page - 1) * PAGE_SIZE + 1,
+          endItem: Math.min(page * PAGE_SIZE, billDetailsData?.count || 0),
+        }}
+        onPageChange={handlePageChange}
         emptyMessage="No bills found"
       />
 

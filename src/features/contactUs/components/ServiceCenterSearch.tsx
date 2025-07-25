@@ -6,6 +6,7 @@ import { Button } from '@shared/ui/button';
 import { Badge } from '@shared/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/ui/dialog';
 import ServiceCenterMap from './ServiceCenterMap';
+import { useServiceDetail } from '../hooks';
 
 interface ServiceCenter {
   id: string;
@@ -16,102 +17,90 @@ interface ServiceCenter {
   subArea: string;
   phone: string;
   email: string;
-  type: 'Main Branch' | 'Sub Branch' | 'Service Point';
+  type: string;
   availableServices: string[];
   distance?: string;
 }
 
-const mockServiceCenters: ServiceCenter[] = [
-  {
-    id: '1',
-    name: 'Downtown Service Center',
-    address: '123 Main Street, Building A',
-    city: 'New York',
-    area: 'Manhattan',
-    subArea: 'Financial District',
-    phone: '(555) 123-4567',
-    email: 'downtown@support.com',
-    type: 'Main Branch',
-    availableServices: ['Water Connection', 'Billing Support', 'Technical Issues', 'Meter Reading', 'Emergency Repairs'],
-    distance: '0.5 miles'
-  },
-  {
-    id: '2',
-    name: 'Westside Branch',
-    address: '456 Oak Avenue, Suite 200',
-    city: 'New York',
-    area: 'Manhattan',
-    subArea: 'Upper West Side',
-    phone: '(555) 987-6543',
-    email: 'westside@support.com',
-    type: 'Sub Branch',
-    availableServices: ['Billing Support', 'Account Management', 'Service Requests'],
-    distance: '1.2 miles'
-  },
-  {
-    id: '3',
-    name: 'North Point Service',
-    address: '789 Pine Road',
-    city: 'New York',
-    area: 'Brooklyn',
-    subArea: 'Williamsburg',
-    phone: '(555) 456-7890',
-    email: 'northpoint@support.com',
-    type: 'Service Point',
-    availableServices: ['Emergency Repairs', 'Meter Reading', 'Technical Issues'],
-    distance: '2.1 miles'
-  },
-  {
-    id: '4',
-    name: 'Central Plaza Center',
-    address: '321 Broadway, Floor 3',
-    city: 'New York',
-    area: 'Manhattan',
-    subArea: 'Midtown',
-    phone: '(555) 234-5678',
-    email: 'central@support.com',
-    type: 'Main Branch',
-    availableServices: ['Water Connection', 'Billing Support', 'Technical Issues', 'Account Management', 'Service Requests', 'Emergency Repairs'],
-    distance: '2.8 miles'
-  }
-];
-
 const ServiceCenterSearch = () => {
+  const { data, refetch } = useServiceDetail({
+    remote_utility_id: "699",
+    consumer_id: "20167"
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<ServiceCenter[]>(mockServiceCenters);
+  const [searchResults, setSearchResults] = useState<ServiceCenter[]>([]);
   const [selectedCenter, setSelectedCenter] = useState<ServiceCenter | null>(null);
   const [isMapOpen, setIsMapOpen] = useState(false);
+
+  // Helper function to extract only TRUE services from additional_data
+  const getServicesFromAdditionalData = (additionalData: any): string[] => {
+    console.log('Additional Data:', additionalData); // Debug log
+    if (!additionalData) return [];
+    
+    const services = [];
+    if (additionalData.isBillPayment === true) services.push("Bill Payment");
+    if (additionalData.isNewConnections === true) services.push("New Connections");
+    if (additionalData.isDisconnection === true) services.push("Disconnections");
+    if (additionalData.isComplaints === true) services.push("Complaints");
+    if (additionalData.isTechnicalSupport === true) services.push("Technical Support");
+    if (additionalData.isDocumentCollection === true) services.push("Document Collection");
+    
+    console.log('Extracted Services:', services); // Debug log
+    return services;
+  };
+
+  // Transform API data to ServiceCenter format
+  const apiServiceCenters: ServiceCenter[] = data?.result ? [{
+    id: data.result.id?.toString() || "",
+    name: data.result.name || "",
+    address: data.result.address || "",
+    city: data.result.cityNames?.join(", ") || "",
+    area: data.result.areaNames?.join(", ") || "",
+    subArea: data.result.subAreaNames?.join(", ") || "",
+    phone: data.result.contactNumber || "",
+    email: data.result.email || "",
+    type: data.result.typeDisplay || "",
+    availableServices: getServicesFromAdditionalData(data.result.additionalData),
+    distance: "0.5 miles" // You might want to calculate this based on user location
+  }] : [];
+
+  console.log('API Service Centers:', apiServiceCenters); // Debug log
 
   // Dynamic search effect - updates results as user types
   useEffect(() => {
     if (!searchQuery.trim()) {
-      // If search is empty, show all centers sorted by distance
-      const sortedCenters = [...mockServiceCenters].sort((a, b) => {
-        const aDistance = parseFloat(a.distance?.split(' ')[0] || '0');
-        const bDistance = parseFloat(b.distance?.split(' ')[0] || '0');
-        return aDistance - bDistance;
-      });
-      setSearchResults(sortedCenters);
+      // If search is empty, show all centers
+      setSearchResults(apiServiceCenters);
       return;
     }
 
     // Filter results based on search query
     const query = searchQuery.toLowerCase();
-    const filteredResults = mockServiceCenters.filter(center => 
+    const filteredResults = apiServiceCenters.filter(center => 
       center.city.toLowerCase().includes(query) ||
       center.address.toLowerCase().includes(query) ||
       center.name.toLowerCase().includes(query) ||
       center.area.toLowerCase().includes(query) ||
       center.subArea.toLowerCase().includes(query) ||
+      center.type.toLowerCase().includes(query) ||
       center.availableServices.some(service => service.toLowerCase().includes(query))
     );
     
     setSearchResults(filteredResults);
-  }, [searchQuery]);
+  }, [searchQuery, data]);
+
+  // Initialize search results when data loads
+  useEffect(() => {
+    if (apiServiceCenters.length > 0) {
+      setSearchResults(apiServiceCenters);
+    }
+  }, [data]);
 
   const handleSearch = () => {
-    // This function is now mainly for the button click, but the actual search happens in useEffect
+    // Optionally refetch data or trigger additional search logic
     console.log('Manual search triggered for:', searchQuery);
+    refetch();
   };
 
   const handleViewLocation = (center: ServiceCenter) => {
@@ -121,12 +110,16 @@ const ServiceCenterSearch = () => {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'Main Branch':
+      case 'Main Office':
         return 'bg-green-100 text-green-800';
-      case 'Sub Branch':
+      case 'Branch Office':
         return 'bg-blue-100 text-blue-800';
-      case 'Service Point':
+      case 'Payment Center':
         return 'bg-orange-100 text-orange-800';
+      case 'Customer Service Center':
+        return 'bg-purple-100 text-purple-800';
+      case 'Technical Support':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -160,114 +153,130 @@ const ServiceCenterSearch = () => {
 
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">
-              {searchQuery ? `Service Centers Matching "${searchQuery}"` : 'Nearest Service Centers'}
+              {searchQuery ? `Service Centers Matching "${searchQuery}"` : 'Available Service Centers'}
               <span className="text-sm font-normal text-muted-foreground ml-2">
                 ({searchResults.length} {searchResults.length === 1 ? 'result' : 'results'})
               </span>
             </h3>
-            <div className="grid gap-3">
-              {searchResults.map((center) => (
-                <Card key={center.id} className="border-l-4 border-l-primary">
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      {/* Header Section */}
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold text-base">{center.name}</h4>
-                            {center.distance && (
-                              <span className="text-sm text-muted-foreground">
-                                • {center.distance} away
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge className={getTypeColor(center.type)}>
-                              {center.type}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {center.area} - {center.subArea}
-                            </span>
-                          </div>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleViewLocation(center)}
-                          className="flex items-center gap-1"
-                        >
-                          <MapPin className="h-3 w-3" />
-                          View Location
-                        </Button>
-                      </div>
-
-                      {/* Content Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {/* Contact Information */}
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-3 w-3 text-muted-foreground mt-1 flex-shrink-0" />
-                            <div className="min-w-0">
-                              <p className="text-xs font-medium text-muted-foreground">Address</p>
-                              <p className="text-sm leading-tight">
-                                {center.address}, {center.city}
-                              </p>
+            
+            {searchResults.length > 0 ? (
+              <div className="grid gap-3">
+                {searchResults.map((center) => (
+                  <Card key={center.id} className="border-l-4 border-l-primary">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* Header Section */}
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-base">{center.name}</h4>
+                              {center.distance && (
+                                <span className="text-sm text-muted-foreground">
+                                  • {center.distance} away
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge className={getTypeColor(center.type)}>
+                                {center.type}
+                              </Badge>
+                              {center.area && center.subArea && (
+                                <span className="text-sm text-muted-foreground">
+                                  {center.area} - {center.subArea}
+                                </span>
+                              )}
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground">Phone</p>
-                              <p className="text-sm">{center.phone}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground">Email</p>
-                              <p className="text-sm">{center.email}</p>
-                            </div>
-                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleViewLocation(center)}
+                            className="flex items-center gap-1"
+                          >
+                            <MapPin className="h-3 w-3" />
+                            View Location
+                          </Button>
                         </div>
 
-                        {/* Services */}
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <Clock className="h-3 w-3 text-muted-foreground mt-1 flex-shrink-0" />
-                            <div className="min-w-0">
-                              <p className="text-xs font-medium text-muted-foreground mb-1">Available Services</p>
-                              <div className="flex flex-wrap gap-1">
-                                {center.availableServices.slice(0, 3).map((service, index) => (
-                                  <Badge key={index} variant="outline" className="text-xs px-1.5 py-0.5">
-                                    {service}
-                                  </Badge>
-                                ))}
-                                {center.availableServices.length > 3 && (
-                                  <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                                    +{center.availableServices.length - 3} more
-                                  </Badge>
+                        {/* Content Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {/* Contact Information */}
+                          <div className="space-y-2">
+                            <div className="flex items-start gap-2">
+                              <MapPin className="h-3 w-3 text-muted-foreground mt-1 flex-shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-muted-foreground">Address</p>
+                                <p className="text-sm leading-tight">
+                                  {center.address}, {center.city}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground">Phone</p>
+                                <p className="text-sm">{center.phone}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground">Email</p>
+                                <p className="text-sm">{center.email}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Services */}
+                          <div className="space-y-2">
+                            <div className="flex items-start gap-2">
+                              <Clock className="h-3 w-3 text-muted-foreground mt-1 flex-shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-muted-foreground mb-1">Available Services</p>
+                                {center.availableServices.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {center.availableServices.slice(0, 3).map((service, index) => (
+                                      <Badge key={index} variant="outline" className="text-xs px-1.5 py-0.5">
+                                        {service}
+                                      </Badge>
+                                    ))}
+                                    {center.availableServices.length > 3 && (
+                                      <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                                        +{center.availableServices.length - 3} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">No services available</p>
                                 )}
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                {searchQuery ? (
+                  <>
+                    <p>No service centers found matching "{searchQuery}".</p>
+                    <p className="text-sm mt-1">Try searching with a different location, service type, or contact our support team.</p>
+                  </>
+                ) : (
+                  <>
+                    <p>No service centers available.</p>
+                    <p className="text-sm mt-1">Please contact our support team for assistance.</p>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-
-          {searchQuery && searchResults.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No service centers found matching "{searchQuery}".</p>
-              <p className="text-sm mt-1">Try searching with a different location, service type, or contact our support team.</p>
-            </div>
-          )}
         </CardContent>
       </Card>
 

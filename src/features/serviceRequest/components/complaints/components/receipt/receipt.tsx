@@ -1,4 +1,4 @@
-// import { RequestCreationSuccess } from '@features/cx/shared/components/RequestCreationSuccess';
+import { RequestCreationSuccess } from '@shared/components/RequestCreationSuccess';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 function ComplaintSuccessPage() {
@@ -15,13 +15,13 @@ function ComplaintSuccessPage() {
   }
 
   return (
-    // <RequestCreationSuccess 
-    //   requestData={requestData}
-    //   requestType="complaint"
-    //   onReturnToDashboard={() => navigate('/cx/complaints')}
-    //   onAddNewRequest={() => navigate('/cx/complaints/create')}
-    // />
-    <h1>test</h1>
+    <RequestCreationSuccess 
+      requestData={requestData}
+      requestType="complaint"
+      onReturnToDashboard={() => navigate('/cx/complaints')}
+      onAddNewRequest={() => navigate('/cx/complaints/create')}
+    />
+  
   );
 }
 

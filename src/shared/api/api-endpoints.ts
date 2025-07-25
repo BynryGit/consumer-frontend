@@ -4,14 +4,18 @@ import { QueryStringParameters, UrlBuilder } from "./url-builder";
 export type ApiType =
   | "auth"
   | "cx"
+  |"bx"
   | "star"
   | "receipt"
-  | "consumerWeb";
+  | "consumerWeb"
+  | "onboarding";
 
 // Define API base URLs
 export const API_BASE_URLS: Record<ApiType, string> = {
+  onboarding: import.meta.env.VITE_ONBOARDING_API_ENDPOINT || "",
   auth: import.meta.env.VITE_AUTH_API_ENDPOINT || "",
   cx: import.meta.env.VITE_CX_API_ENDPOINT || "",
+   bx: import.meta.env.VITE_BX_API_ENDPOINT || "",
   star: import.meta.env.VITE_STAR_API_ENDPOINT || "",
   receipt: import.meta.env.VITE_RECEIPT_API_ENDPOINT || "",
   consumerWeb: import.meta.env.VITE_CONSUMER_WEB_API_ENDPOINT || "",

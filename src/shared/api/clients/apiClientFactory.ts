@@ -45,6 +45,17 @@ const SERVICE_CONFIGS: Record<ApiType, ApiClientConfig> = {
     offlineSupport: true,
     requiresAuth: true,
   },
+   bx: {
+    timeout: 60000,
+    retries: 3,
+    offlineSupport: true,
+    requiresAuth: true,
+  },
+   onboarding: {
+    timeout: 45000,
+    retries: 2,
+    requiresAuth: true,
+  },
   star: {
     timeout: 30000,
     retries: 2,
@@ -493,7 +504,9 @@ export const defaultApiClient = createServiceApiClient("auth");
 // Export pre-configured clients
 export const authApiClient = createServiceApiClient("auth");
 export const cxApiClient = createServiceApiClient("cx");
+export const bxApiClient = createServiceApiClient("bx");
 export const starApiClient = createServiceApiClient("star");
+export const onboardingApiClient = createServiceApiClient("onboarding");
 export const receiptApiClient = createServiceApiClient("receipt");
 export const consumerApiClient = createServiceApiClient("consumerWeb");
 

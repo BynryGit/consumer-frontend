@@ -13,7 +13,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
   // If user is authenticated and trying to access auth routes, redirect to dashboard
   if (user && ['/login', '/forgot-password', '/reset-password', '/'].includes(location.pathname)) {
-    return <Navigate to="/onboarding/system-admin/dashboard" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
