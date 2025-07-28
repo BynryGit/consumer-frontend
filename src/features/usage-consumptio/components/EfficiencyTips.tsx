@@ -110,7 +110,7 @@ const EfficiencyTips = () => {
   const activeServices = useMemo(() => {
     if (!utilityServicesData?.result) return [];
     return utilityServicesData.result.filter(
-      (service) => service.isActive && service.id !== null
+      (service) => service.isActive && service.id !== null &&service.isMeterRequired
     );
   }, [utilityServicesData]);
 
@@ -361,7 +361,6 @@ const EfficiencyTips = () => {
         defaultValue={defaultTab}
         tabComponents={tabComponents.components}
         urlMapping={tabComponents.mapping}
-       tabsListClassName={`grid grid-cols-${serviceCount}`}
         idPrefix="tips-tab"
         className="space-y-4"
         level={1}
