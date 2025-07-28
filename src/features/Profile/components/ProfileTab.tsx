@@ -8,6 +8,7 @@ import {
 } from "@shared/ui/card";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import { Separator } from "@shared/ui/separator";
 import {
   User,
@@ -22,6 +23,7 @@ import {
   Edit,
   Eye,
 } from "lucide-react";
+import { useActivityLog } from "../hooks";
 
 interface ProfileTabProps {
   onEditClick: () => void;
@@ -29,6 +31,13 @@ interface ProfileTabProps {
 }
 
 const ProfileTab: React.FC<ProfileTabProps> = ({ onEditClick, consumerDetailsData }) => {
+    const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
+    const { data: activitylog } = useActivityLog({
+      remote_utility_id: remoteUtilityId,
+      consumer_no: remoteConsumerNumber,
+      module: "cx"
+    });
+
   const profileData = {
     name: consumerDetailsData?.result
       ? `${consumerDetailsData.result.firstName || "N/A"} ${
@@ -90,14 +99,13 @@ const addresses = {
   },
 };
 
-
   const kycDocuments = consumerDetailsData?.result?.document
     ? consumerDetailsData.result.document.map((doc) => ({
         name: doc.documentSubtypeName  || "N/A",
         fileName: doc.file
           ? doc.file.split("/").pop() || "document.pdf"
           : "N/A",
-        fileUrl: doc.file || null, // Add the complete file URL
+        fileUrl: doc.file || null,
         status: doc.statusDisplay || "N/A",
         uploadDate: doc.createdDate || "N/A",
       }))
@@ -120,9 +128,21 @@ const addresses = {
     },
   ];
 
-  const accountActivity = [
-    { date: "N/A", action: "N/A", amount: "N/A", status: "N/A" },
-  ];
+  // Transform activity log data for display
+  const accountActivity = activitylog?.results
+    ? activitylog.results.slice(0, 5).map((activity) => ({
+        date: `${activity.date} ${activity.time}`,
+        action: `${activity.title}`,
+        amount: activity.data.additionalData?.paymentMethod || "N/A",
+        status: activity.data.additionalData?.transactionStatusDisplay || "Unknown",
+        requestType: activity.data.requestType,
+        scheduleDate: activity.data.additionalData?.scheduleDate,
+        paymentMethod: activity.data.additionalData?.paymentMethod,
+        instruction: activity.data.additionalData?.additionalInstruction,
+      }))
+    : [
+        { date: "N/A", action: "N/A", amount: "N/A", status: "N/A" },
+      ];
 
   const preferences = {
     notifications: {
@@ -143,7 +163,6 @@ const addresses = {
 
   const handleViewDocument = (fileName: string, fileUrl?: string) => {
     if (fileUrl) {
-      // Open the document in a new tab
       window.open(fileUrl, "_blank");
     } else {
       console.log(`No file URL available for: ${fileName}`);
@@ -153,22 +172,22 @@ const addresses = {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Verified":
+      case "Paid":
       case "Completed":
       case "Resolved":
-        return <div className="h-4 w-4 text-green-600" />;
+        return <div className="h-4 w-4 bg-green-600 rounded-full" />;
       case "Pending":
-        return <div className="h-4 w-4 text-yellow-600" />;
+        return <div className="h-4 w-4 bg-yellow-600 rounded-full" />;
       case "Under Review":
-        return <div className="h-4 w-4 text-orange-600" />;
+        return <div className="h-4 w-4 bg-orange-600 rounded-full" />;
       default:
-        return <div className="h-4 w-4 text-gray-600" />;
+        return <div className="h-4 w-4 bg-gray-600 rounded-full" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Verified":
+      case "Paid":
       case "Completed":
       case "Resolved":
         return "bg-green-100 text-green-800";
@@ -178,6 +197,18 @@ const addresses = {
         return "bg-orange-100 text-orange-800";
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString.replace(" ", "T"));
+      return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch (error) {
+      return dateString;
     }
   };
 
@@ -429,9 +460,6 @@ const addresses = {
                 </Badge>
               </div>
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                {/* <p className="text-sm font-medium">
-                  {addresses.service.street}
-                </p> */}
                 <p className="text-sm text-muted-foreground">
                   {addresses.service.region} , {addresses.service.country} ,{addresses.service.state},
                   {addresses.service.county} , {addresses.service.zone} ,{addresses.service.division},
@@ -456,9 +484,6 @@ const addresses = {
                 </Badge>
               </div>
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                {/* <p className="text-sm font-medium">
-                  {addresses.billing.street}
-                </p> */}
                 <p className="text-sm text-muted-foreground">
                  {addresses.billing.region} , {addresses.billing.country} ,{addresses.billing.state},
                   {addresses.billing.county} , {addresses.billing.zone} ,{addresses.billing.division},
@@ -475,7 +500,7 @@ const addresses = {
 
       {/* Account Activity and Preferences */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Account Activity */}
+        {/* Account Activity - Updated with real data */}
         <Card className="border-l-4 border-l-indigo-500 bg-gradient-to-r from-indigo-50 to-white">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -485,7 +510,7 @@ const addresses = {
               Recent Activity
             </CardTitle>
             <CardDescription className="p-2">
-              Your recent account transactions and actions
+              Your recent service requests and transactions
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -493,21 +518,24 @@ const addresses = {
               {accountActivity.map((activity, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-indigo-200"
+                  className="flex items-start justify-between p-3 bg-white rounded-lg border border-indigo-200 hover:shadow-sm transition-shadow"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-start gap-3 flex-1"> 
                     {getStatusIcon(activity.status)}
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-medium">{activity.action}</p>
                       <p className="text-xs text-muted-foreground">
-                        {activity.date}
+                       {activity.scheduleDate}
                       </p>
+          
                     </div>
                   </div>
-                  <div className="text-right">
-                    {activity.amount !== "N/A" && (
-                      <p className="text-sm font-semibold">{activity.amount}</p>
-                    )}
+                  <div className="text-right ml-2">
+                    {/* {activity.paymentMethod && activity.paymentMethod !== "N/A" && (
+                      <p className="text-xs font-medium text-gray-700 mb-1">
+                        {activity.paymentMethod}
+                      </p>
+                    )} */}
                     <Badge
                       className={`text-xs ${getStatusColor(activity.status)}`}
                     >

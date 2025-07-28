@@ -4,6 +4,7 @@ import { Mail } from 'lucide-react';
 import AuthLayout from './AuthLayout';
 import { DynamicForm } from "@shared/components/DynamicForm";
 import { FormField, FormService } from "@shared/services/FormServices";
+import { useForgotPassword } from "../hooks";
 
 interface SignUpProps {
   onSwitchToSignIn: () => void;
@@ -12,7 +13,7 @@ interface SignUpProps {
 
 const SignUp = ({ onSwitchToSignIn, onSwitchToPasswordSetup }: SignUpProps) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [submittedEmail, setSubmittedEmail] = useState('');
+  const signUpMutation = useForgotPassword();
 
   // Create form fields configuration
   const formFields: FormField[] = [
@@ -41,10 +42,16 @@ const SignUp = ({ onSwitchToSignIn, onSwitchToPasswordSetup }: SignUpProps) => {
   });
 
   const handleFormSubmit = async (data: any) => {
-    console.log('Sign up attempt:', { email: data.email });
-    setSubmittedEmail(data.email);
-    setIsSubmitted(true);
+    try {
+      const payload = { email: data.email };
+      await signUpMutation.mutateAsync(payload);
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error("Sign up failed", error);
+    }
   };
+
+  const email = signUpForm.getValues().email;
 
   if (isSubmitted) {
     return (
@@ -57,7 +64,7 @@ const SignUp = ({ onSwitchToSignIn, onSwitchToPasswordSetup }: SignUpProps) => {
             <Mail className="h-8 w-8 text-green-600" />
           </div>
           <p className="text-muted-foreground">
-            A password setup link has been sent to <strong>{submittedEmail}</strong>. Please check your email and follow the instructions to complete your account setup.
+            A password setup link has been sent to <strong>{email}</strong>. Please check your email and follow the instructions to complete your account setup.
           </p>
           
           {onSwitchToPasswordSetup && (
@@ -119,7 +126,7 @@ const SignUp = ({ onSwitchToSignIn, onSwitchToPasswordSetup }: SignUpProps) => {
         {/* Submit Button */}
         <Button 
           type="button"
-          onClick={() => handleFormSubmit(signUpForm.getValues())}
+          onClick={() => signUpForm.handleSubmit(handleFormSubmit)()}
           className="w-full h-12 text-base font-medium"
         >
           Send Setup Link
