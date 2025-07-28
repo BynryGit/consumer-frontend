@@ -41,7 +41,7 @@ const ForgotPassword = ({ onSwitchToSignIn }: ForgotPasswordProps) => {
 
   const handleSubmit = async (data: any) => {
   try {
-    const payload = { email: data.email };
+    const payload = { email: data.email,role:"consumer" };
     await forgotMutation.mutateAsync(payload);
     setIsSubmitted(true);
   } catch (error) {
