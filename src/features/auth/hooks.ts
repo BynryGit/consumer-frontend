@@ -210,6 +210,12 @@ export const useForgotPassword=()=>{
   )
 }
 
+
+export const useResetPassword=()=>{
+  return useSmartMutation(
+    (payload: { email: string,role:any }) => authApi.getResetPassword(payload.email,payload.role),
+  )
+}
 export const useConsumerWebLoginStatus = () => {
   return useSmartQuery(
     QueryKeyFactory.module.cx.login.consumerWebLoginStatus(),
