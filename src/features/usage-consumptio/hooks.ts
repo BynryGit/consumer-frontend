@@ -2,7 +2,7 @@
 
 import { useSmartMutation, useSmartQuery } from "@shared/api/queries/hooks";
 import { usageconsumptionApi } from "./api";
-import { ThresholdPayload } from "./types";
+import { AddHelpfullPayload, ThresholdPayload } from "./types";
 import { QueryKeyFactory } from "@shared/api/queries/queryKeyFactory";
 
 
@@ -12,7 +12,13 @@ export const useAddThreshold = () => {
       usageconsumptionApi.addThreshold(payload)
   );
 };
-
+export const useUpdateTipsStatus= () => {
+  return useSmartMutation(
+    (payload: AddHelpfullPayload) =>
+      usageconsumptionApi.addHelpful(payload),
+  
+  );
+};
 export const useTipsData = (params: {
   remote_utility_id: string;
   utility_service: any;

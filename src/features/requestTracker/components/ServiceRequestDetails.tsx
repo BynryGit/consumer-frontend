@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Badge } from '@shared/ui/badge';
 import { Button } from '@shared/ui/button';
 import { Textarea } from '@shared/ui/textarea';
@@ -26,7 +26,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import NotesTab, { Note } from '@shared/components/NotesTab';
 import TimelineTab, { TimelineItem } from '@shared/components/TimelineTab';
-import { useRequestDetail, useAddNote } from '../hooks'; // Added useAddNote import
+import { useRequestDetail, useActivityLog, useAddNote } from '../hooks'; // Added useActivityLog import
 
 interface ServiceRequestPageProps {
   serviceId?: string;
@@ -44,10 +44,33 @@ const ServiceRequestPage = ({ serviceId }: ServiceRequestPageProps) => {
     id: requestId,
    });
    
+   // Add the useActivityLog hook
+   const { data: activitylog } = useActivityLog({
+     remote_utility_id: remoteUtilityId,
+     id: requestId, // Use requestId instead of hardcoded value
+     module: "cx"
+   });
+   
    // Add the useAddNote hook
    const addNoteMutation = useAddNote();
    
-   console.log("dattaaaaaaaaaaa", data);
+   console.log("service request data", data);
+   console.log("activity log data", activitylog);
+   
+   // Transform API data to TimelineItem format
+   const transformedTimeline: TimelineItem[] = useMemo(() => {
+     if (!activitylog?.results) return [];
+     
+     return activitylog.results.map((item: any, index: number) => ({
+       id: item.data?.id || index,
+       action: item.title || "Activity",
+       description: item.description || "No description available",
+       timestamp: item.date && item.time 
+         ? `${item.date} ${item.time}` 
+         : item.date || new Date().toISOString(),
+       status: "completed" // You can add logic here to determine status based on your business rules
+     }));
+   }, [activitylog]);
 
   // Mock data for the service request details
   const request = {
@@ -86,44 +109,6 @@ const ServiceRequestPage = ({ serviceId }: ServiceRequestPageProps) => {
       content: 'Please ensure work is completed before 5 PM as requested.',
       timestamp: '2025-04-08T16:45:00',
       type: 'customer'
-    }
-  ];
-
-  const timeline: TimelineItem[] = [
-    {
-      id: 1,
-      action: 'Request Submitted',
-      description: 'Service request created by customer',
-      timestamp: '2025-04-08T14:30:00',
-      status: 'completed'
-    },
-    {
-      id: 2,
-      action: 'Assignment',
-      description: 'Assigned to technician John Smith',
-      timestamp: '2025-04-08T15:00:00',
-      status: 'completed'
-    },
-    {
-      id: 3,
-      action: 'Site Assessment',
-      description: 'Technician conducted preliminary assessment',
-      timestamp: '2025-04-08T15:30:00',
-      status: 'completed'
-    },
-    {
-      id: 4,
-      action: 'Scheduled',
-      description: 'Service appointment scheduled for April 10, 2025',
-      timestamp: '2025-04-08T16:00:00',
-      status: 'current'
-    },
-    {
-      id: 5,
-      action: 'Service Execution',
-      description: 'Scheduled service work',
-      timestamp: '2025-04-10T14:00:00',
-      status: 'pending'
     }
   ];
 
@@ -191,8 +176,15 @@ const ServiceRequestPage = ({ serviceId }: ServiceRequestPageProps) => {
     timeline: {
       label: 'Timeline',
       icon: <Clock className="h-4 w-4" />,
-      component: <TimelineTab timeline={timeline} title="Request Activity Timeline" idPrefix="service-request" />,
-      shortLabel: 'Timeline'
+      component: (
+        <TimelineTab
+          timeline={transformedTimeline}
+          title="Request Activity Timeline"
+          idPrefix="service-request"
+        />
+      ),
+      shortLabel: 'Timeline',
+      count: transformedTimeline.length,
     }
   };
 

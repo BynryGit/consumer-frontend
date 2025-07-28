@@ -46,8 +46,8 @@ const CreditNotes = () => {
   // Compute filters using useMemo
   const filters = useMemo((): CreditNoteFilters => {
     const urlFilters: CreditNoteFilters = {
-      remote_utility_id: "699",
-      consumer_id: "174825",
+      remote_utility_id: remoteUtilityId,
+      consumer_id:consumerId,
       payment_pay_type: "3",
       page: page,
       limit: PAGE_SIZE,

@@ -1,17 +1,8 @@
-
-
-
-import React from 'react';
-import { Button } from '../../shared/ui/button';
-
 import UsageTrends from './components/UsageTrends';
 import TipsInsights from './components/TipsInsights';
 import QuickActions from './components/QuickActions';
-
-import { RefreshCw } from 'lucide-react';
-import DashboardCards from './components/Dashboard';
+import DashboardCards from './components/DashboardCards';
 import AccountOverview from './components/AccountOverview';
-
 // Sample data for charts - updated to include total cost for each month
 const usageData = [ 
   { name: 'Jan', electricity: 120, water: 85, gas: 45, totalCost: 1150 },
@@ -38,14 +29,6 @@ const billData = {
 };
 
 const DashboardHome = () => {
-  // Usage thresholds
-  const electricityUsage = 320; // kWh
-  const electricityAvg = 350; // kWh
-  const waterUsage = 15000; // Liters
-  const waterAvg = 16500; // Liters
-  const gasUsage = 56; // therms
-  const gasAvg = 65; // therms
-  
   return (
       <div className="space-y-8 animate-fade-in">
         {/* Header Section */}
@@ -57,7 +40,7 @@ const DashboardHome = () => {
             </div>
           </div>
           {/* Key Metrics */}
-          <DashboardCards billData={undefined} electricityUsage={0} electricityAvg={0} waterUsage={0} waterAvg={0} gasUsage={0} gasAvg={0}           
+          <DashboardCards           
           />
         </section>
         {/* Main Dashboard Grid */}

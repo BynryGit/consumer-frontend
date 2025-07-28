@@ -56,6 +56,11 @@ const SERVICE_CONFIGS: Record<ApiType, ApiClientConfig> = {
     retries: 2,
     requiresAuth: true,
   },
+    activityLog: {
+    timeout: 30000,
+    retries: 1,
+    requiresAuth: true,
+  },
   star: {
     timeout: 30000,
     retries: 2,
@@ -65,6 +70,11 @@ const SERVICE_CONFIGS: Record<ApiType, ApiClientConfig> = {
     timeout: 60000,
     retries: 3,
     offlineSupport: true,
+    requiresAuth: true,
+  },
+    communication: {
+    timeout: 40000,
+    retries: 5,
     requiresAuth: true,
   },
   receipt: {
@@ -508,6 +518,8 @@ export const bxApiClient = createServiceApiClient("bx");
 export const starApiClient = createServiceApiClient("star");
 export const onboardingApiClient = createServiceApiClient("onboarding");
 export const receiptApiClient = createServiceApiClient("receipt");
+export const activityLogApiClient = createServiceApiClient("activityLog");
 export const consumerApiClient = createServiceApiClient("consumerWeb");
+export const communicationApiClient = createServiceApiClient("communication");
 
 // export const consumerWebClient = createServiceApiClient("consumerWeb");

@@ -1,6 +1,6 @@
 import { RouteObject, useNavigate, useParams } from 'react-router-dom';
 import SignInComponent from './components/Login';
-import DashboardComponent from '../dashboard/components/Dashboard';
+import DashboardComponent from '../dashboard/components/DashboardCards';
 import ForgotPassword from './components/ForgotPassword';
 import SignUp from './components/SignUp';
 import PasswordSetup from './components/PasswordSetup';

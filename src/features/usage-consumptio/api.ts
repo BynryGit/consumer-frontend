@@ -1,14 +1,10 @@
 import { ApiEndpoints } from "@shared/api/api-endpoints";
-import { ThresholdPayload } from "./types";
+import { AddHelpfullPayload, ThresholdPayload } from "./types";
 import { authApiClient, cxApiClient, onboardingApiClient } from "@shared/api/clients/apiClientFactory";
 
 
 export const usageconsumptionApi = {
-  // localhost:4002/api/onboarding/config-map/tips/?remote_utility_id=699&show_inactive=true&utility_service=Water
-  //http://127.0.0.1:4007/api/consumer-web/consumer-threshold/
-  //localhost:4007/api/consumer-web/consumer-bill/?consumer_number=CRN1095&remote_utility_id=569&fetch_latest=True&bill_data=True
-  //http://127.0.0.1:4007/api/consumer-web/consumer-bill-analytics/?remote_utility_id=569&consumer_no=CRN1095&period=6
-//https://api-cx-staging.bynry.com/api/consumer-web/consumer-dashboard/graph/?consumer_no=AXM012&remote_utility_id=702&fetch_last_six_records=True&utility_service=Electricity
+
  
  getUtilityServices: async (params: {
     utility_id: string;
@@ -23,7 +19,7 @@ export const usageconsumptionApi = {
     const response = await authApiClient.get(url);
     return response.data;
   }, 
-  // localhost:4002/api/onboarding/config-map/tips/?remote_utility_id=699&show_inactive=true&utility_service=Water
+
 
     getTipsData: async (params: {
     remote_utility_id: string;
@@ -102,4 +98,11 @@ addThreshold: async (payload: ThresholdPayload): Promise<any> => {
     const response = await cxApiClient.get(url);
     return response.data;
   }, 
+   addHelpful: async (
+        payload: AddHelpfullPayload
+      ): Promise<any> => {
+        const url = ApiEndpoints.createUrl("onboarding", "config-map/tips");
+        const response = await onboardingApiClient.patch(url, payload);
+        return response.data;
+      },
 };

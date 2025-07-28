@@ -1,5 +1,5 @@
 import { ApiEndpoints } from "@shared/api/api-endpoints";
-import { cxApiClient } from "@shared/api/clients/apiClientFactory";
+import { communicationApiClient, cxApiClient } from "@shared/api/clients/apiClientFactory";
 import { AddNotePayload } from "./types";
 
 // Add your feature-specific API calls here
@@ -80,16 +80,21 @@ export const requestTrackerApi = {
   },
 //https://api-notification-staging.bynry.com/api/activity-log/logs/?remote_utility_id=569&request_id=804&action_type=complaint&module=cx
 getActivityLog: async (params: {
+    id: string;
     remote_utility_id: string;
+    module:any
   }): Promise<any> => {
     const url = ApiEndpoints.createUrlWithQueryParameters(
-      "consumerWeb",
-      "choices/consumer_support_request_status",
+      "activityLog",
+      `logs`,
       (qs) => {
         qs.push("remote_utility_id", params.remote_utility_id);
+          qs.push("request_id", params.id);
+         
+              qs.push("module", params.module);
       }
     );
-    const response = await cxApiClient.get(url);
+    const response = await communicationApiClient.get(url);
     return response.data;
   },
   getRequestDetail: async (params: {

@@ -1,12 +1,38 @@
-
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@shared/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@shared/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import { LineChart, BarChart, ResponsiveContainer, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import React, { useMemo, useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@shared/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shared/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@shared/ui/select";
+import {
+  LineChart,
+  BarChart,
+  ResponsiveContainer,
+  Line,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
+import { useUtilityServices } from "@features/usage-consumptio/hooks";
+import { useUsageChart } from "../hooks";
 
 interface UsageTrendsProps {
-  usageData: Array<{
+  usageData?: Array<{
     name: string;
     electricity: number;
     water: number;
@@ -16,8 +42,56 @@ interface UsageTrendsProps {
 }
 
 const UsageTrends = ({ usageData }: UsageTrendsProps) => {
-  const [utilityFilter, setUtilityFilter] = useState("all");
-  
+  const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
+
+  // API Hooks - utility services
+  const { data: utilityServicesData } = useUtilityServices({
+    utility_id: remoteUtilityId,
+  });
+
+  const activeServices = useMemo(
+    () =>
+      utilityServicesData?.result?.filter(
+        (service) => service.isActive && service.id !== null
+      ) || [],
+    [utilityServicesData]
+  );
+
+  // Set initial filter to first dropdown value
+  const [utilityFilter, setUtilityFilter] = useState("");
+
+  // Set default utility filter when services are loaded
+  useEffect(() => {
+    if (activeServices.length > 0 && !utilityFilter) {
+      setUtilityFilter(activeServices[0].name);
+    }
+  }, [activeServices, utilityFilter]);
+
+  // Usage chart hook - calls API when utility filter changes
+  const { data: graphData } = useUsageChart({
+    consumer_no: remoteConsumerNumber,
+    remote_utility_id: remoteUtilityId,
+    fetch_last_six_records: "True",
+    utility_service: utilityFilter
+  });
+
+  // Transform API data to chart format
+  const transformedUsageData = useMemo(() => {
+    if (!graphData?.result) return [];
+    
+    return Object.entries(graphData.result).map(([month, data]: [string, any]) => ({
+      name: month,
+      consumption: data.consumption,
+      // Map to the utility service name for the chart
+      [utilityFilter.toLowerCase()]: data.consumption,
+    }));
+  }, [graphData, utilityFilter]);
+
+  // Handle utility filter change
+  const handleUtilityChange = (value) => {
+    setUtilityFilter(value);
+  };
+
   return (
     <>
       {/* Usage Trends Card */}
@@ -26,18 +100,24 @@ const UsageTrends = ({ usageData }: UsageTrendsProps) => {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Usage Trends</CardTitle>
-              <CardDescription>Monitor your consumption over time</CardDescription>
+              <CardDescription>
+                Monitor your consumption over time
+              </CardDescription>
             </div>
             <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-              <Select value={utilityFilter} onValueChange={setUtilityFilter}>
+              <Select value={utilityFilter} onValueChange={handleUtilityChange}>
                 <SelectTrigger className="w-[130px]">
-                  <SelectValue placeholder="Filter by" />
+                  <SelectValue placeholder="Select utility" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Utilities</SelectItem>
-                  <SelectItem value="electricity">Electricity</SelectItem>
-                  <SelectItem value="water">Water</SelectItem>
-                  <SelectItem value="gas">Gas</SelectItem>
+                  {activeServices.map((service) => (
+                    <SelectItem
+                      key={service.id}
+                      value={service.name}
+                    >
+                      {service.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -45,21 +125,31 @@ const UsageTrends = ({ usageData }: UsageTrendsProps) => {
         </CardHeader>
         <CardContent className="px-2">
           <div className="h-[300px] flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={usageData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                {(utilityFilter === "all" || utilityFilter === "electricity") && 
-                  <Line type="monotone" dataKey="electricity" stroke="#ffcc00" activeDot={{ r: 8 }} name="Electricity" />}
-                {(utilityFilter === "all" || utilityFilter === "water") && 
-                  <Line type="monotone" dataKey="water" stroke="#0099cc" activeDot={{ r: 8 }} name="Water" />}
-                {(utilityFilter === "all" || utilityFilter === "gas") && 
-                  <Line type="monotone" dataKey="gas" stroke="#ff6633" activeDot={{ r: 8 }} name="Gas" />}
-              </LineChart>
-            </ResponsiveContainer>
+            {transformedUsageData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={transformedUsageData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="consumption"
+                    stroke="#0099cc"
+                    activeDot={{ r: 8 }}
+                    name={`${utilityFilter} Consumption`}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-muted-foreground">
+                {utilityFilter ? "Loading usage data..." : "Select a utility service to view data"}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -68,25 +158,42 @@ const UsageTrends = ({ usageData }: UsageTrendsProps) => {
       <Card>
         <CardHeader>
           <CardTitle>Cost Over Time</CardTitle>
-          <CardDescription>Track how your bills have changed over the last 6 months</CardDescription>
+          <CardDescription>
+            Track how your bills have changed over the last 6 months
+          </CardDescription>
         </CardHeader>
         <CardContent className="px-2">
           <div className="h-[250px] flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={usageData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="totalCost" name="Total Cost (₹)" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
+            {transformedUsageData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={transformedUsageData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar 
+                    dataKey="consumption" 
+                    name={`${utilityFilter} Consumption`} 
+                    fill="#8884d8" 
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-muted-foreground">
+                {utilityFilter ? "Loading cost data..." : "Select a utility service to view data"}
+              </div>
+            )}
           </div>
         </CardContent>
         <CardFooter>
           <div className="text-xs text-muted-foreground">
-            <p>Your bills have decreased by 10% compared to the same period last year.</p>
+            <p>
+              Your {utilityFilter?.toLowerCase()} consumption trends over the last 6 months.
+            </p>
           </div>
         </CardFooter>
       </Card>

@@ -32,9 +32,10 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPaymentSuccess?: () => void; // Callback to refetch data
+  paymentType: 'bill' | 'service'; // New prop to distinguish payment type
 }
 
-const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess }: PaymentModalProps) => {
+const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess, paymentType }: PaymentModalProps) => {
   const [paymentMethod, setPaymentMethod] = useState('online');
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'success' | 'failed' | null>(null);
@@ -46,12 +47,11 @@ const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess }: PaymentModalP
   const handlePayment = async () => {
     if (!bill) return;
 
-    const paymentPayload = {
-      remote_utility_id: parseInt(remoteUtilityId),
-      consumer: parseInt(consumerId),
-      consumer_support_request: bill.serviceRequestId || null,
+    // Create base payload
+    const basePayload = {
+      remote_utility_id: remoteUtilityId,
+      consumer: consumerId,
       amount: bill.amount,
-      payment_pay_type: 5, // Service payment type
       payment_mode: "Online#2",
       payment_channel: "",
       payment_date: new Date().toISOString(),
@@ -65,9 +65,22 @@ const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess }: PaymentModalP
         payment_amount: bill.amount,
         outstanding_amount: 0,
         excess_refund: 0,
-        additional_notes: `Service payment for ${bill.type}`
+        additional_notes: `${paymentType === 'service' ? 'Service' : 'Bill'} payment for ${bill.type}`
       }
     };
+
+    // Add payment type specific fields
+    const paymentPayload = paymentType === 'service' 
+      ? {
+          ...basePayload,
+          consumer_support_request: bill.serviceRequestId || null,
+          payment_pay_type: 5, // Service payment type
+        }
+      : {
+          ...basePayload,
+          payment_pay_type: 2, // Bill payment type
+          // Don't include consumer_support_request for bills
+        };
 
     payBill(paymentPayload, {
       onSuccess: (response) => {
@@ -78,7 +91,7 @@ const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess }: PaymentModalP
           description: `Your payment of $${bill.amount.toFixed(2)} for ${bill.type} has been processed successfully.`,
         });
         
-        // Call the callback to refetch services data
+        // Call the callback to refetch data
         if (onPaymentSuccess) {
           onPaymentSuccess();
         }
@@ -142,12 +155,12 @@ const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess }: PaymentModalP
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            {paymentComplete ? statusDisplay?.title || 'Payment Complete' : 'Pay Bill'}
+            {paymentComplete ? statusDisplay?.title || 'Payment Complete' : `Pay ${paymentType === 'service' ? 'Service' : 'Bill'}`}
           </DialogTitle>
           <DialogDescription>
             {paymentComplete 
               ? statusDisplay?.description || 'Payment processing complete.'
-              : 'Complete your bill payment securely.'
+              : `Complete your ${paymentType} payment securely.`
             }
           </DialogDescription>
         </DialogHeader>
@@ -170,7 +183,7 @@ const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess }: PaymentModalP
             
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Bill #:</span>
+                <span className="text-muted-foreground">{paymentType === 'service' ? 'Service Request #:' : 'Bill #:'}</span>
                 <span className="font-medium">{bill.id}</span>
               </div>
               <div className="flex justify-between">
@@ -178,7 +191,7 @@ const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess }: PaymentModalP
                 <span className="font-medium">${bill.amount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Service Type:</span>
+                <span className="text-muted-foreground">{paymentType === 'service' ? 'Service Type:' : 'Bill Type:'}</span>
                 <span className="font-medium">{bill.type}</span>
               </div>
               <div className="flex justify-between">
@@ -195,27 +208,27 @@ const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess }: PaymentModalP
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Bill Information */}
+            {/* Bill/Service Information */}
             <div className="space-y-3">
-              <h4 className="font-semibold">Bill Information</h4>
+              <h4 className="font-semibold">{paymentType === 'service' ? 'Service' : 'Bill'} Information</h4>
               <div className="bg-muted/50 p-4 rounded-lg space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Bill Number</span>
+                  <span className="text-sm text-muted-foreground">{paymentType === 'service' ? 'Request Number' : 'Bill Number'}</span>
                   <span className="font-medium">{bill.id}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Service Type</span>
+                  <span className="text-sm text-muted-foreground">{paymentType === 'service' ? 'Service Type' : 'Bill Type'}</span>
                   <Badge variant="outline">{bill.type}</Badge>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Issue Date</span>
+                  <span className="text-sm text-muted-foreground">{paymentType === 'service' ? 'Request Date' : 'Issue Date'}</span>
                   <span className="flex items-center gap-1 text-sm">
                     <Calendar className="h-3 w-3" />
                     {new Date(bill.date).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Due Date</span>
+                  <span className="text-sm text-muted-foreground">{paymentType === 'service' ? 'Completion Date' : 'Due Date'}</span>
                   <span className="flex items-center gap-1 text-sm">
                     <Calendar className="h-3 w-3" />
                     {new Date(bill.dueDate).toLocaleDateString()}

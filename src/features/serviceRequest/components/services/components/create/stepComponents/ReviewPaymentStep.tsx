@@ -94,7 +94,7 @@ export const ReviewPaymentStep: React.FC<ReviewPaymentStepProps> = ({
     useState<PaymentMethod | null>(null);
   const { data: timeSlotChoicesData } = useTimeSlotChoices();
   const { data: paymentMethodsData } = usePaymentMethod({
-    remote_utility_id:"699",
+    remote_utility_id:remoteUtilityId,
   });
 
    const getConsumerDetails = useCallback((): LocalConsumerDetails => {

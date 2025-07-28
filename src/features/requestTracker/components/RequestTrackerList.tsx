@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@shared/ui/badge';
 import GenericTable from '@shared/components/GenericTable';
 import { TableColumn } from '@shared/types/table';
-import { useConsumerStatus, useRequestData, useRequestType } from '../hooks';
+import { useRequestData } from '../hooks';
 import { useSearchParams } from 'react-router-dom';
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 import { RequestTrackerFilterPanel } from './RequestTrackerFilterPanel';
+import { PAGE_SIZE } from '@shared/utils/constants';
 
 // Request interface
 interface Request {
@@ -23,8 +24,8 @@ interface Request {
 interface RequestFilters {
   consumer_id: string;
   remote_utility_id: string;
-  page: any;
-  limit: any;
+  page: number;
+  limit: number;
   search_data?: string;
   status?: string;
   request_type?: string;
@@ -38,24 +39,19 @@ export const RequestTrackerTable: React.FC<RequestTrackerTableProps> = ({
   onViewRequest 
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [page, setPage] = useState(1);
 
   // Get utility and consumer id from login utils
   const { remoteUtilityId, consumerId } = getLoginDataFromStorage();
 
-  // Compute filters using useMemo
+  // Compute filters using useMemo instead of a function that calls hooks
   const filters = useMemo((): RequestFilters => {
     const urlFilters: RequestFilters = {
       consumer_id: consumerId,
       remote_utility_id: remoteUtilityId,
-      page: 1,  
-      limit: 50
+      page,
+      limit: PAGE_SIZE,
     };
-
-    // Parse search query
-    const queryParam = searchParams.get("query");
-    if (queryParam) {
-      urlFilters.search_data = queryParam;
-    }
 
     // Parse status filter
     const statusParam = searchParams.get("status");
@@ -69,23 +65,80 @@ export const RequestTrackerTable: React.FC<RequestTrackerTableProps> = ({
       urlFilters.request_type = requestTypeParam;
     }
 
+    // Parse search query
+    const queryParam = searchParams.get("query");
+    if (queryParam) {
+      urlFilters.search_data = queryParam;
+    }
+
     return urlFilters;
-  }, [searchParams, remoteUtilityId, consumerId]);
+  }, [page, searchParams, consumerId, remoteUtilityId]);
+
+  // Update page when URL page param changes
+  useEffect(() => {
+    const pageParam = searchParams.get("page");
+    if (pageParam) {
+      setPage(parseInt(pageParam, 10));
+    }
+  }, [searchParams]);
 
   const { data, isLoading } = useRequestData(filters);
 
   const transformedData = useMemo(() => {
     if (!data?.results) return [];
     
-    return data.results.map((apiRequest: any) => ({
-      requestId: apiRequest.id,
-      id: apiRequest.requestNo,
-      type: apiRequest.requestType,
-      status: apiRequest.statusDisplay,
-      createdAt: apiRequest.createdDate,
-      lastUpdated: apiRequest.lastModifiedDate
+    return data.results.map((apiRequest: any, index: number) => ({
+      requestId: apiRequest.id?.toString() || `req-${index}`,
+      id: apiRequest.requestNo || `unknown-${apiRequest.id || index}`,
+      type: apiRequest.requestType || 'Unknown',
+      status: apiRequest.statusDisplay || 'Unknown',
+      createdAt: apiRequest.createdDate || '',
+      lastUpdated: apiRequest.lastModifiedDate || '',
     }));
   }, [data]);
+
+  const handleApplyFilters = (newFilters: { status?: string; requestType?: string }) => {
+    const params = new URLSearchParams(searchParams);
+
+    // Clear existing filter params
+    params.delete("status");
+    params.delete("request_type");
+    params.delete("page");
+
+    // Add new filter params
+    if (newFilters.status) {
+      params.set("status", newFilters.status);
+    }
+    if (newFilters.requestType) {
+      params.set("request_type", newFilters.requestType);
+    }
+
+    // Reset to page 1 when applying filters
+    params.set("page", "1");
+    setPage(1);
+
+    setSearchParams(params);
+  };
+
+  const handleResetFilters = () => {
+    const params = new URLSearchParams(searchParams);
+
+    // Remove all filter params
+    params.delete("status");
+    params.delete("request_type");
+    params.delete("page");
+    params.delete("query");
+
+    setPage(1);
+    setSearchParams(params);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", newPage.toString());
+    setSearchParams(params);
+    setPage(newPage);
+  };
 
   const handleSearch = (searchTerm: string, paramName: "search_data") => {
     const params = new URLSearchParams(searchParams);
@@ -96,33 +149,10 @@ export const RequestTrackerTable: React.FC<RequestTrackerTableProps> = ({
       params.delete("query");
     }
 
-    setSearchParams(params);
-  };
+    // Reset to page 1 when searching
+    params.set("page", "1");
+    setPage(1);
 
-  const handleApplyFilters = (newFilters: { status?: string; requestType?: string }) => {
-    const params = new URLSearchParams(searchParams);
-
-    // Update status filter
-    if (newFilters.status) {
-      params.set("status", newFilters.status);
-    } else {
-      params.delete("status");
-    }
-
-    // Update request type filter
-    if (newFilters.requestType) {
-      params.set("request_type", newFilters.requestType);
-    } else {
-      params.delete("request_type");
-    }
-
-    setSearchParams(params);
-  };
-
-  const handleResetFilters = () => {
-    const params = new URLSearchParams(searchParams);
-    params.delete("status");
-    params.delete("request_type");
     setSearchParams(params);
   };
 
@@ -222,14 +252,22 @@ export const RequestTrackerTable: React.FC<RequestTrackerTableProps> = ({
     <GenericTable<Request>
       data={transformedData}
       columns={columns}
-      rowKey="id"
-      actions={actions}
-      actionsType="icons"
       searchPlaceholder="Search requests by ID or subject..."
       searchParamName="query"
       searchDebounceMs={300}
       onSearch={handleSearch}
-      emptyMessage="No requests found matching your search criteria"
+      rowKey="id"
+      pagination={{
+        currentPage: page,
+        totalPages: Math.ceil((data?.count || 0) / PAGE_SIZE),
+        totalItems: data?.count || 0,
+        itemsPerPage: PAGE_SIZE,
+        startItem: (page - 1) * PAGE_SIZE + 1,
+        endItem: Math.min(page * PAGE_SIZE, data?.count || 0),
+      }}
+      onPageChange={handlePageChange}
+      actions={actions}
+      actionsType="icons"
       filterPanel={
         <RequestTrackerFilterPanel
           currentFilters={currentFilters}
@@ -238,6 +276,7 @@ export const RequestTrackerTable: React.FC<RequestTrackerTableProps> = ({
           remoteUtilityId={remoteUtilityId}
         />
       }
+      emptyMessage="No requests found matching your search criteria"
     />
   );
 };
