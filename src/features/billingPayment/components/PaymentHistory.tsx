@@ -113,7 +113,7 @@ const PaymentHistory = () => {
       date: payment.paymentDate,
       amount: payment.amount,
       method: payment.paymentMode,
-      status: payment.status,
+      status: payment.paymentReceivedStatus,
       statusKey: payment.status,
       billNumber: payment.remoteBillId,
       serviceId: null,
@@ -124,6 +124,7 @@ const PaymentHistory = () => {
       paymentChannel: payment.paymentChannel,
       transactionId: payment.transactionId,
       consumerInfo: payment.consumer,
+      
     }));
   };
 
