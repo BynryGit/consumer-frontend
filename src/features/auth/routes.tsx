@@ -32,7 +32,6 @@ const SignUpRoute = () => {
   
   return (
     <SignUp 
-    
       onSwitchToSignIn={() => navigate(`/login/${tenant}`)}
       onSwitchToPasswordSetup={() => navigate(`/setup-password/${tenant}`)}
     />
@@ -45,7 +44,18 @@ const PasswordSetupRoute = () => {
   
   return (
     <PasswordSetup 
-   
+      onComplete={() => navigate(`/login/${tenant}`)}
+    />
+  );
+};
+
+// NEW: Route component for handling reset password links from email
+const ResetPasswordRoute = () => {
+  const navigate = useNavigate();
+  const { tenant } = useParams<{ tenant: string }>();
+  
+  return (
+    <PasswordSetup 
       onComplete={() => navigate(`/login/${tenant}`)}
     />
   );
@@ -57,7 +67,6 @@ const ForgotPasswordRoute = () => {
   
   return (
     <ForgotPassword 
-
       onSwitchToSignIn={() => navigate(`/login/${tenant}`)} 
     />
   );
@@ -98,6 +107,14 @@ export const authRoutes: AuthRoute[] = [
     auth: false,
   },
   
+  // NEW ROUTES: Handle email links with code/et parameters
+  // Email link format: https://consumer-staging.bynry.com/reset-password?code=777b8dab77a4b56f955413edeb4f74d9&et=1753788667&email=sayyam32%40yopmail.com&tnc_accepted=True&reset=True
+  {
+    path: '/reset-password/:tenant',
+    element: (<AuthGuard><ResetPasswordRoute /></AuthGuard>),
+    auth: false,
+  },
+  
   // Fallback routes without tenant (redirect to default)
   {
     path: '/login',
@@ -120,6 +137,13 @@ export const authRoutes: AuthRoute[] = [
     auth: false,
   },
   
+  // NEW ROUTE: Handle email links without tenant
+  {
+    path: '/reset-password',
+    element: (<AuthGuard><ResetPasswordRoute /></AuthGuard>),
+    auth: false,
+  },
+  
   // Root redirect
   {
     path: '/',
@@ -127,3 +151,63 @@ export const authRoutes: AuthRoute[] = [
     auth: false,
   },
 ];
+
+/*
+COMPLETE FLOW EXPLANATION:
+
+1. SIGNUP FLOW:
+   - User visits: /signup/:tenant or /signup
+   - SignUpRoute renders SignUp component
+   - User enters email, SignUp calls useResetPassword() hook
+   - Backend sends email with link: /reset-password?code=XXX&et=XXX&email=XXX&tnc_accepted=True&reset=True
+   - User clicks email link
+   - Browser navigates to: /reset-password or /reset-password/:tenant
+   - ResetPasswordRoute renders PasswordSetup component
+   - PasswordSetup extracts code/et from URL parameters using useSearchParams()
+   - PasswordSetup calls resetPassword API with extracted parameters
+   - On success, user redirects to login
+
+2. FORGOT PASSWORD FLOW:
+   - User visits: /forgot-password/:tenant or /forgot-password
+   - ForgotPasswordRoute renders ForgotPassword component
+   - User enters email, ForgotPassword calls useForgotPassword() hook
+   - Backend sends email with same link format: /reset-password?code=XXX&et=XXX&email=XXX...
+   - User clicks email link
+   - Same flow as signup: /reset-password → PasswordSetup → API call → redirect to login
+
+3. REGULAR LOGIN FLOW:
+   - User visits: /login/:tenant or /login
+   - SignInRoute renders SignInComponent (Login)
+   - User enters credentials, calls login API
+   - On success, redirects to dashboard
+
+4. ROUTE STRUCTURE:
+   - Routes with /:tenant parameter for multi-tenant support
+   - Fallback routes without tenant default to 'default' tenant
+   - AuthGuard wrapper for protected routes
+   - All auth routes have auth: false (public access)
+
+5. COMPONENT MAPPING:
+   - /login → SignInComponent (Login form)
+   - /signup → SignUp (Email collection for signup)
+   - /forgot-password → ForgotPassword (Email collection for reset)
+   - /setup-password → PasswordSetup (Manual password setup - if needed)
+   - /reset-password → PasswordSetup (Email link password setup - handles URL params)
+   - / → DefaultRedirect (Root redirect to login)
+
+6. EMAIL LINK HANDLING:
+   - Email links go to /reset-password with query parameters
+   - ResetPasswordRoute renders PasswordSetup component
+   - PasswordSetup component must extract and use URL parameters:
+     * code: Reset verification code
+     * et: Encrypted token/timestamp
+     * email: User's email address
+     * tnc_accepted: Terms acceptance flag
+     * reset: Reset flow identifier
+
+IMPORTANT NOTES:
+- The PasswordSetup component must be updated to handle URL parameters
+- Both signup and forgot password flows use the same reset-password endpoint
+- The /reset-password route is the key route for email link handling
+- AuthGuard protects routes that need authentication checks
+*/

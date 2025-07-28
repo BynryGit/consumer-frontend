@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -104,37 +103,37 @@ export const useAuth = (): UseAuthReturn => {
     checkAndFetchProfile();
   }, [userProfile, isProfileLoading, refetchProfile, queryClient]);
 
-
   const login = useCallback(
-  async (email: string, password: string) => {
-    try {
-      setLoading(true);
-      setError(null);
+    async (email: string, password: string) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const response = await authApi.login({ email, password });
-      localStorage.setItem("auth_token", response.user.token);
-      setUser(response.user);
-console.log("Responssssssss",response)
-      const profile = await authApi.getUserProfile();
+        const response = await authApi.login({ email, password });
+        localStorage.setItem("auth_token", response.user.token);
+        setUser(response.user);
+        console.log("Response", response);
 
-      // Save in globalQueryClient (because profile is shared data)
-      const key = QueryKeyFactory.global.user.profile();
-      globalQueryClient.setQueryData(key, profile);
+        const profile = await authApi.getUserProfile();
 
-      // Save to localStorage
-      localStorage.setItem(CACHED_PROFILE_KEY, JSON.stringify(profile));
+        // Save in globalQueryClient (because profile is shared data)
+        const key = QueryKeyFactory.global.user.profile();
+        globalQueryClient.setQueryData(key, profile);
 
-      navigate("/onboarding/system-admin/dashboard");
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An error occurred during login";
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  },
-  [navigate]
-);
+        // Save to localStorage
+        localStorage.setItem(CACHED_PROFILE_KEY, JSON.stringify(profile));
+
+        navigate("/onboarding/system-admin/dashboard");
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "An error occurred during login";
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [navigate]
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -142,7 +141,7 @@ console.log("Responssssssss",response)
     } catch (error) {
       console.error("Logout API call failed:", error);
     } finally {
-      console.log('called to logout')
+      console.log('called to logout');
       localStorage.clear();
       // Clear React Query cache on logout
       queryClient.clear();
@@ -197,25 +196,80 @@ console.log("Responssssssss",response)
     profileError,
   };
 };
+
+// Consumer Web Login Hook
 export const useConsumerWebLogin = () => {
   return useSmartMutation(
     (payload: ConsumerWebLoginPayload) => authApi.loginConsumerWeb(payload),
-
+    {
+      onSuccess: (data) => {
+        toast.success("Login successful");
+      },
+      onError: (error: any) => {
+        toast.error(`Login failed: ${error.message}`);
+      },
+    }
   );
 };
 
-export const useForgotPassword=()=>{
+// Forgot Password Hook
+export const useForgotPassword = () => {
   return useSmartMutation(
     (payload: { email: string }) => authApi.forgotPassword(payload.email),
-  )
-}
+    {
+      onSuccess: (data) => {
+        toast.success("Password reset email sent successfully");
+      },
+      onError: (error: any) => {
+        toast.error(`Failed to send reset email: ${error.message}`);
+      },
+    }
+  );
+};
 
-
-export const useResetPassword=()=>{
+// Reset Password Hook (Used for both signup and forgot password flows)
+// This is used by your SignUp component
+export const useResetPassword = () => {
   return useSmartMutation(
-    (payload: { email: string,role:any }) => authApi.getResetPassword(payload.email,payload.role),
-  )
-}
+    (payload: { email: string, role: any }) => authApi.getResetPassword(payload.email, payload.role),
+    {
+      onSuccess: (data) => {
+        toast.success("Password setup email sent successfully");
+      },
+      onError: (error: any) => {
+        toast.error(`Failed to send setup email: ${error.message}`);
+      },
+    }
+  );
+};
+
+// NEW HOOK: Password Reset with URL Parameters
+// This is used by your PasswordSetup component when processing the email link
+export const usePasswordResetWithParams = () => {
+  return useSmartMutation(
+    (payload: { 
+      password: string, 
+      email: string,
+      code: string,
+      et: string 
+    }) => {
+      return authApi.resetPasswordWithParams(
+        { password: payload.password, email: payload.email },
+        { et: payload.et, code: payload.code }
+      );
+    },
+    {
+      onSuccess: (data) => {
+        toast.success("Password has been set successfully");
+      },
+      onError: (error: any) => {
+        toast.error(`Failed to set password: ${error.message}`);
+      },
+    }
+  );
+};
+
+// Consumer Web Login Status Hook
 export const useConsumerWebLoginStatus = () => {
   return useSmartQuery(
     QueryKeyFactory.module.cx.login.consumerWebLoginStatus(),
@@ -228,6 +282,7 @@ export const useConsumerWebLoginStatus = () => {
   );
 };
 
+// User Utility Hook
 export const useUserUtility = (params: { tenant_alias: string }) => {
   return useSmartQuery(
     QueryKeyFactory.module.cx.login.userUtility(params),
@@ -237,5 +292,4 @@ export const useUserUtility = (params: { tenant_alias: string }) => {
       refetchInterval: false,
     }
   );
-
 };

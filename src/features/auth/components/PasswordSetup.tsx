@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@shared/ui/button';
 import { Key, CheckCircle } from 'lucide-react';
+// ADD THESE IMPORTS
+import { useSearchParams } from "react-router-dom";
+import { resetPassword } from "@features/auth/api";
+import { useToast } from "@shared/hooks/use-toast";
+
 import AuthLayout from './AuthLayout';
 import { DynamicForm } from "@shared/components/DynamicForm";
 import { FormField, FormService } from "@shared/services/FormServices";
@@ -11,6 +16,10 @@ interface PasswordSetupProps {
 
 const PasswordSetup = ({ onComplete }: PasswordSetupProps) => {
   const [isCompleted, setIsCompleted] = useState(false);
+  // ADD THESE STATE VARIABLES
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [passwordRequirements, setPasswordRequirements] = useState({
     hasMinLength: false,
@@ -20,7 +29,11 @@ const PasswordSetup = ({ onComplete }: PasswordSetupProps) => {
     passwordsMatch: false,
   });
 
-  // Create form fields configuration
+  // ADD THESE HOOKS
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+
+  // Your existing form fields configuration (unchanged)
   const formFields: FormField[] = [
     {
       name: "password",
@@ -60,23 +73,22 @@ const PasswordSetup = ({ onComplete }: PasswordSetupProps) => {
         error: "text-red-500 text-sm",
         helperText: "text-xs text-gray-500 mt-1",
       },
-   
     },
   ];
 
-  // Create form instance
+  // Your existing form instance (unchanged)
   const passwordForm = FormService.createForm({
     fields: formFields,
     mode: "onChange",
     validateOnMount: false,
   });
 
-  // Watch form values for real-time validation
+  // Your existing watch logic (unchanged)
   const watchedValues = passwordForm.watch();
   const password = watchedValues.password || '';
   const confirmPassword = watchedValues.confirmPassword || '';
 
-  // Update password requirements in real-time
+  // Your existing useEffect for password requirements (unchanged)
   useEffect(() => {
     const hasMinLength = password.length >= 8;
     const hasUppercase = /[A-Z]/.test(password);
@@ -101,16 +113,75 @@ const PasswordSetup = ({ onComplete }: PasswordSetupProps) => {
     setPasswordStrength(strength);
   }, [password, confirmPassword]);
 
+  // REPLACE YOUR EXISTING handleFormSubmit WITH THIS:
   const handleFormSubmit = async (data: any) => {
-    if (data.password !== data.confirmPassword) {
-      console.log('Passwords do not match');
-      return;
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (data.password !== data.confirmPassword) {
+        setError("Passwords do not match");
+        setLoading(false);
+        return;
+      }
+
+      // Validate password strength
+      const hasLower = /[a-z]/.test(data.password);
+      const hasUpper = /[A-Z]/.test(data.password);
+      const hasDigit = /\d/.test(data.password);
+      const minLength = data.password.length >= 8;
+
+      if (!hasLower || !hasUpper || !hasDigit || !minLength) {
+        toast({
+          title: "Password Error",
+          description: "Password must be 8+ characters, and include uppercase, lowercase, and a number.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Extract query params from URL
+      const email = searchParams.get("email") || "";
+      const et = searchParams.get("et");
+      const code = searchParams.get("code");
+
+      if (!et || !code) {
+        throw new Error("Missing required reset credentials in the URL.");
+      }
+
+      // Call the resetPassword API (same as your ResetPassword component)
+      await resetPassword(
+        { password: data.password, email: email }, 
+        { et, code }
+      );
+
+      toast({
+        title: "Password Setup Successful",
+        description: `Your password for ${email} has been created successfully.`,
+      });
+
+      setIsCompleted(true);
+
+    } catch (err: any) {
+      const errorMessage =
+        err?.response?.data?.message ||
+        (err instanceof Error
+          ? err.message
+          : "An error occurred during password setup");
+
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    
-    console.log('Password setup:', { password: data.password });
-    setIsCompleted(true);
   };
 
+  // Your existing success screen (unchanged)
   if (isCompleted) {
     return (
       <AuthLayout 
@@ -122,7 +193,7 @@ const PasswordSetup = ({ onComplete }: PasswordSetupProps) => {
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
           <p className="text-muted-foreground">
-            Your account is now ready to use. You can now sign in with your account number and password.
+            Your account is now ready to use. You can now sign in with your email and password.
           </p>
           <Button 
             onClick={onComplete}
@@ -135,7 +206,7 @@ const PasswordSetup = ({ onComplete }: PasswordSetupProps) => {
     );
   }
 
-  // Password strength helper functions
+  // Your existing helper functions (unchanged)
   const getStrengthColor = () => {
     if (passwordStrength <= 1) return 'bg-red-500';
     if (passwordStrength === 2) return 'bg-orange-500';
@@ -158,7 +229,21 @@ const PasswordSetup = ({ onComplete }: PasswordSetupProps) => {
       subtitle="Create a secure password for your account"
     >
       <div className="space-y-6">
-        {/* Dynamic Form */}
+        {/* ADD ERROR DISPLAY */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* ADD LOADING DISPLAY */}
+        {loading && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-sm">
+            Setting up your password...
+          </div>
+        )}
+
+        {/* Your existing Dynamic Form (unchanged) */}
         <DynamicForm
           fields={formFields}
           form={passwordForm}
@@ -175,7 +260,7 @@ const PasswordSetup = ({ onComplete }: PasswordSetupProps) => {
           }}
         />
 
-        {/* Password Strength Indicator */}
+        {/* Your existing Password Strength Indicator (unchanged) */}
         {password && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -197,7 +282,7 @@ const PasswordSetup = ({ onComplete }: PasswordSetupProps) => {
           </div>
         )}
 
-        {/* Password Requirements */}
+        {/* Your existing Password Requirements (unchanged) */}
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
           <p className="text-sm font-medium text-slate-700">Password requirements:</p>
           <ul className="text-sm text-slate-600 space-y-1">
@@ -244,14 +329,14 @@ const PasswordSetup = ({ onComplete }: PasswordSetupProps) => {
           </ul>
         </div>
 
-        {/* Submit Button */}
+        {/* MODIFY YOUR EXISTING SUBMIT BUTTON */}
         <Button 
           type="button"
           onClick={() => handleFormSubmit(passwordForm.getValues())}
           className="w-full h-12 text-base font-medium"
-          disabled={!isValidPassword}
+          disabled={loading || !isValidPassword}
         >
-          Create Password
+          {loading ? "Creating Password..." : "Create Password"}
         </Button>
       </div>
     </AuthLayout>

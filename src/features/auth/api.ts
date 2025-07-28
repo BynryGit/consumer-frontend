@@ -35,13 +35,13 @@ export const authApi = {
     );
     return response.data;
   },
-  getResetPassword: async (email: any,role:any): Promise<void> => {
+
+  getResetPassword: async (email: any, role: any): Promise<void> => {
     const response = await authApiClient.post(
       API_ENDPOINTS.auth.forgotPassword,
       {
         email: email,
-        role:role
-
+        role: role
       }
     );
     return response.data;
@@ -58,6 +58,24 @@ export const authApi = {
     return response.data;
   },
 
+  // NEW METHOD: Reset password with URL parameters (for email links)
+  resetPasswordWithParams: async (
+    payload: { password: string, email: any },
+    queryParams: { et: string; code: string }
+  ): Promise<any> => {
+    const url = ApiEndpoints.createUrlWithQueryParameters(
+      "auth",
+      "auth/reset-password",
+      (query) => {
+        query.push("et", queryParams.et);
+        query.push("code", queryParams.code);
+      }
+    );
+
+    const response = await authApiClient.post(url, payload);
+    return response.data;
+  },
+
   getUserProfile: async (): Promise<UserProfile> => {
     const response = await authApiClient.get(API_ENDPOINTS.auth.profile);
     return response.data.result;
@@ -67,6 +85,7 @@ export const authApi = {
     const response = await authApiClient.post(API_ENDPOINTS.auth.logout, {});
     return response.data;
   },
+
   loginConsumerWeb: async (
     payload: ConsumerWebLoginPayload
   ): Promise<ConsumerWebLoginResponse> => {
@@ -77,15 +96,15 @@ export const authApi = {
     return response.data;
   },
 
-   ForgotPassword:async(
-    payload:forgotPassword
-   ):Promise<any>=>{
-    const response=await authApiClient.post<any>(
+  ForgotPassword: async (
+    payload: forgotPassword
+  ): Promise<any> => {
+    const response = await authApiClient.post<any>(
       "user/auth/forgot-password",
       payload
     );
     return response.data;
-   },
+  },
 
   // Consumer Web Login - GET (check login status or get login info)
   getConsumerWebLogin: async (): Promise<any> => {
@@ -100,8 +119,31 @@ export const authApi = {
     );
     return response.data;
   },
- 
 };
 
+// STANDALONE FUNCTIONS (keep these for backward compatibility)
+export const forgotPasswordApi = async (payload: {
+  email: string;
+}): Promise<any> => {
+  const url = ApiEndpoints.createUrl("auth", "auth/forgot-password");
+  const response = await authApiClient.post(url, payload);
+  return response.data;
+};
 
+// This is the function used by your PasswordSetup component
+export const resetPassword = async (
+  payload: { password: string, email: any },
+  queryParams: { et: string; code: string }
+): Promise<any> => {
+  const url = ApiEndpoints.createUrlWithQueryParameters(
+    "auth",
+    "auth/reset-password",
+    (query) => {
+      query.push("et", queryParams.et);
+      query.push("code", queryParams.code);
+    }
+  );
 
+  const response = await authApiClient.post(url, payload);
+  return response.data;
+};
