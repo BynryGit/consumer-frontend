@@ -1,6 +1,6 @@
 import { Premise } from "@features/serviceRequest/types";
 import { ApiEndpoints } from "@shared/api/api-endpoints";
-import { cxApiClient } from "@shared/api/clients/apiClientFactory";
+import { communicationApiClient, cxApiClient } from "@shared/api/clients/apiClientFactory";
 
 // Add your feature-specific API calls here
 export const ProfileApi = {
@@ -68,4 +68,23 @@ export const ProfileApi = {
     const response = await cxApiClient.put(url, payload);
     return response.data;
   },
+
+
+  getActivityLog: async (params: {
+      remote_utility_id: string;
+      module:any;
+      consumer_no:string
+    }): Promise<any> => {
+      const url = ApiEndpoints.createUrlWithQueryParameters(
+        "activityLog",
+        `logs`,
+        (qs) => {
+          qs.push("remote_utility_id", params.remote_utility_id); 
+            qs.push("consumer_no", params.consumer_no);
+                qs.push("module", params.module);
+        }
+      );
+      const response = await communicationApiClient.get(url);
+      return response.data;
+    },
 };

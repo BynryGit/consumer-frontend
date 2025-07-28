@@ -260,6 +260,11 @@ export class QueryKeyFactory {
           "meterList",
           params,
         ],
+           activityLog: (params?: any): [EntityType, "activityLog", any?] => [
+          "request",
+          "activityLog",
+          params,
+        ],
       },
       billing: {
         billData: (params: {

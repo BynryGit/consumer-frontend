@@ -4,12 +4,16 @@ import { useSmartMutation } from "@shared/api/queries/hooks";
 import { QueryKeyFactory } from "@shared/api/queries/queryKeyFactory";
 import { ProfileApi } from "./api";
 
-// Add your feature-specific hooks here
-export const useProfile = () => {
-  // Define your hooks
-  return {};
+export const useActivityLog = (params: {
+    remote_utility_id: string;
+    consumer_no:string
+    module:any
+}) => {
+  return useSmartQuery(
+    QueryKeyFactory.module.cx.profile.activityLog(params),
+    () => ProfileApi.getActivityLog(params)
+  );
 };
-
 export const useConsumerDetails = (params: {
   remote_utility_id: any;
   consumer_no: string;
