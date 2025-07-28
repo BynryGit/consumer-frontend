@@ -212,6 +212,7 @@ const BillsTable = () => {
         bill={selectedBill}
         isOpen={isPaymentModalOpen}
         onClose={handlePaymentModalClose}
+        paymentType="bill" // Add the payment type prop
       />
     </div>
   );

@@ -77,27 +77,6 @@ const CreditNoteDialog = ({ creditNote, isOpen, onClose }: CreditNoteDialogProps
     ((creditNote.amount - creditNote.remaining) / creditNote.amount * 100) : 
     '0.0';
 
-  // Sample credit applications data - in real app this would come from props or API
-  const creditApplications: CreditApplication[] = creditNote.status === 'Applied' || creditNote.remaining < creditNote.amount ? [
-    {
-      dateApplied: 'Apr 22, 2025',
-      type: 'Bill',
-      reference: 'INV-2025-04-001',
-      description: 'April 2025 Water Bill',
-      amount: 25.00,
-      appliedBy: 'System Auto'
-    },
-    {
-      dateApplied: 'Apr 20, 2025',
-      type: 'Service',
-      reference: 'SRV-2025-002',
-      description: 'Connection Fee Adjustment',
-      amount: 15.00,
-      appliedBy: 'John Wilson'
-    }
-  ] : [];
-
-  const hasApplications = creditApplications.length > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -161,7 +140,7 @@ const CreditNoteDialog = ({ creditNote, isOpen, onClose }: CreditNoteDialogProps
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Created By</label>
-                  <p className="text-sm font-semibold mt-1">Sarah Lee</p>
+                  <p className="text-sm font-semibold mt-1">{creditNote.consumer}</p>
                 </div>
               </div>
 
@@ -180,54 +159,7 @@ const CreditNoteDialog = ({ creditNote, isOpen, onClose }: CreditNoteDialogProps
             </CardContent>
           </Card>
 
-          {/* Credit Applications */}
-          {hasApplications && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Credit Applications</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow>
-                        <TableHead className="font-semibold">Date Applied</TableHead>
-                        <TableHead className="font-semibold">Type</TableHead>
-                        <TableHead className="font-semibold">Reference</TableHead>
-                        <TableHead className="font-semibold">Description</TableHead>
-                        <TableHead className="font-semibold">Amount</TableHead>
-                        <TableHead className="font-semibold">Applied By</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {creditApplications.map((application, index) => (
-                        <TableRow key={index} className="hover:bg-muted/50">
-                          <TableCell className="text-sm">
-                            {application.dateApplied}
-                          </TableCell>
-                          <TableCell>
-                            {getTypeBadge(application.type)}
-                          </TableCell>
-                          <TableCell className="font-mono text-sm text-blue-600">
-                            {application.reference}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {application.description}
-                          </TableCell>
-                          <TableCell className="font-semibold">
-                            ${application.amount}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {application.appliedBy}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+         
         </div>
       </DialogContent>
     </Dialog>

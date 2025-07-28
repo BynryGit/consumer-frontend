@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import { Textarea } from "@shared/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
-import { Tabs } from "@shared/ui/tabs"; // Your shared tab service
+import { Tabs } from "@shared/ui/tabs";
 import {
   CalendarDays,
   Clock,
@@ -26,7 +26,7 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import NotesTab, { Note } from "@shared/components/NotesTab";
 import TimelineTab, { TimelineItem } from "@shared/components/TimelineTab";
-import { useRequestDetail, useAddNote } from "../hooks"; // Added useAddNote import
+import { useRequestDetail, useActivityLog, useAddNote } from "../hooks";
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 
 interface ComplaintPageProps {
@@ -45,26 +45,46 @@ const ComplaintPage = ({ complaintId }: ComplaintPageProps) => {
     id: requestId,
   });
   
-  // Add the useAddNote hook
+  // Updated to use requestId instead of hardcoded "2340"
+  const { data: activitylog } = useActivityLog({
+    remote_utility_id: remoteUtilityId,
+    id: requestId, // Use requestId instead of "2340"
+    module: "cx"
+  });
+  
   const addNoteMutation = useAddNote();
   
   console.log("dattaaaaaaaaaaa", data);
+  console.log("activity log data", activitylog);
   
+  // Transform API data to TimelineItem format
+  const transformedTimeline: TimelineItem[] = useMemo(() => {
+    if (!activitylog?.results) return [];
+    
+    return activitylog.results.map((item: any, index: number) => ({
+      id: item.data?.id || index,
+      action: item.title || "Activity",
+      description: item.description || "No description available",
+      timestamp: item.date && item.time 
+        ? `${item.date} ${item.time}` 
+        : item.date || new Date().toISOString(),
+      status: "completed" // You can add logic here to determine status based on your business rules
+    }));
+  }, [activitylog]);
+
   // Mock data for the complaint details
   const complaintDetails = {
     id: requestId,
-    status:  data?.result?.statusDisplay ||"NA",
-    createdAt: data?.result?.utilitySupportRequest?.createdDate ||"NA",
-    lastUpdated: data?.result?.lastModifiedDate ||"NA",
-    complaintName: data?.result?.utilitySupportRequest?.name ||"NA",
-    complaintCode: data?.result?.utilitySupportRequest?.configurationCode ||"NA",
-    category: data?.result?.utilitySupportRequest?.supportRequestType ||"NA",
-    subCategory: data?.result?.utilitySupportRequest?.supportRequestSubtype ||"NA",
-    incidentDate: data?.result?.requestDate ||"NA",
-    description:
-      data?.result?.utilitySupportRequest?.longDescription ||"NA",
-    expectedResolution:
-      "Resolution expected within 5-7 business days after billing records review is completed.",
+    status: data?.result?.statusDisplay || "NA",
+    createdAt: data?.result?.utilitySupportRequest?.createdDate || "NA",
+    lastUpdated: data?.result?.lastModifiedDate || "NA",
+    complaintName: data?.result?.utilitySupportRequest?.name || "NA",
+    complaintCode: data?.result?.utilitySupportRequest?.configurationCode || "NA",
+    category: data?.result?.utilitySupportRequest?.supportRequestType || "NA",
+    subCategory: data?.result?.utilitySupportRequest?.supportRequestSubtype || "NA",
+    incidentDate: data?.result?.requestDate || "NA",
+    description: data?.result?.utilitySupportRequest?.longDescription || "NA",
+    expectedResolution: "Resolution expected within 5-7 business days after billing records review is completed.",
   };
 
   // Mock evidence data
@@ -108,33 +128,19 @@ const ComplaintPage = ({ complaintId }: ComplaintPageProps) => {
     {
       id: 1,
       author: "Sarah Johnson (Agent)",
-      content:
-        "Initial review completed. Escalating to billing department for detailed analysis.",
+      content: "Initial review completed. Escalating to billing department for detailed analysis.",
       timestamp: "2025-04-08T15:30:00",
       type: "staff",
     },
     {
       id: 2,
       author: "You",
-      content:
-        "Please expedite the review as this is affecting my monthly budget planning.",
+      content: "Please expedite the review as this is affecting my monthly budget planning.",
       timestamp: "2025-04-08T16:45:00",
       type: "customer",
     },
   ];
 
-  // Mock timeline data
-  const timeline = [
-    {
-      id: 1,
-      action: "Complaint Filed",
-      description: "Customer submitted billing dispute complaint",
-      timestamp: "2025-04-08T14:30:00",
-      status: "completed",
-    },
-  ];
-
-  // Updated handleAddNote function to use the API
   const handleAddNote = async (noteContent: string) => {
     if (noteContent.trim() && requestId && remoteUtilityId) {
       const payload = {
@@ -147,7 +153,6 @@ const ComplaintPage = ({ complaintId }: ComplaintPageProps) => {
       };
       
       await addNoteMutation.mutateAsync(payload);
-    
     }
   };
 
@@ -279,12 +284,13 @@ const ComplaintPage = ({ complaintId }: ComplaintPageProps) => {
       icon: <Clock className="h-4 w-4" />,
       component: (
         <TimelineTab
-          timeline={timeline}
+          timeline={transformedTimeline}
           title="Complaint Activity Timeline"
           idPrefix="complaint"
         />
       ),
       shortLabel: "Timeline",
+      count: transformedTimeline.length,
     },
   };
 

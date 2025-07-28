@@ -5,7 +5,7 @@ import { CreateDisconnectionRequestPayload, CreateServiceRequestPayload, Utility
 import { useNavigate } from "react-router-dom";
 import { formDataToJson } from "@shared/utils/jsonToObjectTransformer";
 
-export const useComplaintConfigurations = (remoteUtilityId: number) => {
+export const useComplaintConfigurations = (remoteUtilityId: any) => {
   return useSmartQuery(
     QueryKeyFactory.module.cx.complaint.complaintConfigurations(
       remoteUtilityId

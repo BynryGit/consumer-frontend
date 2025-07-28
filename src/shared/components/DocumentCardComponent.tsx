@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@shared/ui/select";
 
-import { getRemoteUtilityId } from "@shared/utils/getUtilityId";
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 import { toast } from "sonner";
 import { Document, DocumentCard } from "./DocumentUploadForm";
 
@@ -64,7 +64,7 @@ export function DocumentCardComponent({
   isUploadDisabled: (documentType: string) => boolean;
   canRemoveCard: boolean;
 }) {
-  const remoteUtilityId = getRemoteUtilityId();
+  const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
 
   // Get document type code for selected document type
   const getDocumentTypeCode = useCallback((documentTypeName: string) => {
@@ -89,7 +89,7 @@ export function DocumentCardComponent({
     data: documentSubtypeData,
     isLoading: isDocumentSubtypeLoading,
   } = useDocumentSubtype({
-    remote_utility_id: 702,
+    remote_utility_id: remoteUtilityId,
     config_level: "document_subtype",
     code_list: documentTypeCode,
   }, {

@@ -30,7 +30,7 @@ const UsageComparison = () => {
   };
 
   // Fetch data using your existing hook
-  const { data: apiData, isLoading, error } = useComparison({
+  const { data: apiData } = useComparison({
     consumer_no: remoteConsumerNumber,
     remote_utility_id: remoteUtilityId,
     period: getPeriodValue(comparisonPeriod),
@@ -64,36 +64,6 @@ const UsageComparison = () => {
         return '';
     }
   };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading comparison data...</span>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <Card className="border-red-200 bg-red-50">
-        <CardContent className="pt-4">
-          <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-red-600 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-red-900">Error Loading Data</h4>
-              <p className="text-sm text-red-700 mt-1">
-                Unable to load comparison data. Please try again later.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   // No data state
   if (!apiData?.result || transformedData.length === 0) {
     return (

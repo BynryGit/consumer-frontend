@@ -7,7 +7,7 @@ import { Badge } from '@shared/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/ui/dialog';
 import ServiceCenterMap from './ServiceCenterMap';
 import { useServiceDetail } from '../hooks';
-
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 interface ServiceCenter {
   id: string;
   name: string;
@@ -23,9 +23,10 @@ interface ServiceCenter {
 }
 
 const ServiceCenterSearch = () => {
+    const { remoteUtilityId, remoteConsumerNumber ,consumerId} = getLoginDataFromStorage();
   const { data, refetch } = useServiceDetail({
-    remote_utility_id: "699",
-    consumer_id: "20167"
+    remote_utility_id: remoteUtilityId,
+    consumer_id:consumerId
   });
 
   const [searchQuery, setSearchQuery] = useState('');

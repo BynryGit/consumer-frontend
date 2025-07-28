@@ -201,6 +201,7 @@ const ServicesBilling = () => {
         isOpen={isPaymentModalOpen} 
         onClose={handlePaymentModalClose}
         onPaymentSuccess={handlePaymentSuccess}
+        paymentType="service" // Add the payment type prop
       />
     </div>
   );

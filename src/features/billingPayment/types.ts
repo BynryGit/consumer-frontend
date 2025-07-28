@@ -65,10 +65,10 @@ export interface PaymentPayload {
   is_active: boolean;
   is_deleted: boolean;
   is_payment_consiled: boolean;
-  consumer: number;
+  consumer: any;
   created_date: string; // e.g. "23-Jul-2025"
   remote_bill_id: string | null;
-  remote_utility_id: number;
+  remote_utility_id: any;
   extra_data: PaymentExtraData;
   consumer_support_request: number | null;
   source: number;
