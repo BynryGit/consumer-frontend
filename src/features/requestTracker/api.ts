@@ -78,7 +78,6 @@ export const requestTrackerApi = {
     const response = await cxApiClient.get(url);
     return response.data;
   },
-//https://api-notification-staging.bynry.com/api/activity-log/logs/?remote_utility_id=569&request_id=804&action_type=complaint&module=cx
 getActivityLog: async (params: {
     id: string;
     remote_utility_id: string;
