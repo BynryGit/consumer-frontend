@@ -3,7 +3,7 @@ export const API_ENDPOINTS = {
   // Auth endpoints
   auth: {
     login: "/auth/login/",
-    logout: "/auth/logout/",
+    logout: "/logout/",
     forgotPassword: "/auth/forgot-password/",
     resetPassword: "/auth/reset-password/",
     profile: "/user-profile/",

@@ -80,8 +80,6 @@ const UsageCharts = () => {
     }
   }, [activeServices, utilityType, apiThresholds]);
 
-  
-
   const getUnitLabel = (type: string) => {
     const service = activeServices.find(s => s.name.toLowerCase() === type.toLowerCase());
     return service?.utilityUnit || (type === 'electricity' ? 'kWh' : type === 'water' ? 'L' : 'units');
@@ -103,46 +101,6 @@ const UsageCharts = () => {
     return '#8884d8';
   };
 
-  const getCurrentUsage = (utility: string) => {
-    const consumptionDetail = consumptionDetails.find(detail => {
-      const serviceName = Object.keys(detail)[0];
-      return serviceName.toLowerCase() === utility.toLowerCase();
-    });
-    
-    if (consumptionDetail) {
-      const serviceName = Object.keys(consumptionDetail)[0];
-      return consumptionDetail[serviceName].consumption || 0;
-    }
-    
-    return transformedData.length > 0 ? transformedData[transformedData.length - 1].consumption || 0 : 0;
-  };
-
-  const getThresholdData = (utility: string) => {
-    const consumptionDetail = consumptionDetails.find(detail => {
-      const serviceName = Object.keys(detail)[0];
-      return serviceName.toLowerCase() === utility.toLowerCase();
-    });
-    
-    if (consumptionDetail) {
-      const serviceName = Object.keys(consumptionDetail)[0];
-      const data = consumptionDetail[serviceName];
-      return {
-        threshold: data.limit,
-        percentage: data.thresholdPercentage,
-        status: data.thresholdPercentage >= 90 ? 'danger' : data.thresholdPercentage >= 75 ? 'warning' : 'safe'
-      };
-    }
-    
-    const current = getCurrentUsage(utility);
-    const threshold = thresholds[utility] || 1000;
-    const percentage = (current / threshold) * 100;
-    
-    return {
-      threshold,
-      percentage,
-      status: percentage >= 90 ? 'danger' : percentage >= 75 ? 'warning' : 'safe'
-    };
-  };
 
   const handleSaveThresholds = async () => {
     try {
@@ -196,12 +154,13 @@ const UsageCharts = () => {
           {showThresholdSettings ? (
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {activeServices.map((service) => {
-                  const key = service.name.toLowerCase();
+                {consumptionDetails.map((detail, index) => {
+                  const serviceName = Object.keys(detail)[0];
+                  const key = serviceName.toLowerCase();
                   return (
-                    <div key={service.id} className="space-y-2">
+                    <div key={index} className="space-y-2">
                       <Label htmlFor={`${key}-threshold`}>
-                        {service.name} ({getUnitLabel(key)})
+                        {serviceName} ({getUnitLabel(key)})
                       </Label>
                       <Input
                         id={`${key}-threshold`}
@@ -211,7 +170,7 @@ const UsageCharts = () => {
                           ...prev, 
                           [key]: parseInt(e.target.value) || 0 
                         }))}
-                        placeholder={`Enter ${service.name.toLowerCase()} threshold`}
+                        placeholder={`Enter ${serviceName.toLowerCase()} threshold`}
                       />
                     </div>
                   );
@@ -228,32 +187,34 @@ const UsageCharts = () => {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-3">
-              {activeServices.map((service) => {
-                const utility = service.name.toLowerCase();
-                const current = getCurrentUsage(utility);
-                const { threshold, percentage, status } = getThresholdData(utility);
+              {consumptionDetails.map((detail, index) => {
+                const serviceName = Object.keys(detail)[0];
+                const utility = serviceName.toLowerCase();
+                const data = detail[serviceName];
+                const current = data.consumption || 0;
+                const percentage = data.thresholdPercentage || 0;
+                const threshold = data.limit || 0;
+                const status = percentage >= 90 ? 'danger' : percentage >= 75 ? 'warning' : 'safe';
                 
                 return (
-                  <div key={service.id} className="space-y-2">
+                  <div key={index} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {getUtilityIcon(utility)}
-                        <span className="text-sm font-medium">{service.name}</span>
+                        <span className="text-sm font-medium">{serviceName}</span>
                       </div>
                       <Badge variant={
-                        utility === utilityType ? 
-                          (status === 'danger' ? 'destructive' : status === 'warning' ? 'secondary' : 'default')
-                          : 'outline'
+                        status === 'danger' ? 'destructive' : status === 'warning' ? 'secondary' : 'default'
                       }>
-                        {utility === utilityType ? `${percentage}%` : 'No data'}
+                        {`${percentage}%`}
                       </Badge>
                     </div>
                     <Progress 
-                      value={utility === utilityType ? Math.min(percentage, 100) : 0} 
+                      value={Math.min(percentage, 100)} 
                       className="h-2" 
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Current: {utility === utilityType ? current : '-'}</span>
+                      <span>Current: {current}</span>
                       <span>Limit: {threshold}</span>
                     </div>
                   </div>

@@ -4,7 +4,7 @@ import { Mail } from 'lucide-react';
 import AuthLayout from './AuthLayout';
 import { DynamicForm } from "@shared/components/DynamicForm";
 import { FormField, FormService } from "@shared/services/FormServices";
-import { useResetPassword } from "../hooks";
+import { useForgotPassword } from "../hooks";
 
 interface SignUpProps {
   onSwitchToSignIn: () => void;
@@ -13,7 +13,7 @@ interface SignUpProps {
 
 const SignUp = ({ onSwitchToSignIn, onSwitchToPasswordSetup }: SignUpProps) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const signUpMutation = useResetPassword();
+  const signUpMutation = useForgotPassword();
 
   // Create form fields configuration
   const formFields: FormField[] = [

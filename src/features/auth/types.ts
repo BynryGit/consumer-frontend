@@ -111,7 +111,7 @@ export interface ConsumerWebLoginPayload {
   email?: string;
   password: string;
   consumer_number?: string;
-  // Add other login fields as needed
+
 }
 
 export interface forgotPassword{
