@@ -6,6 +6,7 @@ import { useToast } from "../../shared/hooks/use-toast";
 import { useBaseComponent } from "@shared/base/hooks/useBaseComponent";
 import { Toaster } from "sonner";
 import { sidenav as Sidenav } from "@features/core/components/sidenav";
+import { Topnav } from "@features/core/components";
 
 interface MainLayoutProps {
   error?: Error | null;
@@ -60,6 +61,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 
   return (
     <div className="relative min-h-screen">
+      <div className="flex flex-col min-h-screen">
+         <Topnav />
       <div className="flex min-h-screen">
         <Sidenav />
         <main className="flex-1 flex flex-col min-w-0 p-4 relative">
@@ -70,6 +73,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             <LoadingInterceptor />
           </div>
         </main>
+      </div>
       </div>
     </div>
   );
