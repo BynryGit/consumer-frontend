@@ -7,6 +7,7 @@ import {
   AccordionTrigger,
 } from "@shared/ui/accordion";
 import { Tabs } from "@shared/ui/tabs";
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 import { Card, CardContent } from "@shared/ui/card";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
@@ -29,7 +30,7 @@ interface FAQSectionProps {
 const FAQSection = ({ searchQuery }: FAQSectionProps) => {
   const location = useLocation();
   const { toast } = useToast();
-  
+    const { remoteUtilityId, remoteConsumerNumber,consumerId } = getLoginDataFromStorage();
   // Add the useUpdateFaqStatus hook
   const updateFaqStatus = useUpdateFaqStatus();
   
@@ -72,7 +73,7 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
 
   // Fetch FAQ data dynamically based on current tab
   const { data: faqsData, isLoading, error } = useFaqData({
-    remote_utility_id: "699",
+    remote_utility_id:remoteUtilityId,
     show_inactive: true,
     faq_category: apiCategory,
   });
@@ -109,7 +110,7 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
     // Call the API
     updateFaqStatus.mutate({
       code: itemCode,
-      remote_utility_id: 699,
+      remote_utility_id: remoteUtilityId,
       is_helpful: 1
     });
   };

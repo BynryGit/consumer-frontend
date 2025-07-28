@@ -3,7 +3,8 @@ import { consumerApiClient, cxApiClient, onboardingApiClient } from "@shared/api
 import { Complaint, ComplaintConfiguration } from "./components/complaints/types";
 import { CreateDisconnectionRequestPayload, CreateServiceRequestPayload, PaymentMethod, Premise, ServiceRequest, TimeSlotChoice, TransferRequest, UtilityConfigFilters, UtilityRequestConfiguration } from "./types";
 import { transformJsonToObject } from "@shared/utils/jsonToObjectTransformer";
-
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
+  const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
 
 // Add your feature-specific API calls here
 export const serviceRequestApi = {
@@ -52,7 +53,7 @@ export const serviceRequestApi = {
       "consumerWeb",
       "utility-request-configuration",
       (query) => {
-        query.push("remote_utility_id", 699);
+        query.push("remote_utility_id", remoteUtilityId);
         query.push("request_type", filters.requestType);
         if (filters.disablePagination) query.push("disable_pagination", "true");
         if (filters.searchData) query.push("search_data", filters.searchData);
@@ -86,13 +87,6 @@ export const serviceRequestApi = {
     );
     return response.data;
   },
-    // createServiceRequest: async (
-    //   payload: CreateServiceRequestPayload
-    // ): Promise<any> => {
-    //   const url = ApiEndpoints.createUrl("cx", "consumer-service-request");
-    //   const response = await cxApiClient.post(url, payload);
-    //   return response.data;
-    // },
 getPaymentMethod: async (params: {
     remote_utility_id: number;
   }): Promise<any> => {

@@ -12,6 +12,7 @@ export type EntityType =
   | "meter"
   | "consumer"
   | "workorder"
+  |"dashboard"
   | "billing"
   | "notification"
   | "activity"
@@ -185,6 +186,32 @@ export class QueryKeyFactory {
         ],
         
       },
+      dashboard:{
+         billData: (params: {
+          remoteUtilityId: string;
+          remoteConsumerNumber: string;
+         fetch_last_six_records: any;
+        }): [EntityType, ActionType, typeof params] => [
+          "dashboard",
+          "billData",
+          params,
+        ],
+          tipsData:(params?: any): [EntityType, "tipsData", any?] => [
+          "dashboard",
+          "tipsData",
+          params,
+        ],
+        requestData:(params?: any): [EntityType, "requestData", any?] => [
+          "dashboard",
+          "requestData",
+          params,
+        ],
+             UsageChart:(params?: any): [EntityType, "UsageChart", any?] => [
+          "usage",
+          "UsageChart",
+          params,
+        ],
+      },
       usage:{
         getThershold:
         (params?: any): [EntityType, "getThershold", any?] => [
@@ -339,6 +366,11 @@ export class QueryKeyFactory {
         requestData: (params?: any): [EntityType, ActionType, any?] => [
           "request",
           "requestData",
+          params,
+        ],
+        activityLog: (params?: any): [EntityType, "activityLog", any?] => [
+          "request",
+          "activityLog",
           params,
         ],
         paymentMethod

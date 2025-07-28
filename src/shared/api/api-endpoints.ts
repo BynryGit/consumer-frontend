@@ -8,6 +8,8 @@ export type ApiType =
   | "star"
   | "receipt"
   | "consumerWeb"
+  |"communication"
+ | "activityLog"
   | "onboarding";
 
 // Define API base URLs
@@ -17,6 +19,8 @@ export const API_BASE_URLS: Record<ApiType, string> = {
   cx: import.meta.env.VITE_CX_API_ENDPOINT || "",
    bx: import.meta.env.VITE_BX_API_ENDPOINT || "",
   star: import.meta.env.VITE_STAR_API_ENDPOINT || "",
+   activityLog: import.meta.env.VITE_ACTIVITY_LOG_API_ENDPOINT || "",
+    communication: import.meta.env.VITE_NOTIFICATION_API_ENDPOINT || "",
   receipt: import.meta.env.VITE_RECEIPT_API_ENDPOINT || "",
   consumerWeb: import.meta.env.VITE_CONSUMER_WEB_API_ENDPOINT || "",
 };

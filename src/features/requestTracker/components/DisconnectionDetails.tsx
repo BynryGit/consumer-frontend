@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Badge } from '@shared/ui/badge';
 import { Button } from '@shared/ui/button';
 import { Textarea } from '@shared/ui/textarea';
@@ -23,7 +23,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import NotesTab, { Note } from '@shared/components/NotesTab';
 import TimelineTab, { TimelineItem } from '@shared/components/TimelineTab';
-import { useRequestDetail, useAddNote } from '../hooks'; // Added useAddNote import
+import { useRequestDetail, useActivityLog, useAddNote } from '../hooks'; // Added useActivityLog import
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 
 interface DisconnectionPageProps {
@@ -42,8 +42,33 @@ const DisconnectionPage = ({DisconnectionPage}: DisconnectionPageProps) => {
     id: requestId,
   });
   
+  // Add the useActivityLog hook
+  const { data: activitylog } = useActivityLog({
+    remote_utility_id: remoteUtilityId,
+    id: requestId, // Use requestId instead of hardcoded value
+    module: "cx"
+  });
+  
   // Add the useAddNote hook
   const addNoteMutation = useAddNote();
+  
+  console.log("disconnection data", data);
+  console.log("activity log data", activitylog);
+  
+  // Transform API data to TimelineItem format
+  const transformedTimeline: TimelineItem[] = useMemo(() => {
+    if (!activitylog?.results) return [];
+    
+    return activitylog.results.map((item: any, index: number) => ({
+      id: item.data?.id || index,
+      action: item.title || "Activity",
+      description: item.description || "No description available",
+      timestamp: item.date && item.time 
+        ? `${item.date} ${item.time}` 
+        : item.date || new Date().toISOString(),
+      status: "completed" // You can add logic here to determine status based on your business rules
+    }));
+  }, [activitylog]);
   
   // Mock data for the disconnection details
   const request = {
@@ -92,45 +117,6 @@ consumerMappingData.forEach(service => {
       content: 'Please confirm the final reading date as I need to plan my moving schedule accordingly.',
       timestamp: '2025-04-08T16:45:00',
       type: 'customer'
-    }
-  ];
-
-  // Mock timeline data
-  const timeline = [
-    {
-      id: 1,
-      action: 'Disconnection Request Submitted',
-      description: 'Customer submitted disconnection request for relocation',
-      timestamp: '2025-04-08T14:30:00',
-      status: 'completed'
-    },
-    {
-      id: 2,
-      action: 'Request Validation',
-      description: 'Customer service team validated request details',
-      timestamp: '2025-04-08T15:00:00',
-      status: 'completed'
-    },
-    {
-      id: 3,
-      action: 'Final Reading Scheduled',
-      description: 'Final meter reading appointment scheduled',
-      timestamp: '2025-04-08T15:30:00',
-      status: 'current'
-    },
-    {
-      id: 4,
-      action: 'Service Disconnection',
-      description: 'Physical disconnection of water and electricity services',
-      timestamp: '2025-04-15T11:00:00',
-      status: 'pending'
-    },
-    {
-      id: 5,
-      action: 'Final Settlement',
-      description: 'Final bill processing and account closure',
-      timestamp: '2025-04-20T17:00:00',
-      status: 'pending'
     }
   ];
 
@@ -183,8 +169,15 @@ consumerMappingData.forEach(service => {
     timeline: {
       label: 'Timeline',
       icon: <Clock className="h-4 w-4" />,
-      component: <TimelineTab timeline={timeline} title="Disconnection Activity Timeline" idPrefix="disconnection" />,
-      shortLabel: 'Timeline'
+      component: (
+        <TimelineTab
+          timeline={transformedTimeline}
+          title="Disconnection Activity Timeline"
+          idPrefix="disconnection"
+        />
+      ),
+      shortLabel: 'Timeline',
+      count: transformedTimeline.length,
     }
   };
 

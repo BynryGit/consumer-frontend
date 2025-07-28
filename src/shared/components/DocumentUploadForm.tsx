@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@shared/ui/alert";
 
-import { getRemoteUtilityId } from "@shared/utils/getUtilityId";
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 import { toast } from "sonner";
 
 import { useDocumentType, useKycInfo } from "@features/serviceRequest/hooks";
@@ -142,7 +142,7 @@ export function DocumentUploadForm({
   // Extract consumer ID from URL if not provided via props
   const { consumerId: urlConsumerId } = useParams();
   const actualConsumerId = consumerId || urlConsumerId;
-  const remoteUtilityId = getRemoteUtilityId();
+const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
 
   // State management (storing File objects in memory like EvidenceAttachmentsStep)
   const [documents, setDocuments] = useState<Document[]>(initialData);
@@ -162,7 +162,7 @@ export function DocumentUploadForm({
     error: kycError 
   } = useKycInfo(
     {
-      remote_utility_id: 702,
+      remote_utility_id: remoteUtilityId,
       consumer_id: actualConsumerId,
       is_kyc_info: 1
     },
@@ -177,7 +177,7 @@ export function DocumentUploadForm({
     isLoading: isDocumentTypeLoading,
     error: documentTypeError,
   } = useDocumentType({
-    remote_utility_id: 702,
+    remote_utility_id: remoteUtilityId,
     config_level: "document_type",
   });
 

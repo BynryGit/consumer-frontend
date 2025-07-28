@@ -14,7 +14,7 @@ interface ServiceCenter {
   subArea: string;
   phone: string;
   email: string;
-  type: 'Main Branch' | 'Sub Branch' | 'Service Point';
+  type:string;
   availableServices: string[];
   distance?: string;
 }

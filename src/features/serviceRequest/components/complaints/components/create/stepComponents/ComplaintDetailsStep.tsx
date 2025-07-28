@@ -15,6 +15,7 @@ import { Input } from "@shared/ui/input";
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 
 interface ComplaintDetailsStepProps {
   remoteUtilityId: number;
@@ -29,7 +30,6 @@ interface ComplaintDetailsStepProps {
 }
 
 export function ComplaintDetailsStep({
-  remoteUtilityId,
   storageKey,
   stepHelpers,
   currentStepIndex = 1,
@@ -39,6 +39,7 @@ export function ComplaintDetailsStep({
   clearValidationError,
   isValidating,
 }: ComplaintDetailsStepProps) {
+    const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
   const [searchTerm, setSearchTerm] = useState("");
 
   // Use the utility request configuration hook
@@ -46,7 +47,7 @@ export function ComplaintDetailsStep({
     data: complaintConfigs,
     isLoading,
     error,
-  } = useComplaintConfigurations(702);
+  } = useComplaintConfigurations(remoteUtilityId);
 
   // Get selected complaint from step helpers
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);

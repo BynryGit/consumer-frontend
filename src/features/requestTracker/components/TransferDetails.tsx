@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Badge } from "@shared/ui/badge";
 import { Button } from "@shared/ui/button";
 import { Textarea } from "@shared/ui/textarea";
@@ -25,7 +25,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import NotesTab, { Note } from "@shared/components/NotesTab";
 import TimelineTab, { TimelineItem } from "@shared/components/TimelineTab";
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
-import { useRequestDetail, useAddNote } from "../hooks"; // Added useAddNote import
+import { useRequestDetail, useActivityLog, useAddNote } from "../hooks"; // Added useActivityLog import
 
 interface TransferPageProps {
   transferId?: string;
@@ -43,8 +43,33 @@ const TransferPage = ({ transferId }: TransferPageProps) => {
     id: requestId,
   });
 
+  // Add the useActivityLog hook
+  const { data: activitylog } = useActivityLog({
+    remote_utility_id: remoteUtilityId,
+    id: requestId, // Use requestId instead of hardcoded value
+    module: "cx"
+  });
+
   // Add the useAddNote hook
   const addNoteMutation = useAddNote();
+
+  console.log("transfer data", data);
+  console.log("activity log data", activitylog);
+
+  // Transform API data to TimelineItem format
+  const transformedTimeline: TimelineItem[] = useMemo(() => {
+    if (!activitylog?.results) return [];
+    
+    return activitylog.results.map((item: any, index: number) => ({
+      id: item.data?.id || index,
+      action: item.title || "Activity",
+      description: item.description || "No description available",
+      timestamp: item.date && item.time 
+        ? `${item.date} ${item.time}` 
+        : item.date || new Date().toISOString(),
+      status: "completed" // You can add logic here to determine status based on your business rules
+    }));
+  }, [activitylog]);
 
   // Mock data for the transfer details
   const request = {
@@ -93,47 +118,6 @@ const TransferPage = ({ transferId }: TransferPageProps) => {
         "When can I expect the transfer to be completed? The new owner needs service activated urgently.",
       timestamp: "2025-04-01T16:15:00",
       type: "customer",
-    },
-  ];
-
-  // Mock timeline data
-  const timeline = [
-    {
-      id: 1,
-      action: "Transfer Request Submitted",
-      description:
-        "Customer submitted transfer request with initial documentation",
-      timestamp: "2025-04-01T08:20:00",
-      status: "completed",
-    },
-    {
-      id: 2,
-      action: "Document Verification",
-      description:
-        "All required documents uploaded and verification process initiated",
-      timestamp: "2025-04-01T10:45:00",
-      status: "completed",
-    },
-    {
-      id: 3,
-      action: "Financial Review",
-      description: "Account balance review and transfer arrangements finalized",
-      timestamp: "2025-04-02T11:00:00",
-      status: "completed",
-    },
-    {
-      id: 4,
-      action: "Ownership Transfer Processing",
-      description: "Processing ownership change and updating account records",
-      timestamp: "2025-04-03T09:10:00",
-      status: "current",
-    },
-    {
-      id: 5,
-      action: "Service Activation",
-      description: "Service activation under new account holder",
-      timestamp: "2025-04-04T10:00:00",
-      status: "pending",
     },
   ];
 
@@ -289,12 +273,13 @@ const TransferPage = ({ transferId }: TransferPageProps) => {
       icon: <Clock className="h-4 w-4" />,
       component: (
         <TimelineTab
-          timeline={timeline}
+          timeline={transformedTimeline}
           title="Transfer Activity Timeline"
           idPrefix="transfer"
         />
       ),
       shortLabel: "Timeline",
+      count: transformedTimeline.length,
     },
   };
 

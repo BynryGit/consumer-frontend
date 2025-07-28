@@ -36,6 +36,17 @@ export const useRequestSummary = (params: {
   );
 };
 
+export const useActivityLog = (params: {
+  id: string;
+    remote_utility_id: string;
+    module:any
+}) => {
+  return useSmartQuery(
+    QueryKeyFactory.module.cx.request.activityLog(params),
+    () => requestTrackerApi.getActivityLog(params)
+  );
+};
+
 export const useRequestType = (params: {
   remote_utility_id: string;
 }) => {
