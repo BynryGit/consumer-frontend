@@ -4,7 +4,7 @@ import { Mail } from 'lucide-react';
 import AuthLayout from './AuthLayout';
 import { DynamicForm } from "@shared/components/DynamicForm";
 import { FormField, FormService } from "@shared/services/FormServices";
-import { useForgotPassword } from "../hooks";
+import { useResetPassword } from "../hooks";
 
 interface SignUpProps {
   onSwitchToSignIn: () => void;
@@ -13,7 +13,7 @@ interface SignUpProps {
 
 const SignUp = ({ onSwitchToSignIn, onSwitchToPasswordSetup }: SignUpProps) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const signUpMutation = useForgotPassword();
+  const signUpMutation = useResetPassword();
 
   // Create form fields configuration
   const formFields: FormField[] = [
@@ -43,7 +43,7 @@ const SignUp = ({ onSwitchToSignIn, onSwitchToPasswordSetup }: SignUpProps) => {
 
   const handleFormSubmit = async (data: any) => {
     try {
-      const payload = { email: data.email };
+      const payload = { email: data.email,role:"consumer" };
       await signUpMutation.mutateAsync(payload);
       setIsSubmitted(true);
     } catch (error) {
