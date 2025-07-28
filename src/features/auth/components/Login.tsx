@@ -9,7 +9,7 @@ import { DynamicForm } from "@shared/components/DynamicForm";
 import { FormField, FormService } from "@shared/services/FormServices";
 import { setAuthToken } from '@shared/auth/authUtils';
 import { useConsumerDetails } from '@features/serviceRequest/hooks';
-
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 // Types for API response
 interface UtilityProvider {
   id: number;
@@ -37,6 +37,7 @@ interface SignInProps {
 
 const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: SignInProps) => {
   const navigate = useNavigate();
+  const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [serviceProviderID, setServiceProviderID] = useState<number>(0);
   const [passwordVisible, setPasswordVisible] = useState<boolean>(false);
@@ -161,10 +162,13 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
       console.log('✅ Current tenant saved:', tenant);
     }
   }, [tenant]);
+useEffect(() => {
+  if (consumerDetailsData && consumerDetailsParams) {
+    console.log('✅ Consumer details loaded, navigating to dashboard');
+    navigate('/dashboard');
+  }
+}, [consumerDetailsData, consumerDetailsParams, navigate]);
 
-  const togglePasswordVisibility = () => {
-    setPasswordVisible(!passwordVisible);
-  };
 
 const handleFormSubmit = async (data: any) => {
   if (!data.service_provider) {
@@ -214,14 +218,14 @@ const handleFormSubmit = async (data: any) => {
     }
     
     // Set parameters to trigger useConsumerDetails hook
-    const consumerNo = "AXM012";
+    const consumerNo = remoteConsumerNumber;
     setConsumerDetailsParams({
       remote_utility_id: selectedUtility.id,
       consumer_no: consumerNo
     });
     
-    // Navigate to dashboard after successful login
-    navigate('/dashboard');
+    // // Navigate to dashboard after successful login
+    // navigate('/dashboard');
     
   } catch (error) {
     toast.error('Login failed. Please check your credentials.');
