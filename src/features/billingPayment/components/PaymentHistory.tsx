@@ -1,20 +1,38 @@
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/ui/card';
-import { Button } from '@shared/ui/button';
-import { Badge } from '@shared/ui/badge';
-import { Input } from '@shared/ui/input';
-import { Search, Calendar, DollarSign, Eye, CreditCard, FileText, Wrench, CalendarDays, User, ChevronDown } from 'lucide-react';
+import React, { useState, useMemo } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@shared/ui/card";
+import { Button } from "@shared/ui/button";
+import { Badge } from "@shared/ui/badge";
+import { Input } from "@shared/ui/input";
+import {
+  Search,
+  Calendar,
+  DollarSign,
+  Eye,
+  CreditCard,
+  FileText,
+  Wrench,
+  CalendarDays,
+  User,
+  ChevronDown,
+  Filter,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@shared/ui/dialog';
-import { usePayementHistory } from '../hooks';
-import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
-import { PaymentFilterPanel } from './PaymentHistoryFilter';
-import { useSearchParams } from 'react-router-dom';
+} from "@shared/ui/dialog";
+import { usePayementHistory } from "../hooks";
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
+import { PaymentFilterPanel } from "./PaymentHistoryFilter";
+import { useSearchParams } from "react-router-dom";
 
 interface PaymentFilters {
   status?: number[];
@@ -33,7 +51,7 @@ interface PaymentHistoryFilters {
 const PaymentHistory = () => {
   const { remoteUtilityId, consumerId } = getLoginDataFromStorage();
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   // Compute filters using useMemo
   const filters = useMemo((): PaymentHistoryFilters => {
     const urlFilters: PaymentHistoryFilters = {
@@ -60,6 +78,7 @@ const PaymentHistory = () => {
   const [itemsPerLoad] = useState(5);
   const [currentFilters, setCurrentFilters] = useState<PaymentFilters>({});
   const [searchTerm, setSearchTerm] = useState(searchParams.get("query") || "");
+  const [showFilters, setShowFilters] = useState(false);
 
   // Handle search functionality
   const handleSearch = (searchValue: string) => {
@@ -88,8 +107,8 @@ const PaymentHistory = () => {
   // Map API response to component format
   const mapApiToComponentData = (apiResults) => {
     if (!apiResults || !Array.isArray(apiResults)) return [];
-    
-    return apiResults.map(payment => ({
+
+    return apiResults.map((payment) => ({
       id: payment.id,
       date: payment.paymentDate,
       amount: payment.amount,
@@ -104,7 +123,7 @@ const PaymentHistory = () => {
       recordedBy: payment.createdUserRemoteName,
       paymentChannel: payment.paymentChannel,
       transactionId: payment.transactionId,
-      consumerInfo: payment.consumer
+      consumerInfo: payment.consumer,
     }));
   };
 
@@ -116,7 +135,9 @@ const PaymentHistory = () => {
   };
 
   const handleLoadMore = () => {
-    setVisibleCount(prev => Math.min(prev + itemsPerLoad, filteredPayments.length));
+    setVisibleCount((prev) =>
+      Math.min(prev + itemsPerLoad, filteredPayments.length)
+    );
   };
 
   const handleApplyFilters = (filters: Partial<PaymentFilters>) => {
@@ -131,24 +152,24 @@ const PaymentHistory = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'CREDIT':
-        return 'bg-green-100 text-green-800';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'FAILED':
-        return 'bg-red-100 text-red-800';
+      case "CREDIT":
+        return "bg-green-100 text-green-800";
+      case "PENDING":
+        return "bg-yellow-100 text-yellow-800";
+      case "FAILED":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getPaymentTypeIcon = (type) => {
     switch (type) {
-      case 'Bill Payment':
+      case "Bill Payment":
         return <FileText className="h-4 w-4" />;
-      case 'Service Payment':
+      case "Service Payment":
         return <Wrench className="h-4 w-4" />;
-      case 'Installment Payment':
+      case "Installment Payment":
         return <CalendarDays className="h-4 w-4" />;
       default:
         return <DollarSign className="h-4 w-4" />;
@@ -156,7 +177,7 @@ const PaymentHistory = () => {
   };
 
   // Apply filters locally (for non-search filters)
-  const filteredPayments = paymentsData.filter(payment => {
+  const filteredPayments = paymentsData.filter((payment) => {
     // Status filter
     if (currentFilters.status && currentFilters.status.length > 0) {
       if (!currentFilters.status.includes(payment.statusKey)) {
@@ -179,28 +200,39 @@ const PaymentHistory = () => {
 
   return (
     <div className="space-y-6">
-
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search by payment ID, transaction ID, amount..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search by payment ID, transaction ID, amount..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex items-center gap-2 px-4"
+        >
+          <Filter className="h-4 w-4" />
+          {showFilters ? "Hide Filters" : "Show Filters"}
+        </Button>
+      </div>
 
       {/* Filter Panel */}
-      <Card>
-        <CardContent>
-          <PaymentFilterPanel
-            currentFilters={currentFilters}
-            onApplyFilters={handleApplyFilters}
-            onResetFilters={handleResetFilters}
-            remoteUtilityId={remoteUtilityId}
-          />
-        </CardContent>
-      </Card>
+      {showFilters && (
+        <Card>
+          <CardContent>
+            <PaymentFilterPanel
+              currentFilters={currentFilters}
+              onApplyFilters={handleApplyFilters}
+              onResetFilters={handleResetFilters}
+              remoteUtilityId={remoteUtilityId}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Payment History */}
       <Card>
@@ -237,7 +269,7 @@ const PaymentHistory = () => {
                     </Badge>
                     <Badge variant="outline">{payment.paymentType}</Badge>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Date</p>
@@ -254,21 +286,23 @@ const PaymentHistory = () => {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Payment Method</p>
+                      <p className="text-sm text-muted-foreground">
+                        Payment Method
+                      </p>
                       <p className="font-medium flex items-center gap-1">
                         <CreditCard className="h-4 w-4" />
                         {payment.method}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Payment Channel</p>
-                      <p className="font-medium">
-                        {payment.paymentChannel}
+                      <p className="text-sm text-muted-foreground">
+                        Payment Channel
                       </p>
+                      <p className="font-medium">{payment.paymentChannel}</p>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col justify-center items-end h-full ml-4">
                   <Button
                     variant="outline"
@@ -282,11 +316,11 @@ const PaymentHistory = () => {
               </div>
             </div>
           ))}
-          
+
           {hasMorePayments && (
             <div className="flex justify-center pt-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleLoadMore}
                 className="flex items-center gap-2"
               >
@@ -298,7 +332,9 @@ const PaymentHistory = () => {
 
           {filteredPayments.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No payments found matching the selected filters.</p>
+              <p className="text-muted-foreground">
+                No payments found matching the selected filters.
+              </p>
             </div>
           )}
         </CardContent>
@@ -316,7 +352,7 @@ const PaymentHistory = () => {
               Complete information about payment PAY-{selectedPayment?.id}
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedPayment && (
             <div className="space-y-6">
               {/* Payment Information */}
@@ -327,39 +363,62 @@ const PaymentHistory = () => {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Payment ID</label>
-                      <p className="text-lg font-semibold">PAY-{selectedPayment.id}</p>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Payment ID
+                      </label>
+                      <p className="text-lg font-semibold">
+                        PAY-{selectedPayment.id}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Amount</label>
-                      <p className="text-2xl font-bold text-green-600">${selectedPayment.amount}</p>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Amount
+                      </label>
+                      <p className="text-2xl font-bold text-green-600">
+                        ${selectedPayment.amount}
+                      </p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Payment Date</label>
-                      <p className="font-semibold">{new Date(selectedPayment.date).toLocaleDateString()}</p>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Payment Date
+                      </label>
+                      <p className="font-semibold">
+                        {new Date(selectedPayment.date).toLocaleDateString()}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Payment Method</label>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Payment Method
+                      </label>
                       <p className="font-semibold">{selectedPayment.method}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Status</label>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Status
+                      </label>
                       <div className="mt-1">
-                        <Badge className={getStatusColor(selectedPayment.status)}>
+                        <Badge
+                          className={getStatusColor(selectedPayment.status)}
+                        >
                           {selectedPayment.status}
                         </Badge>
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Payment Type</label>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Payment Type
+                      </label>
                       <div className="mt-1">
-                        <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                        <Badge
+                          variant="outline"
+                          className="flex items-center gap-1 w-fit"
+                        >
                           {getPaymentTypeIcon(selectedPayment.paymentType)}
                           {selectedPayment.paymentType}
                         </Badge>
@@ -377,17 +436,17 @@ const PaymentHistory = () => {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Payment Channel</label>
-                      <p className="font-semibold text-blue-600">{selectedPayment.paymentChannel}</p>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Bill Number
+                      </label>
+                      <p className="font-semibold text-blue-600">
+                        {selectedPayment.paymentChannel}
+                      </p>
                     </div>
-                    {selectedPayment.transactionId && (
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Transaction ID</label>
-                        <p className="font-semibold text-blue-600">{selectedPayment.transactionId}</p>
-                      </div>
-                    )}
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Recorded By</label>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Recorded By
+                      </label>
                       <p className="font-semibold flex items-center gap-1">
                         <User className="h-4 w-4" />
                         {selectedPayment.recordedBy}

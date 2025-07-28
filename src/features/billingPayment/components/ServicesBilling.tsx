@@ -8,6 +8,7 @@ import PaymentModal from './PaymentModal';
 import { ServicesKPICards } from './ServiceKpiCard';
 import { useServicesData } from '../hooks';
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
+import { useNavigate } from 'react-router-dom';
 
 // Service interface
 interface Service {
@@ -17,6 +18,7 @@ interface Service {
   requestDate: string;
   technician: string;
   status: string;
+  statusDisplay:string;
   amount: number;
   description: string;
   address: string;
@@ -25,7 +27,7 @@ interface Service {
 
 const ServicesBilling = () => {
   const { toast } = useToast();
-
+const navigate = useNavigate();
   const [selectedServiceForPayment, setSelectedServiceForPayment] = useState<any>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(5);
@@ -41,13 +43,13 @@ const ServicesBilling = () => {
   const servicesData = data?.result?.data?.map(item => ({
     id: item.id,
     requestNumber: item.requestNo,
-    serviceType: item.utilitySupportRequest?.name || 'Service',
+    serviceType: item.utilitySupportRequest?.name ,
     requestDate: item.createdDate,
     technician: item.createdUserRemoteName,
     status: item.paymentStatus,
-    amount: item.utility_supportRequest?.extraData?.serviceCharge || 0,
+    statusDisplay:item.statusDisplay,
+    amount: item.utilitySupportRequest?.extraData?.serviceCharge || 0,
     description: item.utilitySupportRequest?.longDescription || item.utilitySupportRequest?.name || 'Service request',
-    address: '', // Not available in API response
     completionDate: item.closeDate || "NA"
   })) || [];
 
@@ -68,10 +70,9 @@ const ServicesBilling = () => {
     setSelectedServiceForPayment(billData);
     setIsPaymentModalOpen(true);
   };
-
-  const handleViewService = (service: Service) => {
-    console.log('Viewing service details:', service.id);
-  };
+const handleViewService = (service: Service) => {
+  navigate(`/service-request/${service.id}`);
+};
 
   const handlePaymentModalClose = () => {
     setIsPaymentModalOpen(false);
@@ -133,8 +134,8 @@ const ServicesBilling = () => {
                       <div className="flex items-center gap-2">
                         <Wrench className="h-4 w-4 text-primary" />
                         <h3 className="font-semibold">{service.serviceType}</h3>
-                        <Badge className={getStatusColor(service.status)}>
-                          {service.status}
+                        <Badge className={getStatusColor(service.statusDisplay)}>
+                          {service.statusDisplay}
                         </Badge>
                       </div>
                       <p className="text-sm font-medium text-muted-foreground">Request: {service.requestNumber}</p>
@@ -156,9 +157,10 @@ const ServicesBilling = () => {
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
-                    <div className="text-xl font-bold">${service.amount.toFixed(2)}</div>
+                    <div className="text-xl font-bold">${service.amount}</div>
                     <Button variant="ghost" size="sm" onClick={() => handleViewService(service)} className="h-8 w-8 p-0">
                       <Eye className="h-4 w-4" />
+                      
                     </Button>
                   </div>
                 </div>

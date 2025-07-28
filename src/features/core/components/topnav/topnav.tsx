@@ -1,5 +1,5 @@
-import { useAuth } from "@features/auth";
-import { useTenantId } from "@shared/selectors/globalSelectors";
+import { useAuth } from "@features/auth/hooks";
+import { useUserName } from "@shared/selectors/globalSelectors";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,50 +18,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@shared/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@shared/ui/select";
 import { LogOut } from "lucide-react";
 import React, { useState } from "react";
-import { useUtility } from "../../hooks";
-import { bentomenu as Bentomenu } from "../bentomenu/bentomenu";
-import { TopnavSkeleton } from "./topnav-skeleton";
-import { useUserName } from "@shared/selectors/globalSelectors";
-interface topnavProps {
-  // Add your props here
+
+interface TopnavProps {
+  // Add your props here if needed
 }
 
-export const topnav: React.FC<topnavProps> = () => {
+export const Topnav: React.FC<TopnavProps> = () => {
   const name = useUserName();
-  const [bentoOpen, setBentoOpen] = useState(false);
-  const { userProfile, isProfileLoading, logout } = useAuth();
+  const { logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Get tenant ID from user profile
-  // const tenantId = userProfile?.utility?.tenant?.id;
-  const tenantId = useTenantId();
-
-  // Use the utility hook with tenant ID
-  const {
-    utilities,
-    selectedUtility,
-    setSelectedUtility,
-    loading: utilitiesLoading,
-    clearUtility,
-  } = useUtility(tenantId);
-
-  // Handle logout with utility cleanup
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-
-      // Clear utility data on logout
-      clearUtility();
-
       await logout();
     } catch (error) {
       console.error("Logout failed:", error);
@@ -75,70 +46,21 @@ export const topnav: React.FC<topnavProps> = () => {
 
     const names = fullName.trim().split(" ");
     const initials = names
-      .slice(0, 2) // take first two words (e.g., first name and last name)
+      .slice(0, 2)
       .map((n) => n.charAt(0).toUpperCase())
       .join("");
 
     return initials;
   };
 
-  // Show loading skeleton while data is being fetched
-  if (utilitiesLoading || isProfileLoading) {
-    return <TopnavSkeleton />;
-  }
-
   return (
     <header className="w-full bg-white shadow-sm flex items-center justify-between px-6 h-16">
-      <div className="flex items-center gap-2">
-        <button
-          className="flex items-center p-1.5 rounded hover:bg-blue-50"
-          onClick={() => setBentoOpen(true)}
-          aria-label="Open bento menu"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 28 28"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle cx="5" cy="5" r="2" fill="#111827" />
-            <circle cx="14" cy="5" r="2" fill="#111827" />
-            <circle cx="23" cy="5" r="2" fill="#111827" />
-            <circle cx="5" cy="14" r="2" fill="#111827" />
-            <circle cx="14" cy="14" r="2" fill="#111827" />
-            <circle cx="23" cy="14" r="2" fill="#111827" />
-            <circle cx="5" cy="23" r="2" fill="#111827" />
-            <circle cx="14" cy="23" r="2" fill="#111827" />
-            <circle cx="23" cy="23" r="2" fill="#111827" />
-          </svg>
-        </button>
-        <span className="text-xl font-bold flex items-center gap-1">
-          <span className="text-black">SMART</span>
-          <span className="text-blue-600">360</span>
-        </span>
-      </div>
+      <span className="text-xl font-bold flex items-center gap-1">
+        <span className="text-black">SMART</span>
+        <span className="text-blue-600">360</span>
+      </span>
 
-      <div className="flex items-center gap-4">
-        {/* Utility Selector */}
-        <Select
-          value={selectedUtility || ""}
-          onValueChange={setSelectedUtility}
-          disabled={utilities.length === 0}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Select utility" />
-          </SelectTrigger>
-          <SelectContent>
-            {utilities.map((utility) => (
-              <SelectItem key={utility.id} value={utility.name}>
-                {utility.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* User Profile Dropdown */}
+      <div className="flex items-center">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="focus:outline-none">
@@ -184,8 +106,6 @@ export const topnav: React.FC<topnavProps> = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      <Bentomenu open={bentoOpen} onClose={() => setBentoOpen(false)} />
     </header>
   );
 };
