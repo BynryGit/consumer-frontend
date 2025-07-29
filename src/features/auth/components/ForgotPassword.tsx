@@ -8,11 +8,13 @@ import { useForgotPassword } from "../hooks";
 
 interface ForgotPasswordProps {
   onSwitchToSignIn: () => void;
+  onSwitchToPasswordReset?: () => void; // NEW: Add this prop
 }
 
-const ForgotPassword = ({ onSwitchToSignIn }: ForgotPasswordProps) => {
+const ForgotPassword = ({ onSwitchToSignIn, onSwitchToPasswordReset }: ForgotPasswordProps) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const forgotMutation = useForgotPassword();
+  
   // Define form fields
   const formFields: FormField[] = [
     {
@@ -21,7 +23,6 @@ const ForgotPassword = ({ onSwitchToSignIn }: ForgotPasswordProps) => {
       type: "email",
       required: true,
       placeholder: "Enter your email address",
-      //   icon: <Mail className="h-4 w-4" />,
       classes: {
         container: "w-full",
         label: "text-sm font-medium",
@@ -40,14 +41,15 @@ const ForgotPassword = ({ onSwitchToSignIn }: ForgotPasswordProps) => {
   });
 
   const handleSubmit = async (data: any) => {
-  try {
-    const payload = { email: data.email,role:"consumer" };
-    await forgotMutation.mutateAsync(payload);
-    setIsSubmitted(true);
-  } catch (error) {
-    console.error("Reset link request failed", error);
-  }
-};
+    try {
+      const payload = { email: data.email, role: "consumer" };
+      await forgotMutation.mutateAsync(payload);
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error("Reset link request failed", error);
+    }
+  };
+
   const email = forgotForm.getValues().email;
 
   if (isSubmitted) {
@@ -64,6 +66,22 @@ const ForgotPassword = ({ onSwitchToSignIn }: ForgotPasswordProps) => {
             If an account with email <strong>{email}</strong> exists, you will
             receive a password reset link shortly.
           </p>
+          
+          {/* NEW: Add demo button similar to SignUp */}
+          {onSwitchToPasswordReset && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-blue-800 text-sm mb-3">
+                <strong>Demo:</strong> Click below to simulate clicking the email link
+              </p>
+              <Button 
+                onClick={onSwitchToPasswordReset}
+                className="w-full h-12 mb-3"
+              >
+                Reset Password (Demo)
+              </Button>
+            </div>
+          )}
+          
           <Button
             onClick={onSwitchToSignIn}
             variant="outline"

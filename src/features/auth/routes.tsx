@@ -49,7 +49,7 @@ const PasswordSetupRoute = () => {
   );
 };
 
-// NEW: Route component for handling reset password links from email
+// Route component for handling reset password links from email
 const ResetPasswordRoute = () => {
   const navigate = useNavigate();
   const { tenant } = useParams<{ tenant: string }>();
@@ -61,13 +61,15 @@ const ResetPasswordRoute = () => {
   );
 };
 
+// UPDATED: Add demo navigation support
 const ForgotPasswordRoute = () => {
   const navigate = useNavigate();
   const { tenant } = useParams<{ tenant: string }>();
   
   return (
     <ForgotPassword 
-      onSwitchToSignIn={() => navigate(`/login/${tenant}`)} 
+      onSwitchToSignIn={() => navigate(`/login/${tenant}`)}
+      onSwitchToPasswordReset={() => navigate(`/reset-password/${tenant}`)} // NEW: Demo navigation
     />
   );
 };
@@ -107,7 +109,7 @@ export const authRoutes: AuthRoute[] = [
     auth: false,
   },
   
-  // NEW ROUTES: Handle email links with code/et parameters
+  // Email link routes with code/et parameters
   // Email link format: https://consumer-staging.bynry.com/reset-password?code=777b8dab77a4b56f955413edeb4f74d9&et=1753788667&email=sayyam32%40yopmail.com&tnc_accepted=True&reset=True
   {
     path: '/reset-password/:tenant',
@@ -128,7 +130,7 @@ export const authRoutes: AuthRoute[] = [
   },
   {
     path: '/forgot-password',
-    element: <ForgotPasswordRoute />,
+    element: <ForgotPasswordRoute />, // UPDATED: Now supports demo navigation
     auth: false,
   },
   {
@@ -137,7 +139,7 @@ export const authRoutes: AuthRoute[] = [
     auth: false,
   },
   
-  // NEW ROUTE: Handle email links without tenant
+  // Handle email links without tenant
   {
     path: '/reset-password',
     element: (<AuthGuard><ResetPasswordRoute /></AuthGuard>),
@@ -151,4 +153,3 @@ export const authRoutes: AuthRoute[] = [
     auth: false,
   },
 ];
-
