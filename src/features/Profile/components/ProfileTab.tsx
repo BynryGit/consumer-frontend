@@ -52,7 +52,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ onEditClick, consumerDetailsDat
     customerSince: consumerDetailsData?.result?.registrationDate || "N/A",
     accountNumber: consumerDetailsData?.result?.consumerNo || "N/A",
     billingCycle:
-      consumerDetailsData?.result?.planDetails?.billingFrequencyDisplay ||
+      consumerDetailsData?.result?.billCycleData?.billCycleName ||
       "N/A",
   };
 
@@ -78,7 +78,7 @@ const addresses = {
       consumerDetailsData?.result?.territoryData?.billing?.premise || "N/A",
   },
   service: {
-    region:
+    region: 
       consumerDetailsData?.result?.territoryData?.service?.region || "N/A",
     country:
       consumerDetailsData?.result?.territoryData?.service?.country || "N/A",

@@ -27,22 +27,22 @@ const InstallmentsBilling = () => {
   });
 
   const paymentAgreement = paymentAgreementData?.result ? {
-    agreementId: paymentAgreementData.result.agreementNo,
-    createdDate: paymentAgreementData.result.createdDate,
-    createdBy: paymentAgreementData.result.createdUserRemoteName,
-    totalAmount: paymentAgreementData.result.totalAgreementAmount,
-    downPayment: paymentAgreementData.result.downPayment,
-    monthlyPayment: paymentAgreementData.result.monthlyPayment,
+    agreementId: paymentAgreementData.result.agreementNo || "NA",
+    createdDate: paymentAgreementData.result.createdDate || "NA",
+    createdBy: paymentAgreementData.result.createdUserRemoteName || "NA",
+    totalAmount: paymentAgreementData.result.totalAgreementAmount || "NA",
+    downPayment: paymentAgreementData.result.downPayment || "NA",
+    monthlyPayment: paymentAgreementData.result.monthlyPayment || "NA",
     startDate: paymentAgreementData.result.startDate || 'NA',
     endDate: paymentAgreementData.result.endDate || 'NA'
   } : null;
 
   const installmentsData = paymentAgreementData?.result?.installments?.map(installment => ({
-    id: installment.id,
-    installmentNumber: installment.installmentNo,
+    id: installment.id || "NA",
+    installmentNumber: installment.installmentNo|| "NA",
     dueDate: 'NA',
-    amount: installment.installmentAmount,
-    status: installment.statusDisplay,
+    amount: installment.installmentAmount || "NA",
+    status: installment.statusDisplay || "NA",
     paidDate: installment.paymentDate || "NA"
   })) || [];
 
@@ -167,13 +167,6 @@ const InstallmentsBilling = () => {
                     </div>
                     
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Due Date</p>
-                        <p className="font-medium flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {installment.dueDate}
-                        </p>
-                      </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Amount</p>
                         <p className="font-bold text-xl flex items-center gap-1">
