@@ -60,8 +60,8 @@ const DashboardHome = () => {
           {/* Primary Content Area - Full width for usage trends */}
           <div className="lg:col-span-9 space-y-6">
             
-            {/* Usage Trends - Extended horizontally */}
-            <UsageTrends usageData={usageData} />
+            {/* Usage Trends - Extended horizontally - Pass consumerBillData */}
+            <UsageTrends usageData={usageData} consumerBillData={consumerBillData} />
             {/* Tips and Insights */}
             <TipsInsights />
           </div>
@@ -77,4 +77,4 @@ const DashboardHome = () => {
   );
 };
 
-export default DashboardHome; 
+export default DashboardHome;

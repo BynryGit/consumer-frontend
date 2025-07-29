@@ -23,28 +23,24 @@ export const RequestTrackerKPICards: React.FC = () => {
       title: "Services Outstanding",
       count: requestSummary?.totalOutstanding || 0,
       displayValue: `$${(requestSummary?.totalOutstanding || 0)}`,
-      trend: requestSummary?.outstandingYesterdayChange || 0,
       icon: <DollarSign className="h-6 w-6 text-red-600" />
     },
     {
       title: "Active Requests",
       count: requestSummary?.activeRequests || 0,
       displayValue: (requestSummary?.activeRequests || 0),
-      trend: requestSummary?.active_requestsYesterdayChange || 0,
       icon: <Clock className="h-6 w-6 text-blue-600" />
     },
     {
       title: "Completed This Month",
       count: requestSummary?.completedThisMonth || 0,
       displayValue: (requestSummary?.completedThisMonth || 0),
-      trend: requestSummary?.completedYesterdayChange || 0,
       icon: <CheckCircle className="h-6 w-6 text-green-600" />
     },
     {
       title: "Overdue Requests",
-      count: requestSummary?.overdueRequest || 0,
-      displayValue: (requestSummary?.overdueRequest || 0),
-      trend: requestSummary?.overdue_requestChange || 0,
+      count: requestSummary?.overduePayments || 0,
+      displayValue: (requestSummary?.overduePayments || 0),
       icon: <AlertTriangle className="h-6 w-6 text-orange-600" />
     }
   ];
@@ -57,7 +53,6 @@ export const RequestTrackerKPICards: React.FC = () => {
           title={kpi.title}
           count={kpi.count}
           displayValue={kpi.displayValue}
-          trend={kpi.trend}
           icon={kpi.icon}
         />
       ))}

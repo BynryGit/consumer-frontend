@@ -25,7 +25,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import NotesTab, { Note } from "@shared/components/NotesTab";
 import TimelineTab, { TimelineItem } from "@shared/components/TimelineTab";
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
-import { useRequestDetail, useActivityLog, useAddNote } from "../hooks"; // Added useActivityLog import
+import { useRequestDetail, useActivityLog, useAddNote, useNotes } from "../hooks";
 
 interface TransferPageProps {
   transferId?: string;
@@ -50,11 +50,18 @@ const TransferPage = ({ transferId }: TransferPageProps) => {
     module: "cx"
   });
 
+  // Add useNotes hook
+  const { data: notesData, refetch: refetchNotes } = useNotes({
+    remote_utility_id: remoteUtilityId,
+    request_id: requestId,
+  });
+
   // Add the useAddNote hook
   const addNoteMutation = useAddNote();
 
   console.log("transfer data", data);
   console.log("activity log data", activitylog);
+  console.log("notes data", notesData);
 
   // Transform API data to TimelineItem format
   const transformedTimeline: TimelineItem[] = useMemo(() => {
@@ -70,6 +77,22 @@ const TransferPage = ({ transferId }: TransferPageProps) => {
       status: "completed" // You can add logic here to determine status based on your business rules
     }));
   }, [activitylog]);
+
+  // Transform notes data to notes format
+  const notes: Note[] = useMemo(() => {
+    if (!notesData?.result) return [];
+    
+    return notesData.result
+      .filter((item: any) => item.isActive) // Only show active notes
+      .map((item: any, index: number) => ({
+        id: index + 1,
+        author: item.createdBy || "",
+        content: item.note || "",
+        timestamp: item.createdDate ? 
+          new Date(item.createdDate).toISOString() :  
+          new Date().toISOString(),
+      }));
+  }, [notesData]);
 
   // Mock data for the transfer details
   const request = {
@@ -101,27 +124,7 @@ const TransferPage = ({ transferId }: TransferPageProps) => {
       file: doc.file,
     })) || [];
 
-  // Mock notes data
-  const notes = [
-    {
-      id: 1,
-      author: "Mike Chen (Agent)",
-      content:
-        "Transfer request processed. All required documents received and under review by verification team.",
-      timestamp: "2025-04-01T14:30:00",
-      type: "staff",
-    },
-    {
-      id: 2,
-      author: "You",
-      content:
-        "When can I expect the transfer to be completed? The new owner needs service activated urgently.",
-      timestamp: "2025-04-01T16:15:00",
-      type: "customer",
-    },
-  ];
-
-  // Updated handleAddNote function to use the API
+  // Updated handleAddNote function to use the API and refetch
   const handleAddNote = async (noteContent: string) => {
     if (noteContent.trim() && requestId && remoteUtilityId) {
       const payload = {
@@ -133,7 +136,13 @@ const TransferPage = ({ transferId }: TransferPageProps) => {
         },
       };
 
-      await addNoteMutation.mutateAsync(payload);
+      try {
+        await addNoteMutation.mutateAsync(payload);
+        // Refetch notes after successfully adding a note
+        await refetchNotes();
+      } catch (error) {
+        console.error('Error adding note:', error);
+      }
     }
   };
 

@@ -149,11 +149,11 @@ export const useAuth = (): UseAuthReturn => {
     }
   }, [navigate, queryClient]);
 
-  const forgotPassword = useCallback(async (email: string) => {
+  const forgotPassword = useCallback(async (email: string,role: string) => {
     try {
       setLoading(true);
       setError(null);
-      await authApi.forgotPassword(email);
+      await authApi.forgotPassword(email,role);
     } catch (err) {
       const errorMessage =
         err instanceof Error
@@ -215,7 +215,7 @@ export const useConsumerWebLogin = () => {
 // Forgot Password Hook
 export const useForgotPassword = () => {
   return useSmartMutation(
-    (payload: { email: string }) => authApi.forgotPassword(payload.email),
+    (payload: { email: string,role:any }) => authApi.forgotPassword(payload.email,payload.role),
     {
       onSuccess: (data) => {
         toast.success("Password reset email sent successfully");

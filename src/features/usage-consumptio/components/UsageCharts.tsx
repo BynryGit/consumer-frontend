@@ -10,7 +10,8 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tool
 import { Lightbulb, Droplet, Flame, Settings, Zap, Loader2 } from 'lucide-react';
 import { useToast } from '@shared/hooks/use-toast';
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
-import { useUsageChart, useUtilityServices, useThershold, useAddThreshold } from '../hooks';
+import { useUsageChart, useThershold, useAddThreshold } from '../hooks';
+import { useService } from '@features/dashboard/hooks';
 
 const UsageCharts = () => {
   const [utilityType, setUtilityType] = useState("electricity");
@@ -19,10 +20,10 @@ const UsageCharts = () => {
   const [tempThresholds, setTempThresholds] = useState<Record<string, number>>({});
   const { toast } = useToast();
 
-  const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
+  const { remoteUtilityId, remoteConsumerNumber,consumerId } = getLoginDataFromStorage();
 
   // API Hooks
-  const { data: utilityServicesData } = useUtilityServices({ utility_id: remoteUtilityId });
+  const { data: serviceData } = useService({ consumer: consumerId });
   const { data: thresholdData, refetch: refetchThresholds } = useThershold({
     consumer_number: remoteConsumerNumber,
     remote_utility_id: remoteUtilityId,
@@ -39,8 +40,8 @@ const UsageCharts = () => {
 
   // Processed data
   const activeServices = useMemo(() => 
-    utilityServicesData?.result?.filter(service => service.isActive && service.id !== null) || [], 
-    [utilityServicesData]
+    serviceData?.result || [], 
+    [serviceData]
   );
 
   const consumptionDetails = useMemo(() => 
@@ -65,8 +66,8 @@ const UsageCharts = () => {
   // Initialize utility type and thresholds
   useEffect(() => {
     if (activeServices.length > 0) {
-      if (!activeServices.find(s => s.name.toLowerCase() === utilityType)) {
-        setUtilityType(activeServices[0].name.toLowerCase());
+      if (!activeServices.find(s => s.toLowerCase() === utilityType)) {
+        setUtilityType(activeServices[0].toLowerCase());
       }
       
       if (Object.keys(apiThresholds).length > 0) {
@@ -74,6 +75,7 @@ const UsageCharts = () => {
       } else {
         const defaultThresholds: Record<string, number> = {};
         activeServices.forEach(service => {
+          // Add any default threshold logic here if needed
         });
         setThresholds(prev => ({ ...prev, ...defaultThresholds }));
       }
@@ -81,8 +83,8 @@ const UsageCharts = () => {
   }, [activeServices, utilityType, apiThresholds]);
 
   const getUnitLabel = (type: string) => {
-    const service = activeServices.find(s => s.name.toLowerCase() === type.toLowerCase());
-    return service?.utilityUnit || (type === 'electricity' ? 'kWh' : type === 'water' ? 'L' : 'units');
+    // Since we don't have utilityUnit property anymore, use fallback logic
+    return type === 'electricity' ? 'kWh' : type === 'water' ? 'L' : 'units';
   };
 
   const getUtilityIcon = (utility: string) => {
@@ -100,7 +102,6 @@ const UsageCharts = () => {
     if (serviceName === 'gas') return '#ff6633';
     return '#8884d8';
   };
-
 
   const handleSaveThresholds = async () => {
     try {
@@ -232,9 +233,9 @@ const UsageCharts = () => {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {activeServices.map((service) => (
-              <SelectItem key={service.id} value={service.name.toLowerCase()}>
-                {service.name}
+            {activeServices.map((service, index) => (
+              <SelectItem key={index} value={service.toLowerCase()}>
+                {service}
               </SelectItem>
             ))}
           </SelectContent>
