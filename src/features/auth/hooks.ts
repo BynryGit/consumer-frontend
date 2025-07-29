@@ -21,7 +21,7 @@ interface UseAuthReturn {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  forgotPassword: (email: string,role:any) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
   userProfile: UserProfile | undefined;
   isProfileLoading: boolean;
@@ -149,11 +149,11 @@ export const useAuth = (): UseAuthReturn => {
     }
   }, [navigate, queryClient]);
 
-  const forgotPassword = useCallback(async (email: string,role:any) => {
+  const forgotPassword = useCallback(async (email: string) => {
     try {
       setLoading(true);
       setError(null);
-      await authApi.forgotPassword(email,role);
+      await authApi.forgotPassword(email);
     } catch (err) {
       const errorMessage =
         err instanceof Error
@@ -215,7 +215,7 @@ export const useConsumerWebLogin = () => {
 // Forgot Password Hook
 export const useForgotPassword = () => {
   return useSmartMutation(
-    (payload: { email: string ,role:any}) => authApi.forgotPassword(payload.email,payload.role),
+    (payload: { email: string }) => authApi.forgotPassword(payload.email),
     {
       onSuccess: (data) => {
         toast.success("Password reset email sent successfully");
@@ -227,7 +227,21 @@ export const useForgotPassword = () => {
   );
 };
 
-
+// Reset Password Hook (Used for both signup and forgot password flows)
+// This is used by your SignUp component
+export const useResetPassword = () => {
+  return useSmartMutation(
+    (payload: { email: string, role: any }) => authApi.getResetPassword(payload.email, payload.role),
+    {
+      onSuccess: (data) => {
+        toast.success("Password setup email sent successfully");
+      },
+      onError: (error: any) => {
+        toast.error(`Failed to send setup email: ${error.message}`);
+      },
+    }
+  );
+};
 
 // NEW HOOK: Password Reset with URL Parameters
 // This is used by your PasswordSetup component when processing the email link

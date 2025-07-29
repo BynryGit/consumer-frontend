@@ -12,22 +12,17 @@ import {
   FileText,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useConsumerBillDetails, useRequestData } from '../hooks';
+import { useRequestData } from '../hooks';
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 
 interface DashboardCardsProps {
-  // Remove all the previous props since we'll fetch data internally
+  consumerBillData?: any; // Accept consumerBillData as prop
 }
 
-const DashboardCards = ({}: DashboardCardsProps) => {
+const DashboardCards = ({ consumerBillData }: DashboardCardsProps) => {
   const { remoteUtilityId, remoteConsumerNumber, consumerId } = getLoginDataFromStorage();
   
-  const { data: consumerBillData } = useConsumerBillDetails({
-    remoteUtilityId: remoteUtilityId,
-    remoteConsumerNumber: remoteConsumerNumber,
-    fetch_last_six_records: "True",
-  });
-
+  // Only fetch request data here, consumerBillData is passed as prop
   const { data: requestData } = useRequestData({
     remote_utility_id: remoteUtilityId,
     consumer_id: consumerId,
@@ -35,8 +30,8 @@ const DashboardCards = ({}: DashboardCardsProps) => {
     limit: 3,
   });
 
-  // Use fetched bill data or fallback to empty object
-const billData = consumerBillData?.result?.billData?.[0];
+  // Use passed bill data or fallback to empty object
+  const billData = consumerBillData?.result?.billData?.[0];
   const dueDate = new Date(billData?.dueDate);
   const today = new Date();
   const daysUntilDue = Math.ceil(
@@ -44,6 +39,26 @@ const billData = consumerBillData?.result?.billData?.[0];
   );
   console.log("billdattaaaaa",consumerBillData)
 
+  // Calculate monthly savings
+  const calculateMonthlySavings = () => {
+    const billDataArray = consumerBillData?.result?.billData;
+    
+    if (!billDataArray || billDataArray.length < 2) {
+      return { savings: 'N/A', isPositive: true };
+    }
+    
+    const currentBill = parseFloat(billDataArray[0]?.billAmount || '0');
+    const previousBill = parseFloat(billDataArray[1]?.billAmount || '0');
+    
+    const savings = previousBill - currentBill;
+    
+    return {
+      savings: Math.abs(savings).toFixed(0),
+      isPositive: savings >= 0
+    };
+  };
+
+  const { savings, isPositive } = calculateMonthlySavings();
 
   // Use fetched request data or fallback to sample data
   const recentRequests = requestData?.results?.map(request => ({
@@ -54,20 +69,20 @@ const billData = consumerBillData?.result?.billData?.[0];
   })) ;
   
   // Extract usage data from consumerBillData dynamically
- const getUsageFromConsumptionDetails = () => {
-  // Correct path based on your JSON structure
-  const consumptionDetails = consumerBillData?.result?.billData?.[0]?.consumptionDetails || [];
-  
-  return consumptionDetails.map(detail => {
-    const serviceName = Object.keys(detail)[0];
-    const serviceData = detail[serviceName];
-    return {
-      name: serviceName,
-      consumption: serviceData.consumption,
-      unit: getUnitForService(serviceName)
-    };
-  });
-};
+  const getUsageFromConsumptionDetails = () => {
+    // Correct path based on your JSON structure
+    const consumptionDetails = consumerBillData?.result?.billData?.[0]?.consumptionDetails || [];
+    
+    return consumptionDetails.map(detail => {
+      const serviceName = Object.keys(detail)[0];
+      const serviceData = detail[serviceName];
+      return {
+        name: serviceName,
+        consumption: serviceData.consumption,
+        unit: getUnitForService(serviceName)
+      };
+    });
+  };
 
   const getUnitForService = (serviceName) => {
     const unitMap = {
@@ -95,41 +110,41 @@ const billData = consumerBillData?.result?.billData?.[0];
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
- {/* Current Bill */}
-<Card className="hover:shadow-md transition-shadow border-l-4 border-l-primary flex flex-col h-full">
-  <CardHeader className="pb-2">
-    <CardTitle className="text-sm font-medium text-muted-foreground">
-      Current Bill
-    </CardTitle>
-  </CardHeader>
-  <CardContent className="flex-grow">
-    <div className="flex items-center justify-between">
-      <div>
-        <div className="text-2xl font-bold">₹{billData?.billAmount || 0}</div>
-        <div className="flex items-center gap-2 mt-1">
-          <Badge 
-            variant={
-              daysUntilDue <= 3
-                ? 'destructive'
-                : daysUntilDue <= 7
-                ? 'default'
-                : 'secondary'
-            } 
-            className="text-xs"
-          >
-            Due in {isNaN(daysUntilDue) ? 'N/A' : `${daysUntilDue} days`}
-          </Badge>
-        </div>
-      </div>
-      <DollarSign className="h-8 w-8 text-primary p-1 bg-primary/10 rounded-full" />
-    </div>
-  </CardContent>
-  <CardFooter className="pt-0">
-    <Button className="w-full" asChild>
-      <Link to="/billing">Pay Now</Link>
-    </Button>
-  </CardFooter>
-</Card>
+      {/* Current Bill */}
+      <Card className="hover:shadow-md transition-shadow border-l-4 border-l-primary flex flex-col h-full">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Current Bill
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex-grow">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold">₹{billData?.billAmount || 0}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge 
+                  variant={
+                    daysUntilDue <= 3
+                      ? 'destructive'
+                      : daysUntilDue <= 7
+                      ? 'default'
+                      : 'secondary'
+                  } 
+                  className="text-xs"
+                >
+                  Due in {isNaN(daysUntilDue) ? 'N/A' : `${daysUntilDue} days`}
+                </Badge>
+              </div>
+            </div>
+            <DollarSign className="h-8 w-8 text-primary p-1 bg-primary/10 rounded-full" />
+          </div>
+        </CardContent>
+        <CardFooter className="pt-0">
+          <Button className="w-full" asChild>
+            <Link to="/billing">Pay Now</Link>
+          </Button>
+        </CardFooter>
+      </Card>
 
       {/* Usage Summary */}
       <Card className="hover:shadow-md transition-shadow flex flex-col h-full">
@@ -179,7 +194,9 @@ const billData = consumerBillData?.result?.billData?.[0];
         <CardContent className="flex-grow">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold text-green-600"></div>
+              <div className={`text-2xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                {savings === 'N/A' ? 'N/A' : `${isPositive ? '+' : '-'}₹${savings}`}
+              </div>
               <p className="text-xs text-muted-foreground">vs last month</p>
             </div>
             <div className="flex flex-col items-center">
