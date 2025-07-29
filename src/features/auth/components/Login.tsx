@@ -10,6 +10,7 @@ import { FormField, FormService } from "@shared/services/FormServices";
 import { setAuthToken } from '@shared/auth/authUtils';
 import { useConsumerDetails } from '@features/serviceRequest/hooks';
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
+
 // Types for API response
 interface UtilityProvider {
   id: number;
@@ -30,14 +31,49 @@ interface ConsumerWebLoginPayload {
 }
 
 interface SignInProps {
-  tenant?: string; // Add tenant prop
+  tenant?: string;
   onSwitchToSignUp: () => void;
   onSwitchToForgotPassword: () => void;
 }
 
+// Helper function to safely get and store remoteConsumerNumber
+const getOrSetConsumerNumber = (loginResult?: any, consumerDetails?: any) => {
+  let consumerNumber = null;
+  
+  // Try to get from localStorage first
+  consumerNumber = localStorage.getItem('remoteConsumerNumber');
+  
+  if (!consumerNumber) {
+    // Try to extract from loginResult
+    if (loginResult?.result?.consumer_no) {
+      consumerNumber = loginResult.result.consumer_no;
+      localStorage.setItem('remoteConsumerNumber', consumerNumber);
+    }
+    // Try to extract from consumerDetails
+    else if (consumerDetails?.result?.consumer_no) {
+      consumerNumber = consumerDetails.result.consumer_no;
+      localStorage.setItem('remoteConsumerNumber', consumerNumber);
+    }
+    // Try alternative field names
+    else if (loginResult?.result?.consumer_number) {
+      consumerNumber = loginResult.result.consumer_number;
+      localStorage.setItem('remoteConsumerNumber', consumerNumber);
+    }
+  }
+  
+  return consumerNumber;
+};
+
 const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: SignInProps) => {
   const navigate = useNavigate();
-  const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
+  
+  // Get initial data from storage
+  const storageData = getLoginDataFromStorage();
+  const [remoteConsumerNumber, setRemoteConsumerNumber] = useState<string | null>(
+    storageData.remoteConsumerNumber || localStorage.getItem('remoteConsumerNumber')
+  );
+  const { remoteUtilityId } = storageData;
+  
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [serviceProviderID, setServiceProviderID] = useState<number>(0);
   const [passwordVisible, setPasswordVisible] = useState<boolean>(false);
@@ -48,14 +84,14 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
     consumer_no: string;
   } | null>(null);
 
-  // API hooks - now using dynamic tenant
+  // API hooks
   const { data: utilitiesData, isLoading: isLoadingUtilities, error: utilitiesError } = useUserUtility({
-    tenant_alias: tenant // Use tenant from props/URL
+    tenant_alias: tenant
   });
 
   const loginMutation = useConsumerWebLogin();
 
-  const { data: consumerDetailsData, isLoading: isLoadingConsumerDetails } = useConsumerDetails(
+  const { data: consumerDetailsData} = useConsumerDetails(
     consumerDetailsParams || { remote_utility_id: null, consumer_no: '' }
   );
 
@@ -82,9 +118,8 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
       classes: {
         container: "w-full",
         label: "text-sm font-medium",
-         select:
-          "w-full h-10 px-3 pr-10 mb-4 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-gray-50",
-        error: "text-red-500 text-sm ",
+        select: "w-full h-10 px-3 pr-10 mb-4 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-gray-50",
+        error: "text-red-500 text-sm",
       },
     },
     {
@@ -96,9 +131,8 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
       classes: {
         container: "w-full",
         label: "text-sm font-medium",
-        input:
-          "w-full h-10 px-3 pr-10 mb-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-gray-50",
-        error: "text-red-500 text-sm ",
+        input: "w-full h-10 px-3 pr-10 mb-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-gray-50",
+        error: "text-red-500 text-sm",
       },
     },
     {
@@ -113,9 +147,8 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
         helperText: "text-xs text-gray-500 mt-1",
         container: "w-full mb-4 relative",
         label: "block text-sm font-medium text-gray-700 mb-2",
-        input:
-          "w-full h-10 px-3 pr-10 mb-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-gray-50",
-        error: "text-red-600 text-sm ",
+        input: "w-full h-10 px-3 pr-10 mb-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-gray-50",
+        error: "text-red-600 text-sm",
       },
     },
   ];
@@ -147,91 +180,102 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
     }
   }, [passwordVisible]);
 
-  // Store consumer details in localStorage when data is received
+  // Store consumer details and extract consumer number
   useEffect(() => {
     if (consumerDetailsData) {
       localStorage.setItem('consumerDetails', JSON.stringify(consumerDetailsData));
-      console.log('✅ Consumer details saved to localStorage:', consumerDetailsData);
+      
+      // Try to extract and store consumer number if missing
+      const consumerNum = getOrSetConsumerNumber(null, consumerDetailsData);
+      if (consumerNum && consumerNum !== remoteConsumerNumber) {
+        setRemoteConsumerNumber(consumerNum);
+      }
     }
-  }, [consumerDetailsData]);
+  }, [consumerDetailsData, remoteConsumerNumber]);
 
   // Store current tenant in localStorage for persistence
   useEffect(() => {
     if (tenant) {
       localStorage.setItem('currentTenant', tenant);
-      console.log('✅ Current tenant saved:', tenant);
     }
   }, [tenant]);
-useEffect(() => {
-  if (consumerDetailsData && consumerDetailsParams) {
-    console.log('✅ Consumer details loaded, navigating to dashboard');
-    navigate('/dashboard');
-  }
-}, [consumerDetailsData, consumerDetailsParams, navigate]);
 
+  // Navigate to dashboard when consumer details are loaded
+  useEffect(() => {
+    if (consumerDetailsData && consumerDetailsParams) {
+      navigate('/dashboard');
+    }
+  }, [consumerDetailsData, consumerDetailsParams, navigate]);
 
-const handleFormSubmit = async (data: any) => {
-  if (!data.service_provider) {
-    toast.error('Please select a Service Provider.');
-    return;
-  }
-
-  const selectedUtility = utilities.find(u => u.id.toString() === data.service_provider);
-  if (!selectedUtility) {
-    toast.error('Invalid service provider selected.');
-    return;
-  }
-
-  const payload: ConsumerWebLoginPayload = {
-    user: {
-      username: data.username,
-      password: data.password,
-    },
-    remote_utility_id: selectedUtility.id,
-  };
-
-  try {
-    const result = await loginMutation.mutateAsync(payload);
-    
-    // ✅ FIXED: Extract and save the auth token properly
-    const token = result?.result?.user?.token;
-    if (token) {
-      setAuthToken(token);
-      console.log('✅ Auth token saved successfully');
-    } else {
-      console.error('❌ No token found in login response');
-      toast.error('Login failed: No authentication token received');
+  const handleFormSubmit = async (data: any) => {
+    if (!data.service_provider) {
+      toast.error('Please select a Service Provider.');
       return;
     }
-    
-    toast.success('Login successful!');
-    console.log('Login successful:', result);
-    
-    // Optional: Keep this if you need the full result for other purposes
-    localStorage.setItem('loginResult', JSON.stringify(result));
-    
-    // Store authentication data if needed
-    if (rememberMe) {
-      localStorage.setItem('rememberMe', 'true');
-      localStorage.setItem('username', data.username);
-      localStorage.setItem('serviceProvider', data.service_provider);
+
+    const selectedUtility = utilities.find(u => u.id.toString() === data.service_provider);
+    if (!selectedUtility) {
+      toast.error('Invalid service provider selected.');
+      return;
     }
-    
-    // Set parameters to trigger useConsumerDetails hook
-    const consumerNo = remoteConsumerNumber;
-    setConsumerDetailsParams({
+
+    const payload: ConsumerWebLoginPayload = {
+      user: {
+        username: data.username,
+        password: data.password,
+      },
       remote_utility_id: selectedUtility.id,
-      consumer_no: consumerNo
-    });
-    
-    // // Navigate to dashboard after successful login
-    // navigate('/dashboard');
-    
-  } catch (error) {
-    toast.error('Login failed. Please check your credentials.');
-    console.error('Login error:', error);
-  }
-};
+    };
+
+    try {
+      const result = await loginMutation.mutateAsync(payload);
+      
+      // Extract and save the auth token
+      const token = result?.result?.user?.token;
+      if (token) {
+        setAuthToken(token);
+      } else {
+        toast.error('Login failed: No authentication token received');
+        return;
+      }
+      
+      toast.success('Login successful!');
+      
+      // Store login result
+      localStorage.setItem('loginResult', JSON.stringify(result));
+      
+      // Extract and store consumer number from login response
+      const extractedConsumerNumber = getOrSetConsumerNumber(result);
+      if (extractedConsumerNumber) {
+        setRemoteConsumerNumber(extractedConsumerNumber);
+      }
+      
+      // Store authentication data if needed
+      if (rememberMe) {
+        localStorage.setItem('rememberMe', 'true');
+        localStorage.setItem('username', data.username);
+        localStorage.setItem('serviceProvider', data.service_provider);
+      }
+      
+      // Use extracted consumer number or fallback
+      const consumerNoToUse = extractedConsumerNumber || remoteConsumerNumber || data.username;
+      
+      if (!consumerNoToUse) {
+        toast.error('Consumer number not found. Please contact support.');
+        return;
+      }
+      
+      // Set parameters to trigger useConsumerDetails hook
+      setConsumerDetailsParams({
+        remote_utility_id: selectedUtility.id,
+        consumer_no: consumerNoToUse
+      });
+      
+      
+    } catch (error) {
+      toast.error('Login failed. Please check your credentials.');
+    }
+  };
 
   const handleFieldChange = (fieldName: string, value: any) => {
     if (fieldName === 'service_provider') {
@@ -239,13 +283,11 @@ const handleFormSubmit = async (data: any) => {
       if (provider) {
         setSelectedProvider(value);
         setServiceProviderID(provider.id);
-        console.log('Selected provider:', provider);
       }
     }
   };
 
   const handleSignUp = () => {
-    console.log('Navigate to sign up page');
     toast.info('Redirecting to sign up...');
     onSwitchToSignUp();
   };
@@ -280,15 +322,14 @@ const handleFormSubmit = async (data: any) => {
   return (
     <AuthLayout 
       title="Welcome Back" 
-      subtitle={`Sign in to your account to continue (${tenant})`} // Show current tenant
+      subtitle={`Sign in to your account to continue (${tenant})`}
     >
       <div className="space-y-2">
-       
         {/* Dynamic Form */}
         <DynamicForm
-            fields={formFields.map((f) =>
-              f.name === "password" ? { ...f, type: showPassword ? "text" : "password" } : f
-            )}
+          fields={formFields.map((f) =>
+            f.name === "password" ? { ...f, type: showPassword ? "text" : "password" } : f
+          )}
           form={signInForm}
           onSubmit={handleFormSubmit}
           onFieldChange={handleFieldChange}
@@ -307,13 +348,13 @@ const handleFormSubmit = async (data: any) => {
         {/* Remember Me and Forgot Password */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-           <button
-            type="button"
-            onClick={handleForgotPassword}
-            className="text-sm text-primary hover:text-primary/80 transition-colors"
-          >
-            Forgot password?
-          </button>
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              className="text-sm text-primary hover:text-primary/80 transition-colors"
+            >
+              Forgot password?
+            </button>
           </div>
         </div>
 
