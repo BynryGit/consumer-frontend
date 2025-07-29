@@ -7,7 +7,7 @@ import { toast } from "@shared/hooks/use-toast";
 import { FormField, FormService } from "@shared/services/FormServices";
 import { Button } from "@shared/ui/button";
 import { useCallback, useEffect, useRef } from "react";
-
+import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 
 interface TransferDetailsStepProps {
   remoteUtilityId: number;
@@ -22,7 +22,7 @@ interface TransferDetailsStepProps {
 }
 
 export function TransferDetailsStep({
-  remoteUtilityId,
+
   storageKey,
   stepHelpers,
   currentStepIndex = 0,
@@ -32,6 +32,7 @@ export function TransferDetailsStep({
   clearValidationError,
   isValidating,
 }: TransferDetailsStepProps) {
+     const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
   const dataLoadedRef = useRef(false);
 
   // Get transfer type configurations from API
