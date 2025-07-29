@@ -28,8 +28,8 @@ import {
   Legend,
 } from "recharts";
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
-import { useUtilityServices } from "@features/usage-consumptio/hooks";
-import { useUsageChart } from "../hooks";
+
+import { useService, useUsageChart } from "../hooks";
 
 interface UsageTrendsProps {
   usageData?: Array<{
@@ -39,22 +39,20 @@ interface UsageTrendsProps {
     gas: number;
     totalCost: number;
   }>;
+  consumerBillData?: any; // Add consumerBillData prop
 }
 
-const UsageTrends = ({ usageData }: UsageTrendsProps) => {
-  const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
+const UsageTrends = ({ usageData, consumerBillData }: UsageTrendsProps) => {
+  const { remoteUtilityId, remoteConsumerNumber, consumerId } = getLoginDataFromStorage();
 
-  // API Hooks - utility services
-  const { data: utilityServicesData } = useUtilityServices({
-    utility_id: remoteUtilityId,
+  // API Hooks - service data
+  const { data: serviceData } = useService({
+    consumer: consumerId,
   });
 
   const activeServices = useMemo(
-    () =>
-      utilityServicesData?.result?.filter(
-        (service) => service.isActive && service.id !== null
-      ) || [],
-    [utilityServicesData]
+    () => serviceData?.result || [],
+    [serviceData]
   );
 
   // Set initial filter to first dropdown value
@@ -63,7 +61,7 @@ const UsageTrends = ({ usageData }: UsageTrendsProps) => {
   // Set default utility filter when services are loaded
   useEffect(() => {
     if (activeServices.length > 0 && !utilityFilter) {
-      setUtilityFilter(activeServices[0].name);
+      setUtilityFilter(activeServices[0]);
     }
   }, [activeServices, utilityFilter]);
 
@@ -75,7 +73,7 @@ const UsageTrends = ({ usageData }: UsageTrendsProps) => {
     utility_service: utilityFilter
   });
 
-  // Transform API data to chart format
+  // Transform API data to chart format for usage
   const transformedUsageData = useMemo(() => {
     if (!graphData?.result) return [];
     
@@ -86,6 +84,17 @@ const UsageTrends = ({ usageData }: UsageTrendsProps) => {
       [utilityFilter.toLowerCase()]: data.consumption,
     }));
   }, [graphData, utilityFilter]);
+
+  // Transform bill data for cost chart
+  const transformedBillData = useMemo(() => {
+    if (!consumerBillData?.result?.billData) return [];
+    
+    return consumerBillData?.result?.billData?.map((bill: any) => ({
+      name: bill.billMonth,
+      billAmount: bill.billAmount,
+      totalAmount: bill.totalAmountPayable,
+    }));
+  }, [consumerBillData]);
 
   // Handle utility filter change
   const handleUtilityChange = (value) => {
@@ -110,12 +119,12 @@ const UsageTrends = ({ usageData }: UsageTrendsProps) => {
                   <SelectValue placeholder="Select utility" />
                 </SelectTrigger>
                 <SelectContent>
-                  {activeServices.map((service) => (
+                  {activeServices.map((service, index) => (
                     <SelectItem
-                      key={service.id}
-                      value={service.name}
+                      key={index}
+                      value={service}
                     >
-                      {service.name}
+                      {service}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -164,27 +173,29 @@ const UsageTrends = ({ usageData }: UsageTrendsProps) => {
         </CardHeader>
         <CardContent className="px-2">
           <div className="h-[250px] flex items-center justify-center">
-            {transformedUsageData.length > 0 ? (
+            {transformedBillData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={transformedUsageData}
+                  data={transformedBillData}
                   margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="name" />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip 
+                    formatter={(value, name) => [`$${value}`, name]}
+                  />
                   <Legend />
                   <Bar 
-                    dataKey="consumption" 
-                    name={`${utilityFilter} Consumption`} 
+                    dataKey="billAmount" 
+                    name="Bill Amount" 
                     fill="#8884d8" 
                   />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="text-muted-foreground">
-                {utilityFilter ? "Loading cost data..." : "Select a utility service to view data"}
+                Loading bill data...
               </div>
             )}
           </div>
@@ -192,7 +203,7 @@ const UsageTrends = ({ usageData }: UsageTrendsProps) => {
         <CardFooter>
           <div className="text-xs text-muted-foreground">
             <p>
-              Your {utilityFilter?.toLowerCase()} consumption trends over the last 6 months.
+              Your bill amounts over the last 6 months.
             </p>
           </div>
         </CardFooter>

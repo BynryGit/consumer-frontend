@@ -86,5 +86,20 @@ export const dashboardApi = {
     const response = await cxApiClient.get(url);
     return response.data;
   }, 
-    
+    //https://api-cx-staging.bynry.com/api/consumer-web/consumer-utility-services/?consumer=175065
+
+     getConsumerServices: async (params: {
+    consumer: string;
+   
+  }): Promise<any> => {
+    const url = ApiEndpoints.createUrlWithQueryParameters(
+      "consumerWeb",
+      "consumer-utility-services",
+      (qs) => {
+        qs.push("consumer", params.consumer);
+      }
+    );
+    const response = await cxApiClient.get(url);
+    return response.data;
+  }, 
 };

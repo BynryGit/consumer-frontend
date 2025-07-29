@@ -65,6 +65,15 @@ export const useConsumerStatus = (params: {
   );
 };
 
+export const useNotes = (params: {
+  remote_utility_id: string;
+  request_id:any;
+}) => {
+  return useSmartQuery(
+    QueryKeyFactory.module.cx.request.Notes(params),
+    () => requestTrackerApi.getNotes(params)
+  );
+};
 
 export const useRequestDetail = (params: {
   remote_utility_id: string;

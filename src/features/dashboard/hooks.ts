@@ -50,3 +50,13 @@ export const useUsageChart= (params: {
     () => dashboardApi.getUsageChart(params)
   );
 };
+
+export const useService= (params: {
+    consumer: string;
+  
+}) => {
+  return useSmartQuery(
+    QueryKeyFactory.module.cx.dashboard.ConsumerService(params),
+    () => dashboardApi.getConsumerServices(params)
+  );
+};
