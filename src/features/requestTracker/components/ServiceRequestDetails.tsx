@@ -26,7 +26,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import NotesTab, { Note } from '@shared/components/NotesTab';
 import TimelineTab, { TimelineItem } from '@shared/components/TimelineTab';
-import { useRequestDetail, useActivityLog, useAddNote } from '../hooks'; // Added useActivityLog import
+import { useRequestDetail, useActivityLog, useAddNote, useNotes } from '../hooks';
 
 interface ServiceRequestPageProps {
   serviceId?: string;
@@ -51,11 +51,18 @@ const ServiceRequestPage = ({ serviceId }: ServiceRequestPageProps) => {
      module: "cx"
    });
    
+   // Add useNotes hook
+   const { data: notesData, refetch: refetchNotes } = useNotes({
+     remote_utility_id: remoteUtilityId,
+     request_id: requestId,
+   });
+   
    // Add the useAddNote hook
    const addNoteMutation = useAddNote();
    
    console.log("service request data", data);
    console.log("activity log data", activitylog);
+   console.log("notes data", notesData);
    
    // Transform API data to TimelineItem format
    const transformedTimeline: TimelineItem[] = useMemo(() => {
@@ -71,6 +78,22 @@ const ServiceRequestPage = ({ serviceId }: ServiceRequestPageProps) => {
        status: "completed" // You can add logic here to determine status based on your business rules
      }));
    }, [activitylog]);
+
+  // Transform notes data to notes format
+  const notes: Note[] = useMemo(() => {
+    if (!notesData?.result) return [];
+    
+    return notesData.result
+      .filter((item: any) => item.isActive) // Only show active notes
+      .map((item: any, index: number) => ({
+        id: index + 1,
+        author: item.createdBy || "",
+        content: item.note || "",
+        timestamp: item.createdDate ? 
+          new Date(item.createdDate).toISOString() :  
+          new Date().toISOString(),
+      }));
+  }, [notesData]);
 
   // Mock data for the service request details
   const request = {
@@ -94,25 +117,7 @@ const ServiceRequestPage = ({ serviceId }: ServiceRequestPageProps) => {
     rejectionReason: request.status === 'rejected' ? 'Service request rejected due to incomplete documentation. Please provide proof of property ownership and electrical permit before resubmitting.' : null
   };
 
-  // Mock notes data
-  const notes: Note[] = [
-    {
-      id: 1,
-      author: 'John Smith (Technician)',
-      content: 'Initial assessment completed. Materials needed: 3x outlets, 15ft cable.',
-      timestamp: '2025-04-08T15:30:00',
-      type: 'staff'
-    },
-    {
-      id: 2,
-      author: 'You',
-      content: 'Please ensure work is completed before 5 PM as requested.',
-      timestamp: '2025-04-08T16:45:00',
-      type: 'customer'
-    }
-  ];
-
-  // Updated handleAddNote function to use the API
+  // Updated handleAddNote function to use the API and refetch
   const handleAddNote = async (noteContent: string) => {
     if (noteContent.trim() && requestId && remoteUtilityId) {
       const payload = {
@@ -124,7 +129,13 @@ const ServiceRequestPage = ({ serviceId }: ServiceRequestPageProps) => {
         }
       };
       
-      await addNoteMutation.mutateAsync(payload);
+      try {
+        await addNoteMutation.mutateAsync(payload);
+        // Refetch notes after successfully adding a note
+        await refetchNotes();
+      } catch (error) {
+        console.error('Error adding note:', error);
+      }
     }
   };
 

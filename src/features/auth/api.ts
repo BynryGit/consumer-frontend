@@ -26,11 +26,12 @@ export const authApi = {
     return response.data;
   },
 
-  forgotPassword: async (email: any): Promise<void> => {
+  forgotPassword: async (email: any,role:any): Promise<void> => {
     const response = await authApiClient.post(
       API_ENDPOINTS.auth.forgotPassword,
       {
         email: email,
+        role:role
       }
     );
     return response.data;

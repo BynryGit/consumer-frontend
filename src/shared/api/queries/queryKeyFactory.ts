@@ -201,6 +201,12 @@ export class QueryKeyFactory {
           "tipsData",
           params,
         ],
+
+        ConsumerService:(params?: any): [EntityType, "ConsumerService", any?] => [
+          "dashboard",
+          "ConsumerService",
+          params,
+        ],
         requestData:(params?: any): [EntityType, "requestData", any?] => [
           "dashboard",
           "requestData",
@@ -376,6 +382,11 @@ export class QueryKeyFactory {
         activityLog: (params?: any): [EntityType, "activityLog", any?] => [
           "request",
           "activityLog",
+          params,
+        ],
+        Notes: (params?: any): [EntityType, "Notes", any?] => [
+          "request",
+          "Notes",
           params,
         ],
         paymentMethod

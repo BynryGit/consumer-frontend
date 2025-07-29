@@ -81,7 +81,8 @@ const BillsTable = () => {
       downloadID: billData.id,
       id: billData.invoiceNo,
       date: billData.createdDate,
-      amount: billData.totalAmountPayable,
+      amount: billData.billAmount,
+      outstandingAmount:billData.outstandingBalance,
       type: 'Combined',
       status: parseFloat(billData.outstandingBalance) > 0 ? 'Unpaid' : 'Paid',
       dueDate: billData.dueDate
@@ -156,6 +157,11 @@ const BillsTable = () => {
     {
       key: 'amount',
       header: 'Amount',
+      sortable: true,
+    },
+    {
+      key: 'outstandingAmount',
+      header: 'Outstanding Amount',
       sortable: true,
     },
     {

@@ -33,7 +33,8 @@ import {
   Users,
 } from "lucide-react";
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
-import { useUtilityServices, useTipsData, useUpdateTipsStatus } from "../hooks";
+import {  useTipsData, useUpdateTipsStatus } from "../hooks";
+import { useService } from "@features/dashboard/hooks";
 
 // Payload interface for the helpful mutation
 interface AddHelpfullPayload {
@@ -97,10 +98,10 @@ const EfficiencyTips = () => {
   const [debugCounter, setDebugCounter] = useState(0); // Force re-render counter
 
   // Get utility services from API
-  const { remoteUtilityId } = getLoginDataFromStorage();
-  const { data: utilityServicesData, isLoading: servicesLoading } =
-    useUtilityServices({
-      utility_id: remoteUtilityId,
+  const { remoteUtilityId, remoteConsumerNumber,consumerId } = getLoginDataFromStorage();
+  const { data: serviceData, isLoading: servicesLoading } =
+    useService({
+      consumer: consumerId,
     });
 
   // Helpful mutation hook
@@ -108,17 +109,15 @@ const EfficiencyTips = () => {
 
   // Filter active utility services
   const activeServices = useMemo(() => {
-    if (!utilityServicesData?.result) return [];
-    return utilityServicesData.result.filter(
-      (service) => service.isActive && service.id !== null &&service.isMeterRequired
-    );
-  }, [utilityServicesData]);
+    if (!serviceData?.result) return [];
+    return serviceData.result;
+  }, [serviceData]);
 
   // Set default utility when services load
   useEffect(() => {
     if (activeServices.length > 0 && !selectedUtility) {
-      console.log('Setting default utility:', activeServices[0].name);
-      setSelectedUtility(activeServices[0].name);
+      console.log('Setting default utility:', activeServices[0]);
+      setSelectedUtility(activeServices[0]);
     }
   }, [activeServices, selectedUtility]);
 
@@ -299,21 +298,21 @@ const EfficiencyTips = () => {
       
       // Find the service by tab key
       const service = activeServices.find(s => 
-        s.name.toLowerCase().replace(/\s+/g, "") === currentTabParam
+        s.toLowerCase().replace(/\s+/g, "") === currentTabParam
       );
       
-      if (service && service.name !== selectedUtility) {
-        console.log('🎯 Found service via URL:', service.name);
+      if (service && service !== selectedUtility) {
+        console.log('🎯 Found service via URL:', service);
         console.log('🎯 Previous selectedUtility:', selectedUtility);
         
-        setSelectedUtility(service.name);
+        setSelectedUtility(service);
         setDebugCounter(prev => prev + 1);
         
-        console.log('🎯 Setting selectedUtility to:', service.name);
+        console.log('🎯 Setting selectedUtility to:', service);
         
         toast({
-          title: "Switched to " + service.name,
-          description: `Viewing tips for ${service.name} service`,
+          title: "Switched to " + service,
+          description: `Viewing tips for ${service} service`,
         });
       }
     }
@@ -325,12 +324,12 @@ const EfficiencyTips = () => {
     const mapping: Record<string, string> = {};
 
     activeServices.forEach((service, index) => {
-      const key = service.name.toLowerCase().replace(/\s+/g, "");
+      const key = service.toLowerCase().replace(/\s+/g, "");
       
       components[key] = {
-        label: service.name,
-        shortLabel: service.name,
-        icon: getServiceIcon(service.name),
+        label: service,
+        shortLabel: service,
+        icon: getServiceIcon(service),
         component: (
           <TipsGrid 
             tips={allTips} 

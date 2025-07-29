@@ -10,7 +10,7 @@ export const contactUsApi = {
    }): Promise<any> => {
      const url = ApiEndpoints.createUrlWithQueryParameters(
        "consumerWeb",
-       "consumer-service-center",
+       "service-center",
        (qs) => {
          qs.push("remote_utility_id", params.remote_utility_id);
           qs.push("consumer_id", params.consumer_id);

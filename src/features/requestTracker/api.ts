@@ -78,6 +78,23 @@ export const requestTrackerApi = {
     const response = await cxApiClient.get(url);
     return response.data;
   },
+
+  //https://api-cx-staging.bynry.com/api/consumer-web/consumer-request/notes/?remote_utility_id=702
+   getNotes: async (params: {
+    remote_utility_id: string;
+    request_id:any;
+  }): Promise<any> => {
+    const url = ApiEndpoints.createUrlWithQueryParameters(
+      "consumerWeb",
+      "consumer-request/notes",
+      (qs) => {
+        qs.push("remote_utility_id", params.remote_utility_id);
+          qs.push("request_id", params.request_id);
+      }
+    );
+    const response = await cxApiClient.get(url);
+    return response.data;
+  },
 getActivityLog: async (params: {
     id: string;
     remote_utility_id: string;
