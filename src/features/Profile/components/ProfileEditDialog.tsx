@@ -70,66 +70,6 @@ const ProfileEditModal = ({
         error: "text-red-600 text-sm mt-1",
       },
     },
-    {
-      name: "street",
-      label: "Street Address",
-      type: "textarea",
-      required: true,
-      placeholder: "Enter your street address",
-      minLength: 5,
-      fullWidth: true,
-      rows: 2,
-      classes: {
-        container: "w-full mb-4 col-span-2",
-        label: "block text-sm font-medium text-gray-700 mb-2",
-        textarea: "w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white resize-none",
-        error: "text-red-600 text-sm mt-1",
-      },
-    },
-    {
-      name: "city",
-      label: "City",
-      type: "text",
-      required: true,
-      placeholder: "Enter your city",
-      minLength: 2,
-      classes: {
-        container: "w-full mb-4",
-        label: "block text-sm font-medium text-gray-700 mb-2",
-        input: "w-full h-10 px-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white",
-        error: "text-red-600 text-sm mt-1",
-      },
-    },
-    {
-      name: "state",
-      label: "State",
-      type: "text",
-      required: true,
-      placeholder: "Enter your state",
-      minLength: 2,
-      classes: {
-        container: "w-full mb-4",
-        label: "block text-sm font-medium text-gray-700 mb-2",
-        input: "w-full h-10 px-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white",
-        error: "text-red-600 text-sm mt-1",
-      },
-    },
-    {
-      name: "pincode",
-      label: "PIN Code",
-      type: "text",
-      required: true,
-      placeholder: "Enter PIN code",
-      minLength: 5,
-      maxLength: 6,
-      pattern: "^[0-9]{5,6}$",
-      classes: {
-        container: "w-full mb-4",
-        label: "block text-sm font-medium text-gray-700 mb-2",
-        input: "w-full h-10 px-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white",
-        error: "text-red-600 text-sm mt-1",
-      },
-    },
   ];
 
   // Create form
@@ -167,15 +107,6 @@ const ProfileEditModal = ({
           },
         },
         remote_utility_id: remoteUtilityId,
-        service_address_data: {
-          unit: "10",
-          address: formPayload.street,
-          city: formPayload.city,
-          area: formPayload.state,
-          sub_area: "Rahatani",
-          premise: "West Coast#1_USA#1_California#1_San Diego#1_South#1_North#2_Kalewadi#11_Rahatani#1_Test premise#2",
-          zipcode: formPayload.pincode,
-        },
       };
 
       await updateConsumerMutation.mutateAsync({

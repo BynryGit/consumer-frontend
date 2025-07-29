@@ -298,7 +298,7 @@ const UsageComparison = () => {
                 <div className="text-xs text-muted-foreground">
                   <p>✓ {result.totalBillsAnalyzed} bills analyzed</p>
                   <p>✓ Period: {result.periodMonths} months</p>
-                  <p>ℹ️ Trend: {result.trend}</p>
+                  <p>ℹ️ Historical data beyond 12 bills is not stored</p>
                 </div>
               </div>
             </div>
