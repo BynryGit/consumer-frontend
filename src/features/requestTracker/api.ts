@@ -83,6 +83,7 @@ export const requestTrackerApi = {
    getNotes: async (params: {
     remote_utility_id: string;
     request_id:any;
+    source:string;
   }): Promise<any> => {
     const url = ApiEndpoints.createUrlWithQueryParameters(
       "consumerWeb",
@@ -90,6 +91,7 @@ export const requestTrackerApi = {
       (qs) => {
         qs.push("remote_utility_id", params.remote_utility_id);
           qs.push("request_id", params.request_id);
+           qs.push("source", params.source);
       }
     );
     const response = await cxApiClient.get(url);

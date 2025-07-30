@@ -38,7 +38,7 @@ export const RequestTrackerKPICards: React.FC = () => {
       icon: <CheckCircle className="h-6 w-6 text-green-600" />
     },
     {
-      title: "Overdue Requests",
+      title: "Overdue Payments",
       count: requestSummary?.overduePayments || 0,
       displayValue: (requestSummary?.overduePayments || 0),
       icon: <AlertTriangle className="h-6 w-6 text-orange-600" />

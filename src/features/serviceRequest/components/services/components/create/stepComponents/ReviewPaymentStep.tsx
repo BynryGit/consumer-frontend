@@ -287,8 +287,8 @@ export const ReviewPaymentStep: React.FC<ReviewPaymentStepProps> = ({
       utility_support_request: state.serviceId,
       request_date: state.scheduledDate || "",
       additional_data: {
-        transaction_status: 1,
-        payment_service_status: 0,
+        transaction_status: paymentOption === "Pay Later" ? 0 : 1,
+        payment_service_status: paymentOption === "Pay Later" ? 1 : 0,
         schedule_date: state.scheduledDate || "",
         preferred_time_slot: state.preferredTimeSlot || 1,
         additional_instruction: state.additionalInstructions || "",
@@ -475,40 +475,6 @@ export const ReviewPaymentStep: React.FC<ReviewPaymentStepProps> = ({
                 <h4 className="font-medium mb-1">Pay Later</h4>
                 <p className="text-sm text-muted-foreground">
                   Pay within 7 days
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card
-              className={`cursor-pointer transition-all ${
-                paymentOption === "Add to Bill"
-                  ? "ring-2 ring-primary bg-primary/5"
-                  : "hover:bg-accent"
-              }`}
-              onClick={() => handlePaymentOptionChange("Add to Bill")}
-            >
-              <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                <Receipt className="h-8 w-8 mb-2 text-primary" />
-                <h4 className="font-medium mb-1">Add to First Bill</h4>
-                <p className="text-sm text-muted-foreground">
-                  Include fees in first invoice
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card
-              className={`cursor-pointer transition-all ${
-                paymentOption === "Invoice"
-                  ? "ring-2 ring-primary bg-primary/5"
-                  : "hover:bg-accent"
-              }`}
-              onClick={() => handlePaymentOptionChange("Invoice")}
-            >
-              <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                <FileText className="h-8 w-8 mb-2 text-primary" />
-                <h4 className="font-medium mb-1">Send Invoice</h4>
-                <p className="text-sm text-muted-foreground">
-                  Email invoice to consumer
                 </p>
               </CardContent>
             </Card>

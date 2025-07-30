@@ -20,6 +20,8 @@ interface Bill {
   type: string;
   status: string;
   dueDate: string;
+  outstandingAmount: number;
+  billIndex: number;
 }
 
 // Bill filters interface
@@ -72,20 +74,21 @@ const BillsTable = () => {
     }
   }, [searchParams]);
 
-  const { data: billDetailsData } = useConsumerBillDetails(filters);
+  const { data: billDetailsData, refetch } = useConsumerBillDetails(filters);
 
   const bills: Bill[] = useMemo(() => {
     if (!billDetailsData?.results?.billData) return [];
     
-    return billDetailsData.results.billData.map((billData: any) => ({
+    return billDetailsData.results.billData.map((billData: any, index: number) => ({
       downloadID: billData.id,
-      id: billData.invoiceNo,
+      id: billData.invoiceNo, 
       date: billData.createdDate,
       amount: billData.billAmount,
-      outstandingAmount:billData.outstandingBalance,
-      type: 'Combined',
-      status: parseFloat(billData.outstandingBalance) > 0 ? 'Unpaid' : 'Paid',
-      dueDate: billData.dueDate
+      outstandingAmount: billData.outstandingBalance,
+      status: billData.outstandingBalance > 0 ? 'Unpaid' : 'Paid',
+      dueDate: billData.dueDate,
+      type: billData.type || 'Utility Bill',
+      billIndex: index
     }));
   }, [billDetailsData]);
 
@@ -142,11 +145,21 @@ const BillsTable = () => {
     setSelectedBill(null);
   };
 
+  // Add this function to handle successful payment
+  const handlePaymentSuccess = () => {
+    // Refetch the bill data to update the status and outstanding amounts
+    if (refetch) {
+      refetch();
+    }
+    // Close the modal
+    handlePaymentModalClose();
+  };
+
   // Define table columns
   const columns: TableColumn<Bill>[] = [
     {
       key: 'id',
-      header: 'Bill',
+      header: 'Bill Number',
       sortable: true,
     },
     {
@@ -176,7 +189,7 @@ const BillsTable = () => {
       label: 'Pay Now',
       icon: 'CreditCard' as const,
       onClick: (bill: Bill) => handlePayNow(bill),
-      disabled: (bill: Bill) => bill.status === 'Paid'
+      disabled: (bill: Bill) => bill.status === 'Paid' || bill.billIndex !== 0
     },
     {
       label: 'Download',
@@ -218,7 +231,8 @@ const BillsTable = () => {
         bill={selectedBill}
         isOpen={isPaymentModalOpen}
         onClose={handlePaymentModalClose}
-        paymentType="bill" // Add the payment type prop
+        onPaymentSuccess={handlePaymentSuccess}
+        paymentType="bill"
       />
     </div>
   );

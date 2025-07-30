@@ -88,7 +88,7 @@ const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess, paymentType }: 
         setPaymentComplete(true);
         toast({
           title: "Payment Successful!",
-          description: `Your payment of $${bill.amount.toFixed(2)} for ${bill.type} has been processed successfully.`,
+          description: `Your payment of $${bill.amount} for ${bill.type} has been processed successfully.`,
         });
         
         // Call the callback to refetch data
@@ -188,7 +188,7 @@ const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess, paymentType }: 
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Amount:</span>
-                <span className="font-medium">${bill.amount.toFixed(2)}</span>
+                <span className="font-medium">${bill.amount}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{paymentType === 'service' ? 'Service Type:' : 'Bill Type:'}</span>
@@ -239,7 +239,7 @@ const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess, paymentType }: 
                   <span className="font-semibold">Total Amount</span>
                   <span className="font-bold text-lg flex items-center gap-1">
                     <DollarSign className="h-4 w-4" />
-                    {bill.amount.toFixed(2)}
+                    {bill.amount}
                   </span>
                 </div>
               </div>
@@ -279,7 +279,7 @@ const PaymentModal = ({ bill, isOpen, onClose, onPaymentSuccess, paymentType }: 
                 disabled={isProcessing}
                 className="flex-1"
               >
-                {isProcessing ? 'Processing...' : `Pay $${bill.amount.toFixed(2)}`}
+                {isProcessing ? 'Processing...' : `Pay $${bill.amount}`}
               </Button>
             </div>
           )}

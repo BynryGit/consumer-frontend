@@ -89,7 +89,7 @@ const UsageDashboard = () => {
       component: <UsageComparison />
     },
     tips: {
-      label: "Efficiency Tips",
+      label: "Tips",
       shortLabel: "Tips",
       icon: <Lightbulb className="h-4 w-4" />,
       component: <EfficiencyTips />

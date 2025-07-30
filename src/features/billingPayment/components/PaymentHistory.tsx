@@ -110,6 +110,7 @@ const PaymentHistory = () => {
 
     return apiResults.map((payment) => ({
       id: payment.id,
+      receiptNo:payment.receiptNo,
       date: payment.paymentDate,
       amount: payment.amount,
       method: payment.paymentMode,
@@ -263,7 +264,7 @@ const PaymentHistory = () => {
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       {getPaymentTypeIcon(payment.paymentType)}
-                      <h3 className="font-semibold">PAY-{payment.id}</h3>
+                      <h3 className="font-semibold">{payment.receiptNo}</h3>
                     </div>
                     <Badge className={getStatusColor(payment.status)}>
                       {payment.status}
@@ -276,7 +277,7 @@ const PaymentHistory = () => {
                       <p className="text-sm text-muted-foreground">Date</p>
                       <p className="font-medium flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        {new Date(payment.date).toLocaleDateString()}
+                        {payment.date}
                       </p>
                     </div>
                     <div>
@@ -297,9 +298,9 @@ const PaymentHistory = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        Payment Channel
+                        Payment For
                       </p>
-                      <p className="font-medium">{payment.paymentChannel}</p>
+                      <p className="font-medium">{payment.paymentType}</p>
                     </div>
                   </div>
                 </div>

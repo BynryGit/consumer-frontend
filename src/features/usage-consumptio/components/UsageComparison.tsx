@@ -158,12 +158,12 @@ const UsageComparison = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <div className={`text-2xl font-bold ${result.trendPercentage > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              <div className={`text-2xl font-bold ${result.trendPercentage > 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {result.trendPercentage > 0 ? '+' : ''}{result.trendPercentage}%
               </div>
               {result.trendPercentage > 0 ? 
-                <TrendingUp className="h-4 w-4 text-red-500" /> : 
-                <TrendingDown className="h-4 w-4 text-green-500" />
+                <TrendingUp className="h-4 w-4 text-green-500" /> : 
+                <TrendingDown className="h-4 w-4 text-red-500" />
               }
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -193,7 +193,7 @@ const UsageComparison = () => {
           <CardContent>
             <div className="flex items-center gap-2">
               <Badge variant={
-                result.trend === 'increasing' ? "destructive" : 
+                result.trend === 'increasing' ? "success" : 
                 result.trend === 'decreasing' ? "default" : 
                 "secondary"
               }>
