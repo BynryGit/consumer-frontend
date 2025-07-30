@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import {
   Card,
@@ -96,6 +96,9 @@ const EfficiencyTips = () => {
   const [selectedUtility, setSelectedUtility] = useState<string>("");
   const [helpfulTips, setHelpfulTips] = useState<Set<string>>(new Set());
   const [debugCounter, setDebugCounter] = useState(0); // Force re-render counter
+
+  // Create ref for the Quick Summary section
+  const quickSummaryRef = useRef<HTMLDivElement>(null);
 
   // Get utility services from API
   const { remoteUtilityId, remoteConsumerNumber,consumerId } = getLoginDataFromStorage();
@@ -224,6 +227,21 @@ const EfficiencyTips = () => {
     return tipsData.result;
   }, [tipsData]);
 
+  // Enhanced tip selection handler with scroll functionality
+  const handleTipSelect = useCallback((tip: any) => {
+    setSelectedTip(tip);
+    
+    // Scroll to Quick Summary section after state update
+    setTimeout(() => {
+      if (quickSummaryRef.current) {
+        quickSummaryRef.current.scrollIntoView({
+          behavior: 'auto', // instant jump
+          block: 'start'
+        });
+      }
+    }, 100); // Small delay to ensure the tip card is rendered
+  }, []);
+
   // Handle helpful button click
   const handleHelpfulClick = useCallback(
     (tip: any) => {
@@ -261,10 +279,10 @@ const EfficiencyTips = () => {
     if (tipId) {
       const tip = allTips.find((t) => t.code === tipId);
       if (tip) {
-        setSelectedTip(tip);
+        handleTipSelect(tip);
       }
     }
-  }, [searchParams, allTips]);
+  }, [searchParams, allTips, handleTipSelect]);
 
   const handleSaveTip = useCallback(
     (tip: any) => {
@@ -333,7 +351,7 @@ const EfficiencyTips = () => {
         component: (
           <TipsGrid 
             tips={allTips} 
-            onTipSelect={setSelectedTip}
+            onTipSelect={handleTipSelect}
             getTipIcon={getTipIcon}
           />
         ),
@@ -343,7 +361,7 @@ const EfficiencyTips = () => {
 
     console.log('Tab components created:', Object.keys(components));
     return { components, mapping };
-  }, [activeServices, allTips, getServiceIcon, getTipIcon]);
+  }, [activeServices, allTips, getServiceIcon, getTipIcon, handleTipSelect]);
 
   const serviceCount = Object.keys(tabComponents.components).length;
   const isCurrentTipHelpful = selectedTip && helpfulTips.has(selectedTip.code);
@@ -385,7 +403,7 @@ const EfficiencyTips = () => {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            <div>
+            <div ref={quickSummaryRef}>
               <p className="font-medium text-sm mb-1">Quick Summary</p>
               <p className="text-muted-foreground">
                 {selectedTip.quickSummary}
@@ -403,20 +421,6 @@ const EfficiencyTips = () => {
               Back to Tips
             </Button>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handleSaveTip(selectedTip)}
-              >
-                <Bookmark className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handleShareTip(selectedTip)}
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
               <Button 
                 size="sm"
                 disabled={isCurrentTipHelpful || isUpdatingHelpful}

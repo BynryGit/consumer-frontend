@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, MapPin, Phone, Mail, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/ui/card';
 import { Input } from '@shared/ui/input';
@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@shared/ui/dia
 import ServiceCenterMap from './ServiceCenterMap';
 import { useServiceDetail } from '../hooks';
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
+import { useSearchParams } from 'react-router-dom';
+
 interface ServiceCenter {
   id: string;
   name: string;
@@ -23,85 +25,103 @@ interface ServiceCenter {
 }
 
 const ServiceCenterSearch = () => {
-    const { remoteUtilityId, remoteConsumerNumber ,consumerId} = getLoginDataFromStorage();
-  const { data, refetch } = useServiceDetail({
-    remote_utility_id: remoteUtilityId,
-    consumer_id:consumerId
+  const { remoteUtilityId, remoteConsumerNumber, consumerId } = getLoginDataFromStorage();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Internal search state
+  const [searchQuery, setSearchQuery] = useState(() => {
+    return searchParams.get('query') || '';
   });
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<ServiceCenter[]>([]);
   const [selectedCenter, setSelectedCenter] = useState<ServiceCenter | null>(null);
   const [isMapOpen, setIsMapOpen] = useState(false);
+  
+  // Read search query from URL
+  const urlSearchQuery = decodeURIComponent(searchParams.get("query") || "");
 
-  // Helper function to extract only TRUE services from additional_data
-  const getServicesFromAdditionalData = (additionalData: any): string[] => {
-    console.log('Additional Data:', additionalData); // Debug log
-    if (!additionalData) return [];
-    
-    const services = [];
-    if (additionalData.isBillPayment === true) services.push("Bill Payment");
-    if (additionalData.isNewConnections === true) services.push("New Connections");
-    if (additionalData.isDisconnection === true) services.push("Disconnections");
-    if (additionalData.isComplaints === true) services.push("Complaints");
-    if (additionalData.isTechnicalSupport === true) services.push("Technical Support");
-    if (additionalData.isDocumentCollection === true) services.push("Document Collection");
-    
-    console.log('Extracted Services:', services); // Debug log
-    return services;
-  };
+  // Build API parameters with search
+  const apiParams = useMemo(() => {
+    const params = {
+      remote_utility_id: remoteUtilityId,
+      consumer_id: consumerId
+    };
+
+    // Add search parameter if query exists in URL
+    if (urlSearchQuery) {
+      return {
+        ...params,
+        search_data: urlSearchQuery
+      };
+    }
+
+    return params;
+  }, [remoteUtilityId, consumerId, urlSearchQuery]);
+
+  const { data, refetch, isLoading } = useServiceDetail(apiParams);
+
+  // Reset search query when URL changes
+  useEffect(() => {
+    if (urlSearchQuery !== searchQuery) {
+      setSearchQuery(urlSearchQuery);
+    }
+  }, [urlSearchQuery]);
 
   // Transform API data to ServiceCenter format
-  const apiServiceCenters: ServiceCenter[] = data?.result ? [{
-    id: data.result.id?.toString() || "",
-    name: data.result.name || "",
-    address: data.result.address || "",
-    city: data.result.cityNames?.join(", ") || "",
-    area: data.result.areaNames?.join(", ") || "",
-    subArea: data.result.subAreaNames?.join(", ") || "",
-    phone: data.result.contactNumber || "",
-    email: data.result.email || "",
-    type: data.result.typeDisplay || "",
-    availableServices: getServicesFromAdditionalData(data.result.additionalData),
-    distance: "0.5 miles" // You might want to calculate this based on user location
-  }] : [];
-
-  console.log('API Service Centers:', apiServiceCenters); // Debug log
-
-  // Dynamic search effect - updates results as user types
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      // If search is empty, show all centers
-      setSearchResults(apiServiceCenters);
-      return;
-    }
-
-    // Filter results based on search query
-    const query = searchQuery.toLowerCase();
-    const filteredResults = apiServiceCenters.filter(center => 
-      center.city.toLowerCase().includes(query) ||
-      center.address.toLowerCase().includes(query) ||
-      center.name.toLowerCase().includes(query) ||
-      center.area.toLowerCase().includes(query) ||
-      center.subArea.toLowerCase().includes(query) ||
-      center.type.toLowerCase().includes(query) ||
-      center.availableServices.some(service => service.toLowerCase().includes(query))
-    );
+  const apiServiceCenters: ServiceCenter[] = useMemo(() => {
+    if (!data?.result) return [];
     
-    setSearchResults(filteredResults);
-  }, [searchQuery, data]);
-
-  // Initialize search results when data loads
-  useEffect(() => {
-    if (apiServiceCenters.length > 0) {
-      setSearchResults(apiServiceCenters);
-    }
+    // Handle both single result and array of results
+    const results = Array.isArray(data.result) ? data.result : [data.result];
+    
+    return results.map((center: any) => ({
+      id: center.id?.toString() || "",
+      name: center.name || "",
+      address: center.address || "",
+      city: center.cityNames?.join(", ") || "",
+      area: center.areaNames?.join(", ") || "",
+      subArea: center.subAreaNames?.join(", ") || "",
+      phone: center.contactNumber || "",
+      email: center.email || "",
+      type: center.typeDisplay || "Service Center",
+      availableServices: center.utilityService || [],
+      distance: "0.5 miles" // You might want to calculate this based on user location
+    }));
   }, [data]);
 
+  // Handle search with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams);
+      
+      if (searchQuery.trim()) {
+        params.set('query', searchQuery.trim());
+      } else {
+        params.delete('query');
+      }
+      
+      setSearchParams(params);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, setSearchParams]);
+
   const handleSearch = () => {
-    // Optionally refetch data or trigger additional search logic
-    console.log('Manual search triggered for:', searchQuery);
-    refetch();
+    // Force immediate search
+    const params = new URLSearchParams(searchParams);
+    
+    if (searchQuery.trim()) {
+      params.set('query', searchQuery.trim());
+    } else {
+      params.delete('query');
+    }
+    
+    setSearchParams(params);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    const params = new URLSearchParams(searchParams);
+    params.delete('query');
+    setSearchParams(params);
   };
 
   const handleViewLocation = (center: ServiceCenter) => {
@@ -135,7 +155,7 @@ const ServiceCenterSearch = () => {
             Find Nearest Service Center
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 mt-4">
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -146,23 +166,38 @@ const ServiceCenterSearch = () => {
                 className="pl-10"
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearSearch}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                >
+                  ×
+                </Button>
+              )}
             </div>
-            <Button onClick={handleSearch}>
-              Search
+            <Button onClick={handleSearch} disabled={isLoading}>
+              {isLoading ? 'Searching...' : 'Search'}
             </Button>
           </div>
 
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">
-              {searchQuery ? `Service Centers Matching "${searchQuery}"` : 'Available Service Centers'}
+              {urlSearchQuery ? `Service Centers Matching "${urlSearchQuery}"` : 'Available Service Centers'}
               <span className="text-sm font-normal text-muted-foreground ml-2">
-                ({searchResults.length} {searchResults.length === 1 ? 'result' : 'results'})
+                ({apiServiceCenters.length} {apiServiceCenters.length === 1 ? 'result' : 'results'})
               </span>
             </h3>
             
-            {searchResults.length > 0 ? (
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Search className="h-12 w-12 mx-auto mb-4 opacity-50 animate-pulse" />
+                <p>Searching for service centers...</p>
+              </div>
+            ) : apiServiceCenters.length > 0 ? (
               <div className="grid gap-3">
-                {searchResults.map((center) => (
+                {apiServiceCenters.map((center) => (
                   <Card key={center.id} className="border-l-4 border-l-primary">
                     <CardContent className="p-4">
                       <div className="space-y-3">
@@ -208,7 +243,7 @@ const ServiceCenterSearch = () => {
                               <div className="min-w-0">
                                 <p className="text-xs font-medium text-muted-foreground">Address</p>
                                 <p className="text-sm leading-tight">
-                                  {center.address}, {center.city}
+                                  {center.area} ,{center.subArea} , {center.city}
                                 </p>
                               </div>
                             </div>
@@ -264,10 +299,13 @@ const ServiceCenterSearch = () => {
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                {searchQuery ? (
+                {urlSearchQuery ? (
                   <>
-                    <p>No service centers found matching "{searchQuery}".</p>
+                    <p>No service centers found matching "{urlSearchQuery}".</p>
                     <p className="text-sm mt-1">Try searching with a different location, service type, or contact our support team.</p>
+                    <Button variant="outline" size="sm" onClick={handleClearSearch} className="mt-2">
+                      Clear Search
+                    </Button>
                   </>
                 ) : (
                   <>

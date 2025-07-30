@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Stepper } from '@shared/components/Stepper';
 import { ReviewPaymentStep } from './stepComponents/ReviewPaymentStep';
-import { useRemoteUtilityId } from '@shared/selectors/globalSelectors';
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 
 import { RequestDetailsStep } from './stepComponents/RequestDetailsStep';
 
 
 export const CreateDisconnectionRequest: React.FC = () => {
-  const remoteUtilityId = useRemoteUtilityId();
+  const { remoteUtilityId } = getLoginDataFromStorage();
   const storageKey = `disconnection-request-progress-${remoteUtilityId}`;
   // Memoize the steps array to prevent infinite re-renders
   const steps = useMemo(() => [

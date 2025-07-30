@@ -100,7 +100,7 @@ const UsageTrends = ({ usageData, consumerBillData }: UsageTrendsProps) => {
   const handleUtilityChange = (value) => {
     setUtilityFilter(value);
   };
-
+console.log("2nd charttttt",transformedBillData)
   return (
     <>
       {/* Usage Trends Card */}

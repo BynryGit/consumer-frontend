@@ -5,6 +5,8 @@ interface LoginResult {
     remoteUtilityId: string | number;
     consumerNo: string;
     consumerId:any;
+    firstName:any;
+    lastName:any;
     // Add other properties as needed
   };
 }
@@ -13,6 +15,8 @@ interface LoginData {
   remoteUtilityId: string;
   remoteConsumerNumber: string;
   consumerId:any;
+   firstName:any;
+    lastName:any;
 }
 
 /**
@@ -23,21 +27,21 @@ export const getLoginDataFromStorage = (): LoginData => {
   try {
     const loginResult: LoginResult = JSON.parse(localStorage.getItem('loginResult') || '{}');
     
-    console.log('Login Result from localStorage:', loginResult);
-    console.log('Remote Utility ID:', loginResult.result?.remoteUtilityId);
-    console.log('Consumer Number:', loginResult.result?.consumerNo);
-    
     return {
       remoteUtilityId: loginResult.result?.remoteUtilityId?.toString() || '',
       remoteConsumerNumber: loginResult.result?.consumerNo || '',
-      consumerId:loginResult.result?.consumerId || ''
+      consumerId:loginResult.result?.consumerId || '',
+      firstName:loginResult.result?.firstName || '',
+      lastName:loginResult.result?.lastName || ''
     };
   } catch (error) {
     console.error('Error parsing login data from localStorage:', error);
     return {
       remoteUtilityId: '',
       remoteConsumerNumber: '',
-      consumerId:''
+      consumerId:'',
+      lastName:'',
+      firstName:''
     };
   }
 };
@@ -47,8 +51,9 @@ export const getLoginDataFromStorage = (): LoginData => {
  * @returns {boolean} True if both remoteUtilityId and remoteConsumerNumber exist
  */
 export const hasValidLoginData = (): boolean => {
-  const { remoteUtilityId, remoteConsumerNumber,consumerId } = getLoginDataFromStorage();
-  return !!(remoteUtilityId && remoteConsumerNumber && consumerId);
+  const { remoteUtilityId, remoteConsumerNumber,consumerId,lastName,
+      firstName } = getLoginDataFromStorage();
+  return !!(remoteUtilityId && remoteConsumerNumber && consumerId &&firstName&&lastName);
 };
 
 /**

@@ -53,7 +53,7 @@ const DashboardCards = ({ consumerBillData }: DashboardCardsProps) => {
     const savings = previousBill - currentBill;
     
     return {
-      savings: Math.abs(savings).toFixed(0),
+      savings: Math.abs(savings)?.toFixed(0),
       isPositive: savings >= 0
     };
   };

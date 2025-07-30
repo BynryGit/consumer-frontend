@@ -56,6 +56,7 @@ const ComplaintPage = ({ complaintId }: ComplaintPageProps) => {
   const { data: notesData, refetch: refetchNotes } = useNotes({
     remote_utility_id: remoteUtilityId,
     request_id: requestId,
+    source:"consumer_web"
   });
   
   const addNoteMutation = useAddNote();
@@ -111,41 +112,25 @@ const ComplaintPage = ({ complaintId }: ComplaintPageProps) => {
     expectedResolution: "Resolution expected within 5-7 business days after billing records review is completed.",
   };
 
-  // Mock evidence data
-  const evidenceFiles = [
-    {
+ const evidenceFiles = useMemo(() => {
+    if (!data?.result?.file) return [];
+
+    const fileUrl = data.result.file;
+    const fileName = fileUrl.split('/').pop() || 'Unknown File';
+    const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
+    
+    // Determine file type based on extension
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+    const isImage = imageExtensions.includes(fileExtension);
+    
+    return [{
       id: 1,
-      name: "March_2025_Bill_Statement.pdf",
-      type: "file",
-      size: "245 KB",
-      uploadedAt: "2025-04-08T14:30:00",
-      url: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400",
-    },
-    {
-      id: 2,
-      name: "Meter_Reading_Photo.jpg",
-      type: "image",
-      size: "1.2 MB",
-      uploadedAt: "2025-04-08T14:35:00",
-      url: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400",
-    },
-    {
-      id: 3,
-      name: "Previous_Bills_Comparison.xlsx",
-      type: "file",
-      size: "89 KB",
-      uploadedAt: "2025-04-08T14:40:00",
-      url: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400",
-    },
-    {
-      id: 4,
-      name: "Usage_Pattern_Screenshot.png",
-      type: "image",
-      size: "456 KB",
-      uploadedAt: "2025-04-08T14:45:00",
-      url: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400",
-    },
-  ];
+      name: fileName,
+      type: isImage ? "image" : "file",
+      uploadedAt: data.result.createdDate,
+      url: fileUrl,
+    }];
+  }, [data]);
 
   const handleAddNote = async (noteContent: string) => {
     if (noteContent.trim() && requestId && remoteUtilityId) {
@@ -193,12 +178,9 @@ const ComplaintPage = ({ complaintId }: ComplaintPageProps) => {
     }
   };
 
-  const handleFileDownload = (file: (typeof evidenceFiles)[0]) => {
-    console.log("Downloading file:", file.name);
-  };
 
   const handleFilePreview = (file: (typeof evidenceFiles)[0]) => {
-    console.log("Previewing file:", file.name);
+    window.open(file.url, '_blank');
   };
 
   // Evidence & Attachments Tab Content
@@ -236,7 +218,7 @@ const ComplaintPage = ({ complaintId }: ComplaintPageProps) => {
                 <div className="flex-1 min-w-0">
                   <h4 className="font-medium text-sm truncate">{file.name}</h4>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {file.size} • Uploaded{" "}
+               Uploaded{" "}
                     {new Date(file.uploadedAt).toLocaleDateString()}
                   </p>
                   <div className="flex items-center gap-2 mt-3">
@@ -248,15 +230,6 @@ const ComplaintPage = ({ complaintId }: ComplaintPageProps) => {
                     >
                       <Eye className="h-3 w-3 mr-1" />
                       Preview
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleFileDownload(file)}
-                      className="h-8 px-3"
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Download
                     </Button>
                   </div>
                 </div>
@@ -367,7 +340,7 @@ const ComplaintPage = ({ complaintId }: ComplaintPageProps) => {
                 <div>
                   <p className="text-sm text-muted-foreground">Created Date</p>
                   <p className="font-semibold">
-                    {new Date(complaintDetails.createdAt).toLocaleDateString()}
+                    {complaintDetails.createdAt}
                   </p>
                 </div>
               </CardContent>

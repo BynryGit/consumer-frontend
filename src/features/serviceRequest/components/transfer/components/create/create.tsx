@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { Stepper } from '@shared/components/Stepper';
-import { useRemoteUtilityId } from '@shared/selectors/globalSelectors';
 import { DocumentUploadStep } from './stepComponents/DocumentUploadStep';
 import { ReviewSubmitStep } from './stepComponents/ReviewSubmitStep';
 import { TransferDetailsStep } from './stepComponents/TransferDetailsStep';
-
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 
 export interface FileMetadata {
   id: string;
@@ -14,7 +13,7 @@ export interface FileMetadata {
   needsReupload?: boolean;
 }
 export const CreateTransferRequest: React.FC = () => {
-  const remoteUtilityId = useRemoteUtilityId();
+  const { remoteUtilityId } = getLoginDataFromStorage();
   const storageKey = `transfer-request-progress-${remoteUtilityId}`;
   // File state management at parent level
   const [fileObjects, setFileObjects] = useState<File[]>([]);

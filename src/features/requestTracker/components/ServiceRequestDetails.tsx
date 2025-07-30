@@ -55,6 +55,7 @@ const ServiceRequestPage = ({ serviceId }: ServiceRequestPageProps) => {
    const { data: notesData, refetch: refetchNotes } = useNotes({
      remote_utility_id: remoteUtilityId,
      request_id: requestId,
+       source:"consumer_web"
    });
    
    // Add the useAddNote hook
@@ -251,7 +252,7 @@ const ServiceRequestPage = ({ serviceId }: ServiceRequestPageProps) => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Created Date</p>
-                  <p className="font-semibold">{new Date(request.createdAt).toLocaleDateString()}</p>
+                  <p className="font-semibold">{request.createdAt}</p>
                 </div>
               </CardContent>
             </Card>

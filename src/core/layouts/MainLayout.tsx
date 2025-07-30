@@ -68,7 +68,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         <main className="flex-1 flex flex-col min-w-0 p-4 relative">
           <Toaster position="top-center" richColors />
           <div className="w-full overflow-x-hidden relative">
-            <div className="mb-4">{renderBreadcrumbs()}</div>
+            {/* <div className="mb-4">{renderBreadcrumbs()}</div> */}
             <Outlet />
             <LoadingInterceptor />
           </div>
