@@ -41,7 +41,7 @@ const ServiceCenterSearch = () => {
   // Build API parameters with search
   const apiParams = useMemo(() => {
     const params = {
-      remote_utility_id: "699",
+      remote_utility_id: remoteUtilityId,
       consumer_id: consumerId
     };
 
