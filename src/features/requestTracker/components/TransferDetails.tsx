@@ -54,6 +54,7 @@ const TransferPage = ({ transferId }: TransferPageProps) => {
   const { data: notesData, refetch: refetchNotes } = useNotes({
     remote_utility_id: remoteUtilityId,
     request_id: requestId,
+      source:"consumer_web"
   });
 
   // Add the useAddNote hook
@@ -114,13 +115,11 @@ const TransferPage = ({ transferId }: TransferPageProps) => {
 
   // Mock documents data
   const documents =
-    data?.result?.additionalData?.document?.map((doc) => ({
+    data?.result?.additionalData?.newConsumerData?.document?.map((doc) => ({
       id: doc.id,
       name: doc.documentSubtype,
-      type: doc.documentType?.replace("#1", "") || "Unknown",
-      uploadedDate: new Date().toISOString(),
-      size: "N/A",
-      status: "verified",
+      type: doc.documentType?.replace("#1", "") || "",
+      status:  doc.statusDisplay,
       file: doc.file,
     })) || [];
 
@@ -211,7 +210,7 @@ const TransferPage = ({ transferId }: TransferPageProps) => {
           Uploaded Documents
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 mt-4">
         {documents.map((doc) => (
           <div
             key={doc.id}
@@ -234,18 +233,8 @@ const TransferPage = ({ transferId }: TransferPageProps) => {
                 >
                   <Eye className="h-4 w-4 mr-1" />
                   View
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-1" />
-                  Download
-                </Button>
+                </Button> 
               </div>
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>
-                Uploaded: {new Date(doc.uploadedDate).toLocaleString()}
-              </span>
-              <span>Size: {doc.size}</span>
             </div>
           </div>
         ))}
@@ -375,7 +364,7 @@ const TransferPage = ({ transferId }: TransferPageProps) => {
                 <div>
                   <p className="text-sm text-muted-foreground">Created Date</p>
                   <p className="font-semibold">
-                    {new Date(request.createdAt).toLocaleDateString()}
+                    {request.createdAt}
                   </p>
                 </div>
               </CardContent>

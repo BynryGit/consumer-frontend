@@ -4,7 +4,7 @@ import { Stepper } from '@shared/components/Stepper';
 import { ComplaintDetailsStep } from './stepComponents/ComplaintDetailsStep';
 import { EvidenceAttachmentsStep } from './stepComponents/EvidenceAttachmentsStep';
 import { ReviewSubmitStep } from './stepComponents/ReviewSubmitStep';
-import { useRemoteUtilityId } from '@shared/selectors/globalSelectors';
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 // import { FileMetadata } from '@features/cx/shared/types/consumerRequest';
 
 // Complaint-specific data structures
@@ -82,7 +82,7 @@ export interface FileMetadata {
 }
 
 export const CreateComplaintRequest: React.FC = () => {
-  const remoteUtilityId = useRemoteUtilityId();
+  const { remoteUtilityId } = getLoginDataFromStorage();
   const storageKey = `complaint-request-progress-${remoteUtilityId}`;
   
   // File state management at parent level

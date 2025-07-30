@@ -643,10 +643,7 @@ export function RequestDetailsStep({
           <FileText className="h-5 w-5 text-blue-600" />
         </div>
         <h3 className="text-lg font-semibold text-gray-800">
-          {requestForm.watch("requestType") === "disconnection"
-            ? "Disconnection"
-            : "Reconnection"}{" "}
-          Details
+         Disconnection Details
         </h3>
       </div>
       {/* Dynamic Form */}

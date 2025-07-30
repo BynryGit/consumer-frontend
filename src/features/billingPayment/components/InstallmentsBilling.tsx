@@ -33,8 +33,6 @@ const InstallmentsBilling = () => {
     totalAmount: paymentAgreementData.result.totalAgreementAmount || "NA",
     downPayment: paymentAgreementData.result.downPayment || "NA",
     monthlyPayment: paymentAgreementData.result.monthlyPayment || "NA",
-    startDate: paymentAgreementData.result.startDate || 'NA',
-    endDate: paymentAgreementData.result.endDate || 'NA'
   } : null;
 
   const installmentsData = paymentAgreementData?.result?.installments?.map(installment => ({
@@ -124,14 +122,7 @@ const InstallmentsBilling = () => {
               <p className="text-sm text-muted-foreground">Monthly Payment</p>
               <p className="font-semibold">${paymentAgreement?.monthlyPayment}</p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Start Date</p>
-              <p className="font-semibold">{paymentAgreement?.startDate}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">End Date</p>
-              <p className="font-semibold">{paymentAgreement?.endDate}</p>
-            </div>
+
           </div>
         </CardContent>
       </Card>
@@ -172,6 +163,12 @@ const InstallmentsBilling = () => {
                         <p className="font-bold text-xl flex items-center gap-1">
                           <DollarSign className="h-5 w-5" />
                           {installment.amount}
+                        </p>
+                      </div>
+                        <div>
+                        <p className="text-sm text-muted-foreground">Paid Date</p>
+                        <p className="font-bold text-xl flex items-center gap-1">
+                          {installment.paidDate}
                         </p>
                       </div>
                       {installment.paidDate && installment.paidDate !== "NA" && (

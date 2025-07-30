@@ -14,9 +14,8 @@ import { Input } from "@shared/ui/input";
 import { Search } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 interface ServiceSelectionStepProps {
-  remoteUtilityId: number;
   storageKey: string;
   onNext: () => void;
   onPrevious: () => void;
@@ -28,13 +27,15 @@ interface ServiceSelectionStepProps {
 }
 
 export const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({
-  remoteUtilityId,
   storageKey,
   onNext,
   onPrevious,
   stepHelpers,
   currentStepIndex = 1, // Default to step 1 for service selection
 }) => {
+
+   const { remoteUtilityId } = getLoginDataFromStorage();
+  
   const [searchTerm, setSearchTerm] = useState("");
 
   // Use the utility request configuration hook
@@ -45,10 +46,10 @@ export const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({
   } = useUtilityRequestConfiguration({
     remoteUtilityId,
     requestType: "Service",
-    disablePagination: true, // Get all services without pagination
+    disablePagination: true, 
     searchData: searchTerm || undefined,
   });
-
+console.log("utility idd",remoteUtilityId)
   // Get selected service from step helpers
   const [selectedService, setSelectedService] = useState<any>(null);
   const { data: userProfile } = useGlobalUserProfile();

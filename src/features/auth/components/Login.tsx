@@ -8,7 +8,6 @@ import AuthLayout from './AuthLayout';
 import { DynamicForm } from "@shared/components/DynamicForm";
 import { FormField, FormService } from "@shared/services/FormServices";
 import { setAuthToken } from '@shared/auth/authUtils';
-import { useConsumerDetails } from '@features/serviceRequest/hooks';
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 
 // Types for API response
@@ -37,7 +36,7 @@ interface SignInProps {
 }
 
 // Helper function to safely get and store remoteConsumerNumber
-const getOrSetConsumerNumber = (loginResult?: any, consumerDetails?: any) => {
+const getOrSetConsumerNumber = (loginResult?: any) => {
   let consumerNumber = null;
   
   // Try to get from localStorage first
@@ -47,11 +46,6 @@ const getOrSetConsumerNumber = (loginResult?: any, consumerDetails?: any) => {
     // Try to extract from loginResult
     if (loginResult?.result?.consumer_no) {
       consumerNumber = loginResult.result.consumer_no;
-      localStorage.setItem('remoteConsumerNumber', consumerNumber);
-    }
-    // Try to extract from consumerDetails
-    else if (consumerDetails?.result?.consumer_no) {
-      consumerNumber = consumerDetails.result.consumer_no;
       localStorage.setItem('remoteConsumerNumber', consumerNumber);
     }
     // Try alternative field names
@@ -72,17 +66,12 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
   const [remoteConsumerNumber, setRemoteConsumerNumber] = useState<string | null>(
     storageData.remoteConsumerNumber || localStorage.getItem('remoteConsumerNumber')
   );
-  const { remoteUtilityId } = storageData;
   
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [serviceProviderID, setServiceProviderID] = useState<number>(0);
   const [passwordVisible, setPasswordVisible] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [consumerDetailsParams, setConsumerDetailsParams] = useState<{
-    remote_utility_id: any;
-    consumer_no: string;
-  } | null>(null);
 
   // API hooks
   const { data: utilitiesData, isLoading: isLoadingUtilities, error: utilitiesError } = useUserUtility({
@@ -90,10 +79,6 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
   });
 
   const loginMutation = useConsumerWebLogin();
-
-  const { data: consumerDetailsData} = useConsumerDetails(
-    consumerDetailsParams || { remote_utility_id: null, consumer_no: '' }
-  );
 
   // Extract utilities from API response
   const utilities: UtilityProvider[] = utilitiesData?.result || [];
@@ -180,32 +165,12 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
     }
   }, [passwordVisible]);
 
-  // Store consumer details and extract consumer number
-  useEffect(() => {
-    if (consumerDetailsData) {
-      localStorage.setItem('consumerDetails', JSON.stringify(consumerDetailsData));
-      
-      // Try to extract and store consumer number if missing
-      const consumerNum = getOrSetConsumerNumber(null, consumerDetailsData);
-      if (consumerNum && consumerNum !== remoteConsumerNumber) {
-        setRemoteConsumerNumber(consumerNum);
-      }
-    }
-  }, [consumerDetailsData, remoteConsumerNumber]);
-
   // Store current tenant in localStorage for persistence
   useEffect(() => {
     if (tenant) {
       localStorage.setItem('currentTenant', tenant);
     }
   }, [tenant]);
-
-  // Navigate to dashboard when consumer details are loaded
-  useEffect(() => {
-    if (consumerDetailsData && consumerDetailsParams) {
-      navigate('/dashboard');
-    }
-  }, [consumerDetailsData, consumerDetailsParams, navigate]);
 
   const handleFormSubmit = async (data: any) => {
     if (!data.service_provider) {
@@ -257,20 +222,11 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
         localStorage.setItem('serviceProvider', data.service_provider);
       }
       
-      // Use extracted consumer number or fallback
-      const consumerNoToUse = extractedConsumerNumber || remoteConsumerNumber || data.username;
+      // Store remote utility ID for dashboard use
+      localStorage.setItem('remoteUtilityId', selectedUtility.id.toString());
       
-      if (!consumerNoToUse) {
-        toast.error('Consumer number not found. Please contact support.');
-        return;
-      }
-      
-      // Set parameters to trigger useConsumerDetails hook
-      setConsumerDetailsParams({
-        remote_utility_id: selectedUtility.id,
-        consumer_no: consumerNoToUse
-      });
-      
+      // Navigate to dashboard - consumer details will be fetched there
+      navigate('/dashboard');
       
     } catch (error) {
       toast.error('Login failed. Please check your credentials.');

@@ -124,7 +124,7 @@ const CreditNotes = () => {
   const columns: TableColumn<CreditNote>[] = [
     {
       key: "id",
-      header: "Credit Note #",
+      header: "Credit Note",
       sortable: true,
     },
     {

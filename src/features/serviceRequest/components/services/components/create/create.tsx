@@ -3,11 +3,11 @@ import { Stepper } from '@shared/components/Stepper';
 import { ReviewPaymentStep } from './stepComponents/ReviewPaymentStep';
 import { ServiceDetailsStep } from './stepComponents/ServiceDetailsStep';
 import { ServiceSelectionStep } from './stepComponents/ServiceSelectionStep';
-import { useRemoteUtilityId } from '@shared/selectors/globalSelectors';
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 
 
 export const CreateServiceRequest: React.FC = () => {
-  const remoteUtilityId = useRemoteUtilityId();
+ const { remoteUtilityId } = getLoginDataFromStorage();
   const storageKey = `service-request-progress-${remoteUtilityId}`;
   // Memoize the steps array to prevent infinite re-renders
   const steps = useMemo(() => [
@@ -15,7 +15,7 @@ export const CreateServiceRequest: React.FC = () => {
       title: 'Select Service',
       description: 'Browse all available services and select the one you need',
       slug: 'service-selection', // Add slug for routing
-      component: <ServiceSelectionStep remoteUtilityId={Number(remoteUtilityId)} storageKey={storageKey} onNext={() => {}} onPrevious={() => {}}/>,
+      component: <ServiceSelectionStep  storageKey={storageKey} onNext={() => {}} onPrevious={() => {}}/>,
       optional: false,
       infoTitle: 'Service Selection Help',
       infoDescription: 'Browse and select the service you need. Use the search bar to quickly find specific services. Each service shows pricing and description to help you choose.',

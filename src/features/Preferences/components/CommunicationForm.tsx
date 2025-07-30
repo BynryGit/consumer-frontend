@@ -20,10 +20,6 @@ const communicationSchema = z.object({
   billingReminders: z.boolean(),
   outageAlerts: z.boolean(),
   usageReports: z.boolean(),
-  promotions: z.boolean(),
-  contactTime: z.string(),
-  frequencyBilling: z.string(),
-  frequencyUsage: z.string()
 });
 
 type CommunicationFormValues = z.infer<typeof communicationSchema>;
@@ -40,10 +36,6 @@ const CommunicationForm = () => {
     billingReminders: true,
     outageAlerts: true,
     usageReports: true,
-    promotions: false,
-    contactTime: 'anytime',
-    frequencyBilling: 'weekly',
-    frequencyUsage: 'monthly'
   };
 
   const form = useForm<CommunicationFormValues>({
@@ -59,22 +51,7 @@ const CommunicationForm = () => {
     if (data.smsNotifications) communication.push("phone");
     if (data.pushNotifications) communication.push("push");
 
-    // Map preferred time slot
-    const timeSlotMapping: Record<string, number> = {
-      "anytime": 0,
-      "morning": 1,
-      "afternoon": 2,
-      "evening": 3
-    };
 
-    // Map frequencies
-    const frequencyMapping: Record<string, number> = {
-      "weekly": 1,
-      "biweekly": 2,
-      "monthly": 3,
-      "quarterly": 4,
-      "annually": 5
-    };
 
     return {
       additional_data: {
@@ -83,11 +60,7 @@ const CommunicationForm = () => {
           is_billing_and_payment: data.billingReminders,
           is_service_outage: data.outageAlerts,
           is_usage_insights: data.usageReports,
-          is_promotional_offers: data.promotions
         },
-        preferred_time_slot: timeSlotMapping[data.contactTime] || 0,
-        billing_reminder_frequency: frequencyMapping[data.frequencyBilling] || 1,
-        usage_report_frequency: frequencyMapping[data.frequencyUsage] || 3
       }
     };
   };
@@ -121,7 +94,7 @@ const CommunicationForm = () => {
                 Communication Channels
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 mt-4">
               <div className="space-y-4">
                 <FormField 
                   control={form.control} 
@@ -193,7 +166,7 @@ const CommunicationForm = () => {
                 Notification Preferences
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 mt-4">
               <div className="space-y-4">
                 <FormField 
                   control={form.control} 
@@ -248,119 +221,15 @@ const CommunicationForm = () => {
                     </FormItem>
                   )} 
                 />
-                
-                <FormField 
-                  control={form.control} 
-                  name="promotions" 
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel>Promotional Offers</FormLabel>
-                        <FormDescription>
-                          Special offers, discounts, and energy efficiency programs
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                    </FormItem>
-                  )} 
-                />
-              </div>
-              
-              <div className="space-y-4 pt-4">
-                <FormField 
-                  control={form.control} 
-                  name="contactTime" 
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        Preferred Contact Time
-                      </FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select preferred contact time" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="anytime">Anytime</SelectItem>
-                          <SelectItem value="morning">Morning (8 AM - 12 PM)</SelectItem>
-                          <SelectItem value="afternoon">Afternoon (12 PM - 5 PM)</SelectItem>
-                          <SelectItem value="evening">Evening (5 PM - 8 PM)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        When would you prefer to receive non-urgent communications?
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )} 
-                />
-                
-                <FormField 
-                  control={form.control} 
-                  name="frequencyBilling" 
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Billing Reminder Frequency</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select billing reminder frequency" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="quarterly">Quarterly</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        How often would you like billing reminders before due dates?
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )} 
-                />
-                
-                <FormField 
-                  control={form.control} 
-                  name="frequencyUsage" 
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Usage Report Frequency</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select usage report frequency" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="quarterly">Quarterly</SelectItem>
-                          <SelectItem value="annually">Annually</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        How often would you like to receive detailed usage reports?
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )} 
-                />
               </div>
             </CardContent>
             <CardFooter>
               <Button 
                 type="submit" 
-                className="ml-auto flex items-center gap-2"
+                className="ml-auto flex items-center gap-2 mt-4"
                 disabled={updatePreferencesMutation.isPending}
               >
-                <Save className="h-4 w-4" />
+                <Save className="h-4 w-4 " />
                 {updatePreferencesMutation.isPending ? 'Saving...' : 'Save Preferences'}
               </Button>
             </CardFooter>
