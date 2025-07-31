@@ -9,17 +9,112 @@ import { usePaymentAgreementDetail } from '../hooks';
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 
 const InstallmentsBilling = () => {
-  const { remoteUtilityId, remoteConsumerNumber, consumerId } = getLoginDataFromStorage();
+  const { remoteUtilityId, remoteConsumerNumber, consumerId,firstName,lastName } = getLoginDataFromStorage();
   const { toast } = useToast();
   const [selectedInstallment, setSelectedInstallment] = useState(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  const handleViewAgreement = () => {
-    toast({
-      title: "Opening Agreement",
-      description: "Loading payment agreement document..."
-    });
-  };
+const handleViewAgreement = () => {
+  const printWindow = window.open("", "_blank");
+  if (printWindow) {
+    // Helper function to format currency
+    const formatCurrency = (amount) => {
+      if (!amount || amount === "NA") return "N/A";
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+      }).format(amount);
+    };
+
+    // Helper function to format date
+    const formatDate = (dateString) => {
+      if (!dateString || dateString === "NA" || dateString.trim() === "") {
+        return "N/A";
+      }
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+          return "N/A";
+        }
+        return new Intl.DateTimeFormat("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }).format(date);
+      } catch (error) {
+        return "N/A";
+      }
+    };
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Payment Agreement - ${remoteConsumerNumber || "N/A"}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+            .section { margin-bottom: 25px; }
+            .table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+            .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            .table th { background-color: #f5f5f5; }
+            @media print { body { margin: 20px; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>PAYMENT AGREEMENT</h1>
+            <p>Agreement ID: ${paymentAgreement?.agreementId || "N/A"}</p>
+            <p>Created Date: ${formatDate(paymentAgreement?.createdDate)}</p>
+          </div>
+          
+          <div class="section">
+            <h2>Account Information</h2>
+            <p><strong>Account Number:</strong> ${remoteConsumerNumber || "N/A"}</p>
+            <p><strong>Customer Name:</strong>${firstName} ${lastName}</p>
+            <p><strong>Service Address:</strong> N/A</p>
+          </div>
+
+          <div class="section">
+            <h2>Agreement Terms</h2>
+            <p><strong>Total Amount:</strong> ${formatCurrency(paymentAgreement?.totalAmount)}</p>
+            <p><strong>Down Payment:</strong> ${formatCurrency(paymentAgreement?.downPayment)}</p>
+            <p><strong>Monthly Payment:</strong> ${formatCurrency(paymentAgreement?.monthlyPayment)}</p>
+            <p><strong>Number of Installments:</strong> ${installmentsData?.length || "N/A"}</p>
+            <p><strong>Status:</strong> Active</p>
+            <p><strong>Created By:</strong> ${paymentAgreement?.createdBy || "N/A"}</p>
+          </div>
+          
+          <div class="section">
+            <h2>Installment Schedule</h2>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Installment #</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Paid Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${installmentsData?.map(installment => `
+                  <tr>
+                    <td>${installment.installmentNumber}</td>
+                    <td>${formatCurrency(installment.amount)}</td>
+                    <td>${installment.status}</td>
+                    <td>${installment.status === 'Paid' ? formatCurrency(installment.amount) : "-"}</td>
+                  </tr>
+                `).join("") || '<tr><td colspan="4">No installments found</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  }
+};
 
   const { data: paymentAgreementData, refetch: refetchPaymentAgreement } = usePaymentAgreementDetail({
     remote_utility_id: remoteUtilityId ,
