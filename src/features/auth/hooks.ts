@@ -6,7 +6,6 @@ import { authApi } from "./api";
 import type { ConsumerWebLoginPayload, forgotPassword, UserProfile } from "./types";
 import { QueryKeyFactory } from "@shared/api/queries/queryKeyFactory";
 import { globalQueryClient } from "@shared/api/queries/queryClients";
-import { toast } from "sonner";
 import { useSmartMutation, useSmartQuery } from "@shared/api/queries/hooks";
 
 interface User {
@@ -201,14 +200,6 @@ export const useAuth = (): UseAuthReturn => {
 export const useConsumerWebLogin = () => {
   return useSmartMutation(
     (payload: ConsumerWebLoginPayload) => authApi.loginConsumerWeb(payload),
-    {
-      onSuccess: (data) => {
-        toast.success("Login successful");
-      },
-      onError: (error: any) => {
-        toast.error(`Login failed: ${error.message}`);
-      },
-    }
   );
 };
 
@@ -216,14 +207,6 @@ export const useConsumerWebLogin = () => {
 export const useForgotPassword = () => {
   return useSmartMutation(
     (payload: { email: string,role: string }) => authApi.forgotPassword(payload.email,payload.role),
-    {
-      onSuccess: (data) => {
-        toast.success("Password reset email sent successfully");
-      },
-      onError: (error: any) => {
-        toast.error(`Failed to send reset email: ${error.message}`);
-      },
-    }
   );
 };
 
@@ -232,14 +215,7 @@ export const useForgotPassword = () => {
 export const useResetPassword = () => {
   return useSmartMutation(
     (payload: { email: string, role: any }) => authApi.getResetPassword(payload.email, payload.role),
-    {
-      onSuccess: (data) => {
-        toast.success("Password setup email sent successfully");
-      },
-      onError: (error: any) => {
-        toast.error(`Failed to send setup email: ${error.message}`);
-      },
-    }
+   
   );
 };
 
@@ -258,14 +234,7 @@ export const usePasswordResetWithParams = () => {
         { et: payload.et, code: payload.code }
       );
     },
-    {
-      onSuccess: (data) => {
-        toast.success("Password has been set successfully");
-      },
-      onError: (error: any) => {
-        toast.error(`Failed to set password: ${error.message}`);
-      },
-    }
+   
   );
 };
 
@@ -292,4 +261,4 @@ export const useUserUtility = (params: { tenant_alias: string }) => {
       refetchInterval: false,
     }
   );
-};
+};  

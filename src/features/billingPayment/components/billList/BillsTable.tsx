@@ -9,7 +9,7 @@ import { useDownloadBillTemplate } from '@features/billingPayment/hooks';
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 import { useSearchParams } from 'react-router-dom';
 import { PAGE_SIZE } from "@shared/utils/constants";
-import { toast } from "sonner";
+import { useToast } from '@shared/hooks/use-toast'; // Changed from sonner
 
 // Bill interface
 interface Bill {
@@ -36,6 +36,7 @@ interface BillFilters {
 }
 
 const BillsTable = () => {
+  const { toast } = useToast(); // Added custom toast hook
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -87,7 +88,7 @@ const BillsTable = () => {
       outstandingAmount: billData.outstandingBalance,
       status: billData.outstandingBalance > 0 ? 'Unpaid' : 'Paid',
       dueDate: billData.dueDate,
-      type: billData.type || 'Utility Bill',
+      type: billData.type || '',
       billIndex: index
     }));
   }, [billDetailsData]);
@@ -125,17 +126,24 @@ const BillsTable = () => {
     setIsPaymentModalOpen(true);
   };
 
-  // Updated download handler
+  // Updated download handler with custom toast
   const handleDownloadBill = (bill: Bill) => {
     downloadBillTemplate.mutate({
       billId: bill.downloadID,
     }, {
       onSuccess: () => {
-        toast.success("Bill downloaded successfully");
+        toast({
+          title: "Success!",
+          description: "Bill downloaded successfully",
+        });
       },
       onError: (error) => {
         console.error("Download failed:", error);
-        toast.error("Failed to download bill");
+        toast({
+          title: "Download Failed",
+          description: "Failed to download bill. Please try again.",
+          variant: "destructive"
+        });
       }
     });
   };
@@ -182,7 +190,7 @@ const BillsTable = () => {
       header: 'Due Date',
     },
   ];
-  
+
   // Define table actions
   const actions = [
     {

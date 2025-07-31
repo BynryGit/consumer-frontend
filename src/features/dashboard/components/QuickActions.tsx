@@ -1,22 +1,41 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/ui/card';
 import { Button } from '@shared/ui/button';
 import { CreditCard, Receipt, Wrench, AlertTriangle, Search } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDownloadBillTemplate } from '@features/billingPayment/hooks';
+import { useToast } from '@shared/hooks/use-toast';
 
-const QuickActions = () => {
+
+const QuickActions = ({ consumerBillData }) => {
+  const { toast } = useToast(); 
   const navigate = useNavigate();
+  const downloadBillTemplate = useDownloadBillTemplate();
+console.log("billlllllDownloadID",consumerBillData)
+  const handleDownloadLatestBill = () => {
+    // Get the first bill from the array (most recent)
+    const latestBill = consumerBillData?.result?.billData?.[0];
+    
+    if (!latestBill) {
+      return; // No bills available - do nothing
+    }
 
-  const handleServiceRequest = () => {
-    // Simulate service request submission
-    const requestId = 'SR-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-    navigate('/service/success', { 
-      state: { 
-        type: 'service',
-        id: requestId,
-        data: { priority: 'standard', category: 'general' }
-      } 
+    downloadBillTemplate.mutate({
+      billId: latestBill.id,
+    }, {
+      onSuccess: () => {
+toast({
+  title: "Success!",
+  description: "Bill downloaded successfully",
+});
+      },
+      onError: (error) => {
+    toast({
+  title: "Download Failed", 
+  description: "Failed to download bill. Please try again.",
+  variant: "destructive"
+});
+      }
     });
   };
 
@@ -32,13 +51,19 @@ const QuickActions = () => {
             Pay Bill
           </Link>
         </Button>
-        <Button variant="outline" className="w-full justify-start">
+        <Button 
+          variant="outline" 
+          className="w-full justify-start"
+          onClick={handleDownloadLatestBill}
+        >
           <Receipt className="mr-2 h-4 w-4" />
           Download Latest Bill
         </Button>
-        <Button variant="outline" className="w-full justify-start" onClick={handleServiceRequest}>
-          <Wrench className="mr-2 h-4 w-4" />
-          Request Service
+         <Button variant="outline" className="w-full justify-start" asChild>
+          <Link to="/service/newservice">
+           <Wrench className="mr-2 h-4 w-4" />
+           Request Service
+          </Link>
         </Button>
         <Button variant="outline" className="w-full justify-start" asChild>
           <Link to="/service/complaint">
@@ -47,7 +72,7 @@ const QuickActions = () => {
           </Link>
         </Button>
         <Button variant="outline" className="w-full justify-start" asChild>
-          <Link to="/service/tracker">
+          <Link to="/request-tracker">
             <Search className="mr-2 h-4 w-4" />
             Track Request
           </Link>

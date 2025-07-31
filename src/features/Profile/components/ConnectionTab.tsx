@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/ui/card';
 import { Separator } from '@shared/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@shared/ui/collapsible';
@@ -6,7 +6,6 @@ import { Calendar, ChevronDown, Lightbulb, Droplet, Flame, Zap } from 'lucide-re
 import { LucideIcon } from 'lucide-react';
 import ReadingsTable from './ReadingsTable';
 import { useMeterList } from '../hooks';
-
 
 interface Reading {
   date: string;
@@ -16,7 +15,7 @@ interface Reading {
 
 interface Connection {
   utility: string;
-  id:any
+  id: any;
   icon: LucideIcon;
   color: string;
   meterNo: string;
@@ -35,23 +34,23 @@ interface ConnectionTabProps {
 
 const ConnectionTab: React.FC<ConnectionTabProps> = ({ consumerDetailsData }) => {
   const [activeUtilityReadings, setActiveUtilityReadings] = useState<{[key: string]: Reading[]}>({});
-  const [loadingUtilityId, setLoadingUtilityId] = useState<string | null>(null);
-  const [fetchingUtilities, setFetchingUtilities] = useState<{[key: string]: boolean}>({});
+  const [currentFetchingUtility, setCurrentFetchingUtility] = useState<string | null>(null);
 
-  const mapping = consumerDetailsData?.result?.consumerMappingData?.[0];
-
-  // Create conditional hook calls for each utility
   const connectionMappings = consumerDetailsData?.result?.consumerMappingData || [];
-  const meterListQueries = connectionMappings.map((mapping: any) => {
-    const shouldFetch = fetchingUtilities[mapping.remoteMeterId];
-    return useMeterList({
-      remote_utility_id: shouldFetch ? consumerDetailsData?.result?.remoteUtilityId : null,
-      consumer_id: shouldFetch ? consumerDetailsData?.result?.id : null,
-      remote_meter_id: shouldFetch ? mapping.remoteMeterId : null,
-      is_status: false,
-      page: 1,
-      limit: 10,
-    });
+  
+  // Find the currently fetching utility mapping
+  const currentMapping = connectionMappings.find((mapping: any) => 
+    mapping.remoteMeterId === currentFetchingUtility
+  );
+
+  // Single hook call - only fetch for the currently selected utility
+  const meterListQuery = useMeterList({
+    remote_utility_id: currentMapping ? consumerDetailsData?.result?.remoteUtilityId : null,
+    consumer_id: currentMapping ? consumerDetailsData?.result?.id : null,
+    remote_meter_id: currentMapping ? currentMapping.remoteMeterId : null,
+    is_status: false,
+    page: 1,
+    limit: 10,
   });
 
   // Function to get utility icon and colors based on service type
@@ -90,7 +89,6 @@ const ConnectionTab: React.FC<ConnectionTabProps> = ({ consumerDetailsData }) =>
     }
   };
 
- 
   // Transform API data to Reading format
   const transformApiDataToReadings = (apiResults: any[], utilityService: string): Reading[] => {
     const unit = utilityService === 'Electricity' ? 'kWh' : 
@@ -100,68 +98,67 @@ const ConnectionTab: React.FC<ConnectionTabProps> = ({ consumerDetailsData }) =>
     return apiResults.map(result => ({
       date: result.meter?.currentReadingDate || result.createdDate || result.updatedOn || '1222',
       reading: result.meter?.currentReading ? `${result.meter.currentReading} ${unit}` : (result.meterReading ? `${result.meter_reading} ${unit}` : 'N/A'),
-      status: result.meter?.status|| 'N/A'
+      status: result.meter?.status || 'N/A'
     }));
   };
 
   // Function to trigger meter readings fetch for specific utility
   const fetchUtilityReadings = (utilityId: string) => {
-    if (activeUtilityReadings[utilityId] || fetchingUtilities[utilityId]) {
-      // Already fetched or currently fetching, don't fetch again
+    if (activeUtilityReadings[utilityId]) {
+      // Already fetched, don't fetch again
       return;
     }
 
-    setFetchingUtilities(prev => ({
-      ...prev,
-      [utilityId]: true
-    }));
+    setCurrentFetchingUtility(utilityId);
   };
 
-  // Process the query results
-  React.useEffect(() => {
-    connectionMappings.forEach((mapping: any, index: number) => {
-      const query = meterListQueries[index];
-      const utilityId = mapping.remoteMeterId;
+  // Handle the meter list query response
+  useEffect(() => {
+    if (currentFetchingUtility && meterListQuery.data) {
+      const mapping = connectionMappings.find((m: any) => m.remoteMeterId === currentFetchingUtility);
       
-      if (fetchingUtilities[utilityId] && query.data && !activeUtilityReadings[utilityId]) {
-        if (query.data.results) {
-          const transformedReadings = transformApiDataToReadings(query.data.results, mapping.utilityService);
-          setActiveUtilityReadings(prev => ({
-            ...prev,
-            [utilityId]: transformedReadings
-          }));
-        }
+      if (mapping && meterListQuery.data.results) {
+        const transformedReadings = transformApiDataToReadings(
+          meterListQuery.data.results, 
+          mapping.utilityService
+        );
+        
+        setActiveUtilityReadings(prev => ({
+          ...prev,
+          [currentFetchingUtility]: transformedReadings
+        }));
       }
-    });
-  }, [meterListQueries.map(q => q.data), fetchingUtilities, activeUtilityReadings, connectionMappings]);
+
+      setCurrentFetchingUtility(null);
+    }
+  }, [meterListQuery.data, currentFetchingUtility, connectionMappings]);
 
   // Map API data to connection format
-  const connectionData: Connection[] = consumerDetailsData?.result?.consumerMappingData 
-    ? consumerDetailsData.result.consumerMappingData.map(mapping => {
-        const config = getUtilityConfig(mapping.utilityService);
-       
-        return {
-          utility: mapping.utilityService || 'N/A',
-          id: mapping.remoteMeterId,
-          icon: config.icon,
-          color: config.color,
-          meterNo: mapping.meterDetails?.meterNumber || 'N/A',
-          deviceNo: mapping.meterDetails?.deviceNo || 'N/A',
-          meterType: mapping.meterDetails?.meterTypeDisplay || 'N/A',
-          lastReading: mapping.meterDetails?.lastReading || 'N/A',
-          lastReadingDate: mapping.meterDetails?.lastReadingDate || 'N/A',
-          borderColor: config.borderColor,
-          readings: activeUtilityReadings[mapping.remoteMeterId]
-        };
-      })
-    : [];
+  const connectionData: Connection[] = connectionMappings.map((mapping: any) => {
+    const config = getUtilityConfig(mapping.utilityService);
+   
+    return {
+      utility: mapping.utilityService || 'N/A',
+      id: mapping.remoteMeterId,
+      icon: config.icon,
+      color: config.color,
+      meterNo: mapping.meterDetails?.meterNumber || 'N/A',
+      deviceNo: mapping.meterDetails?.deviceNo || 'N/A',
+      meterType: mapping.meterDetails?.meterTypeDisplay || 'N/A',
+      lastReading: mapping.meterDetails?.lastReading || 'N/A',
+      lastReadingDate: mapping.meterDetails?.lastReadingDate || 'N/A',
+      borderColor: config.borderColor,
+      bgColor: '', // You might want to add bgColor to getUtilityConfig
+      readings: activeUtilityReadings[mapping.remoteMeterId] || []
+    };
+  });
 
   return (
     <div className="space-y-6">
       <div className="grid gap-6">
         {connectionData.length > 0 ? (
           connectionData.map((connection, index) => (
-            <Card key={index} className={`border-l-4 ${connection.borderColor}`}>
+            <Card key={connection.id} className={`border-l-4 ${connection.borderColor}`}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <connection.icon className={`h-5 w-5 ${connection.color}`} />
@@ -196,7 +193,12 @@ const ConnectionTab: React.FC<ConnectionTabProps> = ({ consumerDetailsData }) =>
                       <label className="text-sm font-medium text-muted-foreground">Last Reading Date</label>
                       <div className="flex items-center gap-1 mt-1">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <p className="text-sm font-semibold">{connection.lastReadingDate !== "N/A" ? new Date(connection.lastReadingDate).toLocaleDateString() : "N/A"}</p>
+                        <p className="text-sm font-semibold">
+                          {connection.lastReadingDate !== "N/A" 
+                            ? new Date(connection.lastReadingDate).toLocaleDateString() 
+                            : "N/A"
+                          }
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -213,7 +215,15 @@ const ConnectionTab: React.FC<ConnectionTabProps> = ({ consumerDetailsData }) =>
                       <ChevronDown className="h-4 w-4" />
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-3">
-                      <ReadingsTable readings={connection.readings} />
+                      {connection.readings.length > 0 ? (
+                        <ReadingsTable readings={connection.readings} />
+                      ) : (
+                        <div className="text-center py-4">
+                          <p className="text-sm text-muted-foreground">
+                            Click "View Reading History" to load data
+                          </p>
+                        </div>
+                      )}
                     </CollapsibleContent>
                   </Collapsible>
                 </div>    

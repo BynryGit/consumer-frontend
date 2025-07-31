@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -37,6 +36,7 @@ interface CreditNoteDialogProps {
     status: string;
     createdDate: string;
     linkedPayment: string;
+    isPaymentConsiled: boolean; // Added this field
   } | null;
   isOpen: boolean;
   onClose: () => void;
@@ -73,10 +73,10 @@ const CreditNoteDialog = ({ creditNote, isOpen, onClose }: CreditNoteDialogProps
     }
   };
 
-  const usagePercentage = creditNote.amount > 0 ? 
-    ((creditNote.amount - creditNote.remaining) / creditNote.amount * 100) : 
-    '0.0';
-
+  // New logic based on isPaymentConsiled
+  const appliedAmount = creditNote.isPaymentConsiled ? creditNote.amount : 0;
+  const remainingBalance = creditNote.isPaymentConsiled ? 0 : creditNote.amount;
+  const usagePercentage = creditNote.isPaymentConsiled ? '100.0' : '0.0';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -108,7 +108,7 @@ const CreditNoteDialog = ({ creditNote, isOpen, onClose }: CreditNoteDialogProps
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Remaining Balance</label>
-                  <p className="text-2xl font-bold text-green-600">${creditNote.remaining}</p>
+                  <p className="text-2xl font-bold text-green-600">${remainingBalance}</p>
                 </div>
               </div>
               
@@ -116,7 +116,7 @@ const CreditNoteDialog = ({ creditNote, isOpen, onClose }: CreditNoteDialogProps
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Applied Amount</label>
                   <p className="text-lg font-semibold text-blue-600">
-                    ${(creditNote.amount - creditNote.remaining)}
+                    ${appliedAmount}
                   </p>
                 </div>
                 <div>

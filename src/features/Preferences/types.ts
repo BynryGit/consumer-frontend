@@ -1,5 +1,5 @@
 export interface prefrencesPayload {
-  id: number | string; // depending on your API
+  id: any; 
   additional_data: {
     communication: Array<'email' | 'phone'>;
     preferences: {

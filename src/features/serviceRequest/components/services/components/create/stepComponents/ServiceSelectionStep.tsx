@@ -13,7 +13,7 @@ import {
 import { Input } from "@shared/ui/input";
 import { Search } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { useToast } from '@shared/hooks/use-toast';
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 interface ServiceSelectionStepProps {
   storageKey: string;
@@ -33,7 +33,7 @@ export const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({
   stepHelpers,
   currentStepIndex = 1, // Default to step 1 for service selection
 }) => {
-
+const { toast } = useToast();
    const { remoteUtilityId } = getLoginDataFromStorage();
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -150,7 +150,10 @@ console.log("utility idd",remoteUtilityId)
       }
     }
 
-    toast.success(`Service "${service.name}" selected successfully`);
+   toast({
+  title: "Success!",
+  description: `Service "${service.name}" selected successfully`,
+});
   };
 
   // Check if a service is selected
@@ -167,7 +170,11 @@ console.log("utility idd",remoteUtilityId)
 
   const handleNext = () => {
     if (!selectedService) {
-      toast.error("Please select a service to continue");
+    toast({
+  title: "Selection Required",
+  description: "Please select a service to continue",
+  variant: "destructive"
+});
       return;
     }
     onNext();

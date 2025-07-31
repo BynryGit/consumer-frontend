@@ -47,6 +47,7 @@ interface RequestTypeConfig {
 
 // Predefined configurations for each request type
 const REQUEST_TYPE_CONFIGS: Record<RequestType, RequestTypeConfig> = {
+  
   service: {
     title: "Service Request Created Successfully!",
     description:
@@ -54,16 +55,13 @@ const REQUEST_TYPE_CONFIGS: Record<RequestType, RequestTypeConfig> = {
     icon: CheckCircle,
     iconColor: "text-green-500",
     titleColor: "text-green-600",
-    dashboardRoute: "/cx/services",
-    createRoute: "/cx/services/create",
+    dashboardRoute: "/serviceRequest",
+    createRoute: "/service/newservice",
     receiptType: "Service Request Receipt",
     fieldMappings: {
       typeField: "serviceType",
       descriptionField: "serviceDescription",
       dateField: "scheduledDate",
-      additionalFields: {
-        preferredTimeSlot: "preferredTimeSlot",
-      },
     },
   },
   complaint: {
@@ -73,8 +71,8 @@ const REQUEST_TYPE_CONFIGS: Record<RequestType, RequestTypeConfig> = {
     icon: AlertCircle,
     iconColor: "text-green-500",
     titleColor: "text-green-600",
-    dashboardRoute: "/cx/complaints",
-    createRoute: "/cx/complaints/create",
+    dashboardRoute: "/serviceRequest",
+    createRoute: "/service/complaint",
     receiptType: "Complaint Receipt",
     fieldMappings: {
       typeField: "complaintType",
@@ -92,8 +90,8 @@ const REQUEST_TYPE_CONFIGS: Record<RequestType, RequestTypeConfig> = {
     icon: PowerOff,
     iconColor: "text-red-500",
     titleColor: "text-red-600",
-    dashboardRoute: "/cx/disconnections",
-    createRoute: "/cx/disconnections/create",
+    dashboardRoute: "/serviceRequest",
+    createRoute: "/service/disconnect",
     receiptType: "Disconnection Request Receipt",
     fieldMappings: {
       typeField: "disconnectionType",
@@ -111,7 +109,7 @@ const REQUEST_TYPE_CONFIGS: Record<RequestType, RequestTypeConfig> = {
     icon: Power,
     iconColor: "text-blue-500",
     titleColor: "text-blue-600",
-    dashboardRoute: "/cx/reconnections",
+    dashboardRoute: "/serviceRequest",
     createRoute: "/cx/reconnections/create",
     receiptType: "Reconnection Request Receipt",
     fieldMappings: {
@@ -130,8 +128,8 @@ const REQUEST_TYPE_CONFIGS: Record<RequestType, RequestTypeConfig> = {
     icon: ArrowRightLeft,
     iconColor: "text-purple-500",
     titleColor: "text-purple-600",
-    dashboardRoute: "/cx/transfer",
-    createRoute: "/cx/transfers/create",
+    dashboardRoute: "/serviceRequest",
+    createRoute: "/service/transfer",
     receiptType: "Transfer Request Receipt",
     fieldMappings: {
       typeField: "transferType",
@@ -183,9 +181,10 @@ export function RequestCreationSuccess({
   onAddNewRequest,
   customConfig,
 }: RequestSuccessProps) {
+      const { remoteUtilityId, remoteConsumerNumber,consumerId,firstName,lastName } = getLoginDataFromStorage();
   const navigate = useNavigate();
   const { data: utilityData } = useGlobalUtility();
-
+console.log("dattaaaaaaaaaaa",utilityData)
   // Get configuration for the request type
   const baseConfig = REQUEST_TYPE_CONFIGS[requestType];
   const config = { ...baseConfig, ...customConfig };
@@ -276,6 +275,7 @@ const serviceAmount = Number(data.serviceCharges) || Number(result.paymentResult
       "transfer",
       "reconnection",
       "disconnection",
+      
     ].includes(requestType);
 
     // Build request details section with type-specific data
@@ -296,15 +296,15 @@ const serviceAmount = Number(data.serviceCharges) || Number(result.paymentResult
           result.requestDate ||
           result.createdDate ||
           new Date().toLocaleDateString(),
-        consumerID: result.consumer?.toString() || "N/A",
+        consumerID:consumerId|| "N/A",
       } as Record<string, any>,
     };
 
     console.log("Request Section Content:", requestType);
 
-    if (!["transfer", "reconnect", "disconnection"].includes(requestType)) {
-      requestSection.content.utilityService = data.utilityService || "N/A";
-    }
+    // if (!["transfer", "reconnect", "disconnection"].includes(requestType)) {
+    //   requestSection.content.utilityService = data.utilityService || "N/A";
+    // }
 
     // Add type-specific fields
     if (config.fieldMappings.dateField) {
@@ -353,17 +353,14 @@ const serviceAmount = Number(data.serviceCharges) || Number(result.paymentResult
     }
     
     // Build payment details section
-    const paymentSection: any = {
-      title: "Payment Information",
-      layout: "grid" as const,
-      content: {
-        paymentStatus:
-          result.additionalData?.transactionStatusDisplay || "UnPaid",
-        paymentServiceStatus: getPaymentServiceStatus(
-          result.additionalData?.paymentServiceStatus
-        ),
-      },
-    };
+ const paymentSection: any = {
+  title: "Payment Information",
+  layout: "grid" as const,
+  content: {
+    paymentStatus:
+      result.additionalData?.transactionStatusDisplay || "UnPaid",
+  },
+};
 
     // Add payment details if payment was made
     if (paymentResult && Object.keys(paymentResult).length > 0) {
@@ -374,7 +371,6 @@ const serviceAmount = Number(data.serviceCharges) || Number(result.paymentResult
         amount: `$${Number(paymentResult.amount || 0).toFixed(2)}`,
         paymentMode: paymentResult.paymentMode || "Pending",
         paymentDate: paymentResult.paymentDate || "Pending",
-        status: paymentResult.status || "Pending",
       };
 
       // Add extra payment data if available
@@ -684,7 +680,7 @@ const serviceAmount = Number(data.serviceCharges) || Number(result.paymentResult
   ): string[] => {
     const baseSteps = [
       `Your ${type} request has been logged with reference number ${requestId}`,
-      `Request status: ${result.statusDisplay || "Created"}`,
+
     ];
 
     // Add payment-related steps

@@ -14,8 +14,8 @@ import {
 import { Input } from "@shared/ui/input";
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
+import { useToast } from "@shared/hooks/use-toast";
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 
 interface ComplaintDetailsStepProps {
   remoteUtilityId: number;
@@ -39,7 +39,8 @@ export function ComplaintDetailsStep({
   clearValidationError,
   isValidating,
 }: ComplaintDetailsStepProps) {
-    const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
+  const { toast } = useToast();
+  const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
   const [searchTerm, setSearchTerm] = useState("");
 
   // Use the utility request configuration hook
@@ -133,7 +134,10 @@ export function ComplaintDetailsStep({
       stepHelpers.setStepData(currentStepIndex, stepData);
     }
 
-    toast.success(`Complaint "${complaint.name}" selected successfully`);
+    toast({
+      title: "Success!",
+      description: `Complaint "${complaint.name}" selected successfully`,
+    });
   };
 
   // Check if a complaint is selected
@@ -150,7 +154,11 @@ export function ComplaintDetailsStep({
 
   const handleNext = () => {
     if (!selectedComplaint) {
-      toast.error("Please select a complaint to continue");
+      toast({
+        title: "Selection Required",
+        description: "Please select a complaint to continue",
+        variant: "destructive",
+      });
       return;
     }
     onNext();

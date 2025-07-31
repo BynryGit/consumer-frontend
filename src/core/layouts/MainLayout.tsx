@@ -6,7 +6,7 @@ import { useToast } from "../../shared/hooks/use-toast";
 import { useBaseComponent } from "@shared/base/hooks/useBaseComponent";
 import { Toaster } from "sonner";
 import { sidenav as Sidenav } from "@features/core/components/sidenav";
-import { Topnav } from "@features/core/components";
+import { Footer, Topnav } from "@features/core/components";
 
 interface MainLayoutProps {
   error?: Error | null;
@@ -74,6 +74,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
           </div>
         </main>
       </div>
+      <Footer />
       </div>
     </div>
   );

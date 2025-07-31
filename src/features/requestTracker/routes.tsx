@@ -1,14 +1,3 @@
-// import { Route } from 'react-router-dom';
-
-// export const requestTrackerRoutes = () => {
-//   return (
-//     <>
-//       {/* Add your routes here */}
-//     </>
-//   );
-// };
-
-
 
 import { RouteObject } from 'react-router-dom';
 import ComplaintPage from './components/ComplaintDetails';
