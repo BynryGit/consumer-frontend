@@ -5,6 +5,6 @@ const getLoginDataFromStorage = () => {
     console.log('Consumer Number:', loginResult.result.consumerNo);
     return {
       remoteUtilityId: loginResult.remoteUtilityId?.toString() ,
-      remoteConsumerNumber: loginResult.consumerNo 
+      remoteConsumerNumber: loginResult.consumerNo,
     };
   };

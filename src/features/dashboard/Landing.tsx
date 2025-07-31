@@ -9,29 +9,6 @@ import { getLoginDataFromStorage } from "@shared/utils/loginUtils"; // Import lo
 import { useConsumerDetails } from "@features/serviceRequest/hooks";
 
 // Sample data for charts - updated to include total cost for each month
-const usageData = [
-  { name: "Jan", electricity: 120, water: 85, gas: 45, totalCost: 1150 },
-  { name: "Feb", electricity: 110, water: 80, gas: 60, totalCost: 1280 },
-  { name: "Mar", electricity: 105, water: 75, gas: 55, totalCost: 1245 },
-  { name: "Apr", electricity: 115, water: 90, gas: 50, totalCost: 1320 },
-  { name: "May", electricity: 130, water: 100, gas: 65, totalCost: 1450 },
-  { name: "Jun", electricity: 140, water: 110, gas: 70, totalCost: 1580 },
-];
-
-const billData = {
-  currentTotal: 1245,
-  previousMonth: 1387,
-  dueDate: "2025-05-15",
-  paymentStatus: "Pending",
-  nextEstimatedBill: 1320,
-  currentMonth: "March",
-  breakdown: [
-    { name: "Electricity", value: 685, color: "#ffcc00" },
-    { name: "Water", value: 320, color: "#0099cc" },
-    { name: "Gas", value: 185, color: "#ff6633" },
-    { name: "Service Charges", value: 55, color: "#9333ea" },
-  ],
-};
 
 const DashboardHome = () => {
   // Fetch consumerBillData once at the parent level
@@ -77,7 +54,7 @@ const DashboardHome = () => {
         {/* Primary Content Area - Full width for usage trends */}
         <div className="lg:col-span-9 space-y-6">
           {/* Usage Trends - Extended horizontally */}
-          <UsageTrends usageData={usageData} consumerBillData={consumerBillData} />
+          <UsageTrends  consumerBillData={consumerBillData} />
           {/* Tips and Insights */}
           <TipsInsights />
         </div>

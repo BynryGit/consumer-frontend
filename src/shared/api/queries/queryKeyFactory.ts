@@ -259,6 +259,11 @@ export class QueryKeyFactory {
           "faqs",
           "faqData",
           params,
+        ],
+      searchFaq: (params?: any): [EntityType, "searchFaq", any?] => [
+          "faqs",
+          "searchFaq",
+          params,
         ],},
       profile: {
         meterList: (params?: any): [EntityType, ActionType, any?] => [
