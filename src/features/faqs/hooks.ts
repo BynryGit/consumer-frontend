@@ -13,7 +13,19 @@ export const useFaqData = (params: {
     () => faqsApi.getFaq(params)
   );
 };
-
+export const useFaqSearch = (params: {
+  search_data: string;
+  remote_utility_id: string;  
+}, options?: { enabled?: boolean }) => {
+  return useSmartQuery(
+    QueryKeyFactory.module.cx.faqs.searchFaq(params),
+    () => faqsApi.searchFaq(params),
+    {
+      enabled: options?.enabled !== false && params.search_data.length > 0,
+      staleTime: 30000, // Cache search results for 30 seconds
+    }
+  );
+};
 
 export const useUpdateFaqStatus= () => {
   return useSmartMutation(

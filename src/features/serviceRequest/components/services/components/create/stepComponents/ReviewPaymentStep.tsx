@@ -308,7 +308,7 @@ export const ReviewPaymentStep: React.FC<ReviewPaymentStepProps> = ({
         consumer: consumerId,
         status: "CREDIT",
         payment_pay_type: 5,
-        source: 0,
+        source: 1,
         extra_data: {
           ...customFieldsData, // All custom fields go here
         },

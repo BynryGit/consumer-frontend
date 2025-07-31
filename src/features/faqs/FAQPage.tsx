@@ -11,7 +11,7 @@ const FAQPage = () => {
     setSearchQuery(query);
   };
 
-  return (
+  return (  
    
       <div className="space-y-6">
         <div>
