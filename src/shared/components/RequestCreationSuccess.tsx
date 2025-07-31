@@ -1,8 +1,7 @@
-
-
 import { queryClient } from "@shared/api/queries/queryClient";
 import { QueryKeyFactory } from "@shared/api/queries/queryKeyFactory";
 import { useGlobalUtility } from "@shared/hooks/useGlobalUtility";
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import {
   AlertCircle,
   ArrowRightLeft,
@@ -233,7 +232,9 @@ export function RequestCreationSuccess({
     data: any
   ): ConfigurableReceiptProps["config"] => {
     console.log(`Mapping ${requestType} data to receipt config:`, data);
-    console.log(utilityData);
+    console.log("utility dataaaa", utilityData);
+      const utility = Array.isArray(utilityData) && utilityData.length > 0 ? utilityData[0] : null;
+      console.log("Extracted utility:", utility);
     // Extract data from API response structure
     const result = data.result || {};
     const paymentResult = data.paymentResult || {};
@@ -243,7 +244,7 @@ export function RequestCreationSuccess({
     const requestId =
       result.requestNo ||
       `${requestType.toUpperCase()}-${Date.now().toString().slice(-6)}`;
-    const serviceAmount = Number(result.paymentResult?.amount) || 0;
+const serviceAmount = Number(data.serviceCharges) || Number(result.paymentResult?.amount) || 0;
 
     // Get field values based on request type mapping
     const typeValue =
@@ -271,7 +272,11 @@ export function RequestCreationSuccess({
       },
     ];
 
-    const shouldIncludeServiceName = !['transfer', 'reconnection', 'disconnection'].includes(requestType);
+    const shouldIncludeServiceName = ![
+      "transfer",
+      "reconnection",
+      "disconnection",
+    ].includes(requestType);
 
     // Build request details section with type-specific data
     const requestSection = {
@@ -280,7 +285,9 @@ export function RequestCreationSuccess({
       } Request Details`,
       layout: "grid" as const,
       content: {
-        ...(shouldIncludeServiceName && { ServiceName: data.serviceName || "N/A" }),
+        ...(shouldIncludeServiceName && {
+          ServiceName: data.serviceName || "N/A",
+        }),
         description: descriptionValue,
         requestNumber: result.requestNo || "Pending assignment",
         requestType: typeValue,
@@ -295,7 +302,7 @@ export function RequestCreationSuccess({
 
     console.log("Request Section Content:", requestType);
 
-    if (!["transfer", "reconnect", 'disconnection'].includes(requestType)) {
+    if (!["transfer", "reconnect", "disconnection"].includes(requestType)) {
       requestSection.content.utilityService = data.utilityService || "N/A";
     }
 
@@ -321,7 +328,11 @@ export function RequestCreationSuccess({
     }
 
     // Add preferred time slot for applicable request types
-    if (requestType === "service" || requestType === "reconnection" || requestType === "disconnection") {
+    if (
+      requestType === "service" ||
+      requestType === "reconnection" ||
+      requestType === "disconnection"
+    ) {
       requestSection.content.preferredTime =
         getTimeSlotDisplay(result.additionalData?.preferredTimeSlot) ||
         formData.preferredTimeSlot ||
@@ -330,8 +341,9 @@ export function RequestCreationSuccess({
 
     // Add service charges
     if (!["transfer", "disconnection", "reconnection"].includes(requestType)) {
-      requestSection.content.serviceCharges =
-        data.serviceCharges > 0 ? `$${data.serviceCharges.toFixed(2)}` : "No charge";
+  requestSection.content.serviceCharges = 
+  data.serviceCharges ? `$${data.serviceCharges}` : 
+  (formData.serviceCharge ? `$${formData.serviceCharge}` : "No charge");
     }
 
     // Add additional instructions if provided
@@ -339,15 +351,14 @@ export function RequestCreationSuccess({
       requestSection.content.additionalInstructions =
         result.additionalData.additionalInstruction;
     }
-
+    
     // Build payment details section
     const paymentSection: any = {
       title: "Payment Information",
       layout: "grid" as const,
       content: {
         paymentStatus:
-          result.additionalData?.transactionStatusDisplay ||
-          "UnPaid",
+          result.additionalData?.transactionStatusDisplay || "UnPaid",
         paymentServiceStatus: getPaymentServiceStatus(
           result.additionalData?.paymentServiceStatus
         ),
@@ -494,15 +505,14 @@ export function RequestCreationSuccess({
       };
 
       return {
-      company: {
-  name: utilityData?.utility?.name || "Utility Company",
-  address:
-    utilityData?.utility?.addressMap?.address ||
-    `${utilityData?.utility?.addressMap?.city}, ${utilityData?.utility?.addressMap?.zipCode}, ${utilityData?.utility?.addressMap?.state}, ${utilityData?.utility?.addressMap?.country}` ||
-    "Address not available",
-  phone: utilityData?.utility?.contactNumber || "Contact not available",
-  email: utilityData?.utility?.email || "Email not available",
-},
+         company: {
+      name: utility?.name || "Utility Company",
+      address: utility?.addressMap?.address || 
+               `${utility?.addressMap?.city || ''}, ${utility?.addressMap?.state || ''}`.trim() || 
+               "Address not available",
+      phone: utility?.contactNumber || "Contact not available",
+      email: utility?.email || "Email not available",
+    },
 
         receipt: {
           number: result.receipt_no || `PAY-${Date.now().toString().slice(-6)}`,
@@ -565,15 +575,14 @@ export function RequestCreationSuccess({
       };
     }
     return {
-     company: {
-  name: utilityData?.utility?.name || "Utility Company",
-  address:
-    utilityData?.utility?.addressMap?.address ||
-    `${utilityData?.utility?.addressMap?.city}, ${utilityData?.utility?.addressMap?.zipCode}, ${utilityData?.utility?.addressMap?.state}, ${utilityData?.utility?.addressMap?.country}` ||
-    "Address not available",
-  phone: utilityData?.utility?.contactNumber || "Contact not available",
-  email: utilityData?.utility?.email || "Email not available",
-},
+      company: {
+      name: utility?.name || "Utility Company",
+      address: utility?.addressMap?.address || 
+               `${utility?.addressMap?.city || ''}, ${utility?.addressMap?.state || ''}`.trim() || 
+               "Address not available",
+      phone: utility?.contactNumber || "Contact not available",
+      email: utility?.email || "Email not available",
+    },
 
       receipt: {
         number: requestId,
@@ -750,13 +759,13 @@ export function RequestCreationSuccess({
   // Custom action buttons component
   const ActionButtons = () => (
     <div className="flex flex-wrap justify-center gap-3 mb-6 print:hidden">
-  <button
-    onClick={() => navigate('/serviceRequest')}
-    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-  >
-    <Home className="mr-2 h-4 w-4" />
-    Return to Dashboard
-  </button>
+      <button
+        onClick={() => navigate("/serviceRequest")}
+        className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      >
+        <Home className="mr-2 h-4 w-4" />
+        Return to Dashboard
+      </button>
       <button
         onClick={onAddNewRequest || (() => navigate(config.createRoute))}
         className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"

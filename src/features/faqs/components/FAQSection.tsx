@@ -1,3 +1,4 @@
+// Updated FAQSection Component
 import React, { useState, useMemo, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import {
@@ -21,7 +22,7 @@ import {
   ThumbsUp,
 } from "lucide-react";
 import { useToast } from "@shared/hooks/use-toast";
-import { useFaqData, useUpdateFaqStatus } from "../hooks"; // Added useUpdateFaqStatus import
+import { useFaqData, useUpdateFaqStatus, useFaqSearch } from "../hooks";
 
 interface FAQSectionProps {
   searchQuery: string;
@@ -30,15 +31,13 @@ interface FAQSectionProps {
 const FAQSection = ({ searchQuery }: FAQSectionProps) => {
   const location = useLocation();
   const { toast } = useToast();
-    const { remoteUtilityId, remoteConsumerNumber,consumerId } = getLoginDataFromStorage();
-  // Add the useUpdateFaqStatus hook
+  const { remoteUtilityId, remoteConsumerNumber, consumerId } = getLoginDataFromStorage();
   const updateFaqStatus = useUpdateFaqStatus();
-  
+
   // Get current tab from URL parameters with billing as default
   const getCurrentTab = (): string => {
     const searchParams = new URLSearchParams(location.search);
     const currentTab = searchParams.get('tab');
-    // Always default to billing if no tab is specified or invalid tab
     const validTabs = ['billing', 'services', 'account', 'usage', 'emergency'];
     return currentTab && validTabs.includes(currentTab) ? currentTab : 'billing';
   };
@@ -55,6 +54,18 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
     return categoryMapping[tabKey] || "Billing";
   };
 
+  // Convert API category back to tab key for navigation
+  const getTabFromApiCategory = (apiCategory: string): string => {
+    const tabMapping: Record<string, string> = {
+      "Billing": "billing",
+      "Services": "services",
+      "Account": "account", 
+      "Usage": "usage",
+      "Emergency": "emergency"
+    };
+    return tabMapping[apiCategory] || "billing";
+  };
+
   const currentTab = getCurrentTab();
   const apiCategory = getApiCategoryFromTab(currentTab);
 
@@ -63,7 +74,6 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
     const searchParams = new URLSearchParams(location.search);
     const currentTabParam = searchParams.get('tab');
     
-    // If no tab parameter exists, redirect to billing
     if (!currentTabParam) {
       searchParams.set('tab', 'billing');
       const newUrl = `${location.pathname}?${searchParams.toString()}`;
@@ -71,43 +81,79 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
     }
   }, [location]);
 
-  // Fetch FAQ data dynamically based on current tab
+  // Fetch FAQ data for current tab
   const { data: faqsData, isLoading, error } = useFaqData({
-    remote_utility_id:remoteUtilityId,
+    remote_utility_id: remoteUtilityId,
     show_inactive: true,
     faq_category: apiCategory,
   });
 
-  // Debug the hook response
-  console.log('useFaqData Response:', {
-    data: faqsData,
-    isLoading,
-    error,
-    apiCategory
+  // Fetch search results across all categories
+  const { 
+    data: searchData, 
+    isLoading: isSearchLoading, 
+    error: searchError 
+  } = useFaqSearch({
+    search_data: searchQuery.trim(),
+    remote_utility_id: remoteUtilityId,
+  }, {
+    enabled: searchQuery.trim().length > 0
   });
 
-  const [helpfulQuestions, setHelpfulQuestions] = useState<Set<string>>(
-    new Set()
-  );
+  const [helpfulQuestions, setHelpfulQuestions] = useState<Set<string>>(new Set());
   const [openAccordionItem, setOpenAccordionItem] = useState<string>("");
 
-  // Updated handleHelpfulClick function with API integration
+  // Transform API data to match expected format
+  const transformApiData = (apiData: any, category?: string) => {
+    if (!apiData?.result || !Array.isArray(apiData.result)) return [];
+    
+    return apiData.result.map((item: any) => ({
+      id: item.code || `faq-${Date.now()}-${Math.random()}`,
+      question: item.name || 'No question text',
+      answer: item.answer || '',
+      isActive: item.is_active !== false,
+      createdBy: item.createdBy,
+      createdDate: item.createdDate,
+      faqCategory: item.faqCategory,
+      utilityService: item.utilityService,
+      code: item.code,
+      category: category || getTabFromApiCategory(item.faqCategory || 'Billing'),
+    }));
+  };
+
+  // Get current category data for tab view
+  const getCurrentCategoryData = () => {
+    const transformedData = transformApiData(faqsData, currentTab);
+    return transformedData.filter(item => item.isActive !== false);
+  };
+
+  // Process search results from search API
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim() || !searchData) return [];
+
+    const transformedSearchData = transformApiData(searchData);
+    
+    return transformedSearchData
+      .filter(item => item.isActive !== false)
+      .map((item) => ({
+        ...item,
+        categoryLabel: getApiCategoryFromTab(item.category),
+      }));
+  }, [searchQuery, searchData]);
+
+  // Updated handleHelpfulClick function
   const handleHelpfulClick = (questionId: string, questionText: string, itemCode: string) => {
-    // Don't allow clicking if already marked as helpful
     if (helpfulQuestions.has(questionId)) {
       return;
     }
 
-    // Update local state immediately
     setHelpfulQuestions((prev) => new Set(prev).add(questionId));
     
-    // Show success toast
     toast({
       title: "Thanks for your feedback!",
       description: "We're glad this was helpful.",
     });
 
-    // Call the API
     updateFaqStatus.mutate({
       code: itemCode,
       remote_utility_id: remoteUtilityId,
@@ -115,58 +161,18 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
     });
   };
 
-  // Transform API data to match expected format
-  const transformApiData = (apiData: any) => {
-    if (!apiData?.result || !Array.isArray(apiData.result)) return [];
-    
-    return apiData.result.map((item: any) => ({
-      id: item.code || `faq-${Date.now()}-${Math.random()}`,
-      question: item.name || 'No question text', // Handle missing name field
-      answer: item.answer || '',
-      isActive: item.is_active !== false, // Default to true if not specified
-      createdBy: item.createdBy,
-      createdDate: item.createdDate,
-      faqCategory: item.faqCategory,
-      utilityService: item.utilityService,
-      code: item.code,
-    }));
-  };
-
-  // Get transformed data for current category
-  const getCurrentCategoryData = () => {
-    const transformedData = transformApiData(faqsData);
-    // Filter only active items if needed (default to showing all if is_active is not specified)
-    return transformedData.filter(item => item.isActive !== false);
-  };
-
-  // Filter FAQ data based on search query - return all matching questions with their categories
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-
-    const query = searchQuery.toLowerCase();
-    const currentCategoryData = getCurrentCategoryData();
-    
-    const results = currentCategoryData
-      .filter((item) =>
-        item.question.toLowerCase().includes(query) ||
-        item.answer.toLowerCase().includes(query)
-      )
-      .map((item) => ({
-        ...item,
-        category: currentTab,
-        categoryLabel: getApiCategoryFromTab(currentTab),
-      }));
-
-    return results;
-  }, [searchQuery, faqsData, currentTab]);
-
   const handleQuestionClick = (category: string, questionId: string) => {
     console.log("Redirecting to category:", category, "question:", questionId);
     setOpenAccordionItem(questionId);
 
+    // Clear search when navigating to specific question
+    // You might want to call a prop function here to clear search
+    // onClearSearch?.();
+
     // Use URL navigation to switch to the correct tab
     const currentUrl = new URL(window.location.href);
     currentUrl.searchParams.set("tab", category);
+    currentUrl.searchParams.delete("q"); // Remove search query from URL if present
     window.history.pushState({}, "", currentUrl.toString());
 
     // Trigger a custom event to notify the tab service
@@ -174,17 +180,13 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
 
     // Improved scrolling logic
     setTimeout(() => {
-      // First scroll to the tabs section
       const tabsElement = document.querySelector('[role="tablist"]');
       if (tabsElement) {
         tabsElement.scrollIntoView({ behavior: "smooth", block: "start" });
       }
 
-      // Then after a short delay, scroll to the specific question
       setTimeout(() => {
-        const accordionElement = document.querySelector(
-          `[value="${questionId}"]`
-        );
+        const accordionElement = document.querySelector(`[value="${questionId}"]`);
         if (accordionElement) {
           accordionElement.scrollIntoView({
             behavior: "smooth",
@@ -195,9 +197,8 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
     }, 200);
   };
 
-  // Create tab content components using API data
+  // Create tab content components
   const createTabContent = (category: string) => {
-    // Only show data for the current active tab to avoid unnecessary API calls
     if (category !== currentTab) {
       return <div>Loading...</div>;
     }
@@ -257,11 +258,7 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
                         variant={isHelpful ? "default" : "outline"}
                         size="sm"
                         onClick={() =>
-                          handleHelpfulClick(
-                            questionKey,
-                            item.question,
-                            item.code
-                          )
+                          handleHelpfulClick(questionKey, item.question, item.code)
                         }
                         disabled={isHelpful}
                         className="flex items-center gap-1"
@@ -280,7 +277,7 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
     );
   };
 
-  // Tab configuration for your shared tab service
+  // Tab configuration
   const tabComponents = {
     billing: {
       label: "Billing",
@@ -314,8 +311,35 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
     },
   };
 
+  // Show search loading state
+  if (searchQuery.trim() && isSearchLoading) {
+    return (
+      <Card className="w-full">
+        <CardContent className="p-6 text-center">
+          <div className="flex items-center justify-center space-x-2">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <span>Searching across all categories...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show search error
+  if (searchQuery.trim() && searchError) {
+    return (
+      <Card className="w-full">
+        <CardContent className="p-6 text-center">
+          <p className="text-red-600">
+            Error searching FAQ: {searchError.message || 'Unknown error'}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // If search is active and no results found
-  if (searchQuery.trim() && searchResults.length === 0) {
+  if (searchQuery.trim() && searchResults.length === 0 && !isSearchLoading) {
     return (
       <Card className="w-full">
         <CardContent className="p-6 text-center">
@@ -382,11 +406,7 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
                         variant={isResultHelpful ? "default" : "outline"}
                         size="sm"
                         onClick={() =>
-                          handleHelpfulClick(
-                            resultKey,
-                            result.question,
-                            result.code
-                          )
+                          handleHelpfulClick(resultKey, result.question, result.code)
                         }
                         disabled={isResultHelpful}
                         className="flex items-center gap-1"
@@ -408,7 +428,6 @@ const FAQSection = ({ searchQuery }: FAQSectionProps) => {
           </div>
         )}
 
-        {/* Using your shared tab service - default to billing */}
         <Tabs
           defaultValue="billing"
           tabComponents={tabComponents}

@@ -14,7 +14,7 @@ import {
   Printer,
   User,
 } from "lucide-react";
-
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 
 export default function ConfigurableReceipt({
   config,
@@ -25,6 +25,7 @@ export default function ConfigurableReceipt({
   onEmail,
   onCopy,
 }: ConfigurableReceiptProps) {
+    const { remoteUtilityId, remoteConsumerNumber,consumerId,firstName,lastName } = getLoginDataFromStorage();
   const handlePrint = () => {
     if (onPrint) {
       onPrint();
@@ -601,19 +602,19 @@ const formatDate = (date?: Date | string | null) => {
                     {config.customer.accountNumber && (
                       <div>
                         <span className="font-medium">Account Number:</span>
-                        <p>{config.customer.accountNumber}</p>
+                        <p>{remoteConsumerNumber}</p>
                       </div>
                     )}
                     {config.customer.customerId && (
                       <div>
                         <span className="font-medium">Customer ID:</span>
-                        <p>{config.customer.customerId}</p>
+                        <p>{consumerId}</p>
                       </div>
                     )}
                     {config.customer.name && config.customer.name != 'N/A' && (
                       <div>
                         <span className="font-medium">Name:</span>
-                        <p>{config.customer.name}</p>
+                        <p>{firstName} {lastName}</p>
                       </div>
                     )}
                     {config.customer.email &&  config.customer.email != 'N/A' && (
