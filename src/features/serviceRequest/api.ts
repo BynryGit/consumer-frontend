@@ -4,7 +4,7 @@ import { Complaint, ComplaintConfiguration } from "./components/complaints/types
 import { CreateDisconnectionRequestPayload, CreateServiceRequestPayload, PaymentMethod, Premise, ServiceRequest, TimeSlotChoice, TransferRequest, UtilityConfigFilters, UtilityRequestConfiguration } from "./types";
 import { transformJsonToObject } from "@shared/utils/jsonToObjectTransformer";
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
-  const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
+  // const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
 
 // Add your feature-specific API calls here
 export const serviceRequestApi = {
@@ -53,7 +53,7 @@ export const serviceRequestApi = {
       "consumerWeb",
       "utility-request-configuration",
       (query) => {
-        query.push("remote_utility_id", remoteUtilityId);
+        query.push("remote_utility_id", filters.remote_utility_id);
         query.push("request_type", filters.requestType);
         if (filters.disablePagination) query.push("disable_pagination", "true");
         if (filters.searchData) query.push("search_data", filters.searchData);

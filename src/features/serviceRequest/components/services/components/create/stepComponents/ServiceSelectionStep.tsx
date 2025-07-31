@@ -44,7 +44,7 @@ export const ServiceSelectionStep: React.FC<ServiceSelectionStepProps> = ({
     isLoading,
     error,
   } = useUtilityRequestConfiguration({
-    remoteUtilityId,
+    remote_utility_id:remoteUtilityId,  
     requestType: "Service",
     disablePagination: true, 
     searchData: searchTerm || undefined,

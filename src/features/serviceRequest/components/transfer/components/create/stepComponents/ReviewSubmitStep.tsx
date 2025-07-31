@@ -433,7 +433,7 @@ export function ReviewSubmitStep({
                   Outstanding Balance
                 </span>
                 <span className="font-bold text-red-600">
-                  ${customer.outstandingBalance?.toFixed(2) || "0.00"}
+                  ${customer.outstandingBalance || "0.00"}
                 </span>
               </div>
             </div>

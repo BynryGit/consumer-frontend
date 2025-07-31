@@ -67,7 +67,7 @@ export function RequestDetailsStep({
   // Fetch utility request configuration for reasons
   const { data: utilityConfigData, isLoading: isConfigLoading } =
     useUtilityRequestConfiguration({
-      remoteUtilityId,
+      remote_utility_id:remoteUtilityId,
       requestType: "Disconnect Permanent", // For disconnection requests
       disablePagination: true,
     });
