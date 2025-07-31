@@ -1140,7 +1140,7 @@ export interface UtilityRequestConfiguration {
 
 
 export interface UtilityConfigFilters {
-  remoteUtilityId: any;
+  remote_utility_id: any;
   requestType: string;
   disablePagination?: boolean;
   searchData?: string;

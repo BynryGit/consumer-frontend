@@ -125,7 +125,7 @@ const PaymentHistory = () => {
       paymentChannel: payment.paymentChannel,
       transactionId: payment.transactionId,
       consumerInfo: payment.consumer,
-      
+      referenceNo:payment.referenceNo
     }));
   };
 
@@ -300,7 +300,7 @@ const PaymentHistory = () => {
                       <p className="text-sm text-muted-foreground">
                         Payment For
                       </p>
-                      <p className="font-medium">{payment.paymentType}</p>
+                      <p className="font-medium">{payment.paymentType}-{payment.referenceNo}</p>
                     </div>
                   </div>
                 </div>
@@ -369,9 +369,9 @@ const PaymentHistory = () => {
                         Payment ID
                       </label>
                       <p className="text-lg font-semibold">
-                        PAY-{selectedPayment.id}
+                       {selectedPayment.receiptNo}
                       </p>
-                    </div>
+                    </div>  
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">
                         Amount
@@ -442,7 +442,7 @@ const PaymentHistory = () => {
                         Bill Number
                       </label>
                       <p className="font-semibold text-blue-600">
-                        {selectedPayment.paymentChannel}
+                        {selectedPayment.referenceNo}
                       </p>
                     </div>
                     <div>

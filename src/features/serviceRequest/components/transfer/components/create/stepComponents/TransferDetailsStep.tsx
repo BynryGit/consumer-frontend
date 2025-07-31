@@ -38,7 +38,7 @@ export function TransferDetailsStep({
   // Get transfer type configurations from API
   const { data: transferConfigurations, isLoading: isLoadingTransferTypes } =
     useUtilityRequestConfiguration({
-      remoteUtilityId,
+      remote_utility_id:remoteUtilityId,
       requestType: "Transfer",
       disablePagination: true,
     });
