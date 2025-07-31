@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@shared/ui/card";
 import { Calendar, CreditCard, FileText, Receipt } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
+import { useToast } from '@shared/hooks/use-toast';
 import * as z from "zod";
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import { ApiCustomField, CustomFieldConfig, useCustomFieldsForm } from "@shared/utils/customFormMaker";
@@ -87,6 +87,7 @@ export const ReviewPaymentStep: React.FC<ReviewPaymentStepProps> = ({
   clearValidationError,
   isValidating,
 }) => {
+   const { toast } = useToast();
   const { remoteUtilityId,consumerId} = getLoginDataFromStorage();
   const createServiceRequestMutation = useCreateServiceRequest();
   const [paymentOption, setPaymentOption] = useState("Pay Now");
@@ -261,7 +262,11 @@ export const ReviewPaymentStep: React.FC<ReviewPaymentStepProps> = ({
   const handleFormSubmit = (data: ReviewPaymentFormData) => {
     if (!data.acceptTerms) {
       if (setValidationError) {
-        toast.error("Please accept the terms and conditions to continue");
+      toast({
+  title: "Terms Required",
+  description: "Please accept the terms and conditions to continue",
+  variant: "destructive"
+});
       }
       return;
     }

@@ -166,10 +166,10 @@ const UsageCharts = () => {
                       <Input
                         id={`${key}-threshold`}
                         type="number"
-                        value={tempThresholds[key] || 0}
+                        value={tempThresholds[key] }
                         onChange={(e) => setTempThresholds(prev => ({ 
                           ...prev, 
-                          [key]: parseInt(e.target.value) || 0 
+                          [key]: parseInt(e.target.value) 
                         }))}
                         placeholder={`Enter ${serviceName.toLowerCase()} threshold`}
                       />

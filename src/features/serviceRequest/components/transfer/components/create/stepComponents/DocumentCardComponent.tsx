@@ -1,14 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@shared/ui/button";
 import { Card, CardContent } from "@shared/ui/card";
-import {
-  Upload,
-  X,
-  FilePlus,
-  FileText,
-  Check,
-  Plus,
-} from "lucide-react";
+import { Upload, X, FilePlus, FileText, Check, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -18,11 +11,10 @@ import {
 } from "@shared/ui/select";
 
 import { getRemoteUtilityId } from "@shared/utils/getUtilityId";
-import { toast } from "sonner";
+import { useToast } from "@shared/hooks/use-toast";
 import { Document, DocumentCard } from "./TransferDocumentUploadForm";
 import { useDocumentSubtype } from "@features/serviceRequest/hooks";
 import { formatFileSize, validateFile } from "@shared/utils/file";
-
 
 export function DocumentCardComponent({
   doc,
@@ -55,7 +47,12 @@ export function DocumentCardComponent({
   dragging: boolean;
   onDocumentTypeChange: (documentType: string, typeName: string) => void;
   onSubtypeChange: (documentType: string, subtypeName: string) => void;
-  onFileUpload: (file: File, docType: string, subType: string, cardId: string) => void;
+  onFileUpload: (
+    file: File,
+    docType: string,
+    subType: string,
+    cardId: string
+  ) => void;
   onRemoveDocument: (id: string) => void;
   onRemoveCard: (cardId: string) => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -64,40 +61,55 @@ export function DocumentCardComponent({
   canRemoveCard: boolean;
 }) {
   const remoteUtilityId = getRemoteUtilityId();
-
+  const { toast } = useToast();
   // Get document type code for selected document type
-  const getDocumentTypeCode = useCallback((documentTypeName: string) => {
-    const documentType = documentTypeData?.result?.find(
-      (type: any) => type.name.toLowerCase() === documentTypeName.toLowerCase()
-    );
-    return documentType?.code || "";
-  }, [documentTypeData]);
+  const getDocumentTypeCode = useCallback(
+    (documentTypeName: string) => {
+      const documentType = documentTypeData?.result?.find(
+        (type: any) =>
+          type.name.toLowerCase() === documentTypeName.toLowerCase()
+      );
+      return documentType?.code || "";
+    },
+    [documentTypeData]
+  );
 
   // Get document type object for full details
-  const getDocumentTypeObject = useCallback((documentTypeName: string) => {
-    return documentTypeData?.result?.find(
-      (type: any) => type.name.toLowerCase() === documentTypeName.toLowerCase()
-    );
-  }, [documentTypeData]);
+  const getDocumentTypeObject = useCallback(
+    (documentTypeName: string) => {
+      return documentTypeData?.result?.find(
+        (type: any) =>
+          type.name.toLowerCase() === documentTypeName.toLowerCase()
+      );
+    },
+    [documentTypeData]
+  );
 
   // Use document subtype hook for this specific card
   const selectedDocumentType = selectedDocumentTypes[doc.id];
-  const documentTypeCode = selectedDocumentType ? getDocumentTypeCode(selectedDocumentType) : "";
-  
-  const {
-    data: documentSubtypeData,
-    isLoading: isDocumentSubtypeLoading,
-  } = useDocumentSubtype({
-    remote_utility_id: remoteUtilityId,
-    config_level: "document_subtype",
-    code_list: documentTypeCode,
-  }, {
-    enabled: !!documentTypeCode,
-  });
+  const documentTypeCode = selectedDocumentType
+    ? getDocumentTypeCode(selectedDocumentType)
+    : "";
+
+  const { data: documentSubtypeData, isLoading: isDocumentSubtypeLoading } =
+    useDocumentSubtype(
+      {
+        remote_utility_id: remoteUtilityId,
+        config_level: "document_subtype",
+        code_list: documentTypeCode,
+      },
+      {
+        enabled: !!documentTypeCode,
+      }
+    );
 
   // Update subtype selection in edit mode when subtype data is loaded
   useEffect(() => {
-    if (isEditMode && documentSubtypeData?.result && selectedDocumentTypes[doc.id]) {
+    if (
+      isEditMode &&
+      documentSubtypeData?.result &&
+      selectedDocumentTypes[doc.id]
+    ) {
       const cardDocuments = getCardDocuments();
       if (cardDocuments.length > 0) {
         const existingDoc = cardDocuments[0];
@@ -111,7 +123,14 @@ export function DocumentCardComponent({
         }
       }
     }
-  }, [documentSubtypeData, isEditMode, doc.id, selectedDocumentTypes, selectedSubTypes, onSubtypeChange]);
+  }, [
+    documentSubtypeData,
+    isEditMode,
+    doc.id,
+    selectedDocumentTypes,
+    selectedSubTypes,
+    onSubtypeChange,
+  ]);
 
   const getCardDocuments = useCallback(() => {
     return documents.filter((document) => document.type === doc.id);
@@ -122,88 +141,112 @@ export function DocumentCardComponent({
   }, [selectedDocumentTypes, doc.id, isDocumentSubtypeLoading]);
 
   // Get subtypes for a specific document type from specific subtype data
-  const getSubtypesForDocumentType = useCallback((documentTypeName: string, subtypeData: any) => {
-    if (!subtypeData?.result || !documentTypeName) return [];
+  const getSubtypesForDocumentType = useCallback(
+    (documentTypeName: string, subtypeData: any) => {
+      if (!subtypeData?.result || !documentTypeName) return [];
 
-    const documentTypeCode = getDocumentTypeCode(documentTypeName);
-    const typePrefix = documentTypeCode.split("#")[0];
+      const documentTypeCode = getDocumentTypeCode(documentTypeName);
+      const typePrefix = documentTypeCode.split("#")[0];
 
-    return subtypeData.result.filter(
-      (subtype: any) =>
-        subtype.isActive && (subtype.code?.includes(typePrefix) || true)
-    );
-  }, [getDocumentTypeCode]);
+      return subtypeData.result.filter(
+        (subtype: any) =>
+          subtype.isActive && (subtype.code?.includes(typePrefix) || true)
+      );
+    },
+    [getDocumentTypeCode]
+  );
 
-  const handleCardFileUpload = useCallback((
-    file: File,
-    docType: string,
-    subType: string
-  ) => {
-    // Validate file (matching EvidenceAttachmentsStep validation)
-    const validation = validateFile(file);
-    if (validation) {
-      toast.error("File Upload Error", {
-        description: validation,
-      });
-      return;
-    }
+  const handleCardFileUpload = useCallback(
+    (file: File, docType: string, subType: string) => {
+      // Validate file (matching EvidenceAttachmentsStep validation)
+      const validation = validateFile(file);
+      if (validation) {
+        toast({
+          title: "File Upload Error",
+          description: validation,
+          variant: "destructive",
+        });
+        return;
+      }
 
-    onFileUpload(file, docType, subType, doc.id);
-  }, [onFileUpload, doc.id]);
+      onFileUpload(file, docType, subType, doc.id);
+    },
+    [onFileUpload, doc.id]
+  );
 
-  const handleCardFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const docType = selectedDocumentTypes[doc.id];
-    const subType = selectedSubTypes[doc.id];
+  const handleCardFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const docType = selectedDocumentTypes[doc.id];
+      const subType = selectedSubTypes[doc.id];
 
-    if (!docType) {
-      toast.error("Selection Required", {
-        description: "Please select a document type first",
-      });
-      return;
-    }
+      if (!docType) {
+        toast({
+          title: "Selection Required",
+          description: "Please select a document type first",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (!subType) {
-      toast.error("Selection Required", {
-        description: "Please select a document sub-type first",
-      });
-      return;
-    }
-
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      handleCardFileUpload(file, docType, subType);
-    }
-    
-    // Reset the input value to allow uploading the same file again
-    e.target.value = '';
-  }, [selectedDocumentTypes, selectedSubTypes, doc.id, handleCardFileUpload]);
-
-  const handleCardDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    onDragLeave();
-
-    const docType = selectedDocumentTypes[doc.id];
-    const subType = selectedSubTypes[doc.id];
-
-    if (!docType) {
-      toast.error("Selection Required", {
-        description: "Please select a document type first",
-      });
-      return;
-    }
-
-    if (!subType) {
-      toast.error("Selection Required", {
+      if (!subType) {
+        toast({
+          title: "Selection Required",
           description: "Please select a document sub-type first",
-      });
-      return;
-    }
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      handleCardFileUpload(file, docType, subType);
-    }
-  }, [selectedDocumentTypes, selectedSubTypes, doc.id, onDragLeave, handleCardFileUpload]);
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        handleCardFileUpload(file, docType, subType);
+      }
+
+      // Reset the input value to allow uploading the same file again
+      e.target.value = "";
+    },
+    [selectedDocumentTypes, selectedSubTypes, doc.id, handleCardFileUpload]
+  );
+
+  const handleCardDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      onDragLeave();
+
+      const docType = selectedDocumentTypes[doc.id];
+      const subType = selectedSubTypes[doc.id];
+
+      if (!docType) {
+        toast({
+          title: "Selection Required",
+          description: "Please select a document type first",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!subType) {
+        toast({
+          title: "Selection Required",
+          description: "Please select a document sub-type first",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        const file = e.dataTransfer.files[0];
+        handleCardFileUpload(file, docType, subType);
+      }
+    },
+    [
+      selectedDocumentTypes,
+      selectedSubTypes,
+      doc.id,
+      onDragLeave,
+      handleCardFileUpload,
+    ]
+  );
 
   return (
     <Card key={doc.id} className="overflow-hidden">
@@ -214,9 +257,7 @@ export function DocumentCardComponent({
               <h3 className="font-medium">
                 {doc.name} {index + 1}
               </h3>
-              <p className="text-sm text-muted-foreground">
-                {doc.description}
-              </p>
+              <p className="text-sm text-muted-foreground">{doc.description}</p>
             </div>
             <div className="flex items-center gap-2">
               {getCardDocuments().some(
@@ -245,14 +286,15 @@ export function DocumentCardComponent({
         <div className="p-4 space-y-4">
           {/* Document Type Dropdown */}
           <div>
-            <label className="text-sm font-medium mb-2 block" htmlFor={`doc-type-${doc.id}`}>
+            <label
+              className="text-sm font-medium mb-2 block"
+              htmlFor={`doc-type-${doc.id}`}
+            >
               Select Document Type
             </label>
             <Select
               value={selectedDocumentTypes[doc.id] || ""}
-              onValueChange={(value) =>
-                onDocumentTypeChange(doc.id, value)
-              }
+              onValueChange={(value) => onDocumentTypeChange(doc.id, value)}
               disabled={isDocumentTypeLoading}
             >
               <SelectTrigger id={`doc-type-${doc.id}`}>
@@ -268,7 +310,10 @@ export function DocumentCardComponent({
                 {documentTypeData?.result
                   ?.filter((type: any) => type.isActive)
                   .map((documentType: any) => (
-                    <SelectItem key={documentType.code} value={documentType.name}>
+                    <SelectItem
+                      key={documentType.code}
+                      value={documentType.name}
+                    >
                       {documentType.name}
                     </SelectItem>
                   ))}
@@ -278,17 +323,17 @@ export function DocumentCardComponent({
 
           {/* Document Sub-Type Dropdown */}
           <div>
-            <label className="text-sm font-medium mb-2 block" htmlFor={`doc-subtype-${doc.id}`}>
+            <label
+              className="text-sm font-medium mb-2 block"
+              htmlFor={`doc-subtype-${doc.id}`}
+            >
               Select Document Sub-Type
             </label>
             <Select
               value={selectedSubTypes[doc.id] || ""}
-              onValueChange={(value) =>
-                onSubtypeChange(doc.id, value)
-              }
+              onValueChange={(value) => onSubtypeChange(doc.id, value)}
               disabled={
-                !selectedDocumentTypes[doc.id] ||
-                getSubtypeLoadingState()
+                !selectedDocumentTypes[doc.id] || getSubtypeLoadingState()
               }
             >
               <SelectTrigger id={`doc-subtype-${doc.id}`}>
@@ -321,9 +366,7 @@ export function DocumentCardComponent({
             className={`flex flex-col items-center justify-center min-h-[120px] text-center border-2 border-dashed rounded-md p-4 ${
               dragging ? "bg-blue-50 border-blue-300" : "border-gray-300"
             } ${
-              isUploadDisabled(doc.id)
-                ? "opacity-50 pointer-events-none"
-                : ""
+              isUploadDisabled(doc.id) ? "opacity-50 pointer-events-none" : ""
             }`}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
@@ -367,16 +410,14 @@ export function DocumentCardComponent({
                   </label>
                 </div>
                 <div id={`file-help-${doc.id}`} className="sr-only">
-                  Select a file to upload. Accepted formats: JPG, PNG, PDF. Maximum size: 5MB.
+                  Select a file to upload. Accepted formats: JPG, PNG, PDF.
+                  Maximum size: 5MB.
                 </div>
               </>
             ) : (
               <div className="w-full space-y-3">
                 {getCardDocuments().map((document) => (
-                  <div
-                    key={document.id}
-                    className="border rounded-md p-3"
-                  >
+                  <div key={document.id} className="border rounded-md p-3">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center">
                         <FileText className="h-4 w-4 mr-2 text-blue-500" />
@@ -394,9 +435,9 @@ export function DocumentCardComponent({
                           )}
                           {document.url && (
                             <div className="mt-1">
-                              <a 
-                                href={document.url} 
-                                target="_blank" 
+                              <a
+                                href={document.url}
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-blue-600 hover:text-blue-800 underline"
                                 aria-label={`View ${document.name}`}
@@ -419,25 +460,37 @@ export function DocumentCardComponent({
                     </div>
                     {document.needsReupload && (
                       <div className="mb-2 p-2 bg-orange-50 rounded text-xs text-orange-700">
-                        File from previous session - please re-upload to include in submission
+                        File from previous session - please re-upload to include
+                        in submission
                       </div>
                     )}
                     <div className="flex justify-between items-center text-xs text-muted-foreground">
                       <span>
-                        {document.size > 0 
+                        {document.size > 0
                           ? formatFileSize(document.size)
-                          : document.url ? "Available" : "No file"
-                        }
+                          : document.url
+                          ? "Available"
+                          : "No file"}
                       </span>
-                      <span className={document.needsReupload ? "text-orange-600" : "text-green-600"}>
-                        {document.needsReupload ? "Needs re-upload" : 
-                         document.file ? "Selected" : 
-                         document.url ? "Available" : "No file"}
+                      <span
+                        className={
+                          document.needsReupload
+                            ? "text-orange-600"
+                            : "text-green-600"
+                        }
+                      >
+                        {document.needsReupload
+                          ? "Needs re-upload"
+                          : document.file
+                          ? "Selected"
+                          : document.url
+                          ? "Available"
+                          : "No file"}
                       </span>
                     </div>
                   </div>
                 ))}
-                
+
                 {/* Allow adding more files to the same card */}
                 <div className="border-2 border-dashed border-gray-200 rounded-md p-3">
                   <div className="flex items-center justify-center">
@@ -465,7 +518,10 @@ export function DocumentCardComponent({
                       </Button>
                     </label>
                   </div>
-                  <div id={`additional-file-help-${doc.id}`} className="sr-only">
+                  <div
+                    id={`additional-file-help-${doc.id}`}
+                    className="sr-only"
+                  >
                     Add another file to this document card
                   </div>
                 </div>
@@ -476,4 +532,4 @@ export function DocumentCardComponent({
       </CardContent>
     </Card>
   );
-} 
+}

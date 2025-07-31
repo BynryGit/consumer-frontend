@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@shared/ui/button';
 import { Building2, Mail, User, Key, Eye, EyeOff } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@shared/hooks/use-toast'; // Changed from sonner
 import { useConsumerWebLogin, useUserUtility } from '../hooks';
 import AuthLayout from './AuthLayout';
 import { DynamicForm } from "@shared/components/DynamicForm";
@@ -60,6 +60,7 @@ const getOrSetConsumerNumber = (loginResult?: any) => {
 
 const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: SignInProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast(); // Changed to use custom hook
   
   // Get initial data from storage
   const storageData = getLoginDataFromStorage();
@@ -174,13 +175,21 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
 
   const handleFormSubmit = async (data: any) => {
     if (!data.service_provider) {
-      toast.error('Please select a Service Provider.');
+      toast({
+        title: "Validation Error",
+        description: "Please select a Service Provider.",
+        variant: "destructive"
+      });
       return;
     }
 
     const selectedUtility = utilities.find(u => u.id.toString() === data.service_provider);
     if (!selectedUtility) {
-      toast.error('Invalid service provider selected.');
+      toast({
+        title: "Invalid Selection",
+        description: "Invalid service provider selected.",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -200,11 +209,18 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
       if (token) {
         setAuthToken(token);
       } else {
-        toast.error('Login failed: No authentication token received');
+        toast({
+          title: "Login Failed",
+          description: "No authentication token received",
+          variant: "destructive"
+        });
         return;
       }
       
-      toast.success('Login successful!');
+      toast({
+        title: "Success!",
+        description: "Login successful! Redirecting to dashboard...",
+      });
       
       // Store login result
       localStorage.setItem('loginResult', JSON.stringify(result));
@@ -229,7 +245,11 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
       navigate('/dashboard');
       
     } catch (error) {
-      toast.error('Login failed. Please check your credentials.');
+      toast({
+        title: "Login Failed",
+        description: "Please check your credentials and try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -244,7 +264,10 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
   };
 
   const handleSignUp = () => {
-    toast.info('Redirecting to sign up...');
+    toast({
+      title: "Redirecting",
+      description: "Taking you to the sign up page...",
+    });
     onSwitchToSignUp();
   };
 
@@ -271,9 +294,15 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
   }, [signInForm]);
 
   // Handle loading and error states
-  if (utilitiesError) {
-    toast.error('Failed to load service providers. Please refresh the page.');
-  }
+  useEffect(() => {
+    if (utilitiesError) {
+      toast({
+        title: "Loading Error",
+        description: "Failed to load service providers. Please refresh the page.",
+        variant: "destructive"
+      });
+    }
+  }, [utilitiesError, toast]);
 
   return (
     <AuthLayout 

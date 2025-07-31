@@ -30,12 +30,12 @@ const CommunicationForm = () => {
   const updatePreferencesMutation = useAddPreferences();
 
   const defaultValues: CommunicationFormValues = {
-    emailNotifications: true,
+    emailNotifications: false,
     smsNotifications: false,
-    pushNotifications: true,
-    billingReminders: true,
-    outageAlerts: true,
-    usageReports: true,
+    pushNotifications: false,
+    billingReminders: false,
+    outageAlerts: false,
+    usageReports: false,
   };
 
   const form = useForm<CommunicationFormValues>({

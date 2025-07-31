@@ -605,12 +605,7 @@ const formatDate = (date?: Date | string | null) => {
                         <p>{remoteConsumerNumber}</p>
                       </div>
                     )}
-                    {config.customer.customerId && (
-                      <div>
-                        <span className="font-medium">Customer ID:</span>
-                        <p>{consumerId}</p>
-                      </div>
-                    )}
+    
                     {config.customer.name && config.customer.name != 'N/A' && (
                       <div>
                         <span className="font-medium">Name:</span>
