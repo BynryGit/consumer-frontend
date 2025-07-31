@@ -81,6 +81,7 @@ const CreditNotes = () => {
     reason: item.creditNoteReason,
     status: item.paymentReceivedStatus,
     createdDate: item.createdDate,
+    isPaymentConsiled:item.isPaymentConsiled,
     linkedPayment: item.referenceReceiptNo,
   })) || [];
 
