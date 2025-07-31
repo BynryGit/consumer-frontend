@@ -99,25 +99,15 @@ const addresses = {
   },
 };
 
-  const kycDocuments = consumerDetailsData?.result?.document
-    ? consumerDetailsData.result.document.map((doc) => ({
-        name: doc.documentSubtypeName  || "N/A",
-        fileName: doc.file
-          ? doc.file.split("/").pop() || "document.pdf"
-          : "N/A",
-        fileUrl: doc.file || null,
-        status: doc.statusDisplay || "N/A",
-        uploadDate: doc.createdDate || "N/A",
-      }))
-    : [
-        {
-          name: "N/A",
-          fileName: "N/A",
-          fileUrl: null,
-          status: "N/A",
-          uploadDate: "N/A",
-        },
-      ];
+ const kycDocuments = consumerDetailsData?.result?.document
+  ? consumerDetailsData.result.document.map((doc) => ({
+      name: doc.documentSubtypeName || "N/A",
+      fileName: doc.file ? doc.file.split("/").pop() || "document.pdf" : "N/A",
+      fileUrl: doc.file || null,
+      status: doc.statusDisplay || "N/A",
+      uploadDate: doc.createdDate || "N/A",
+    }))
+  : [];
 
   const secondaryPersons = [
     {
@@ -461,8 +451,6 @@ const addresses = {
               </div>
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  {addresses.service.region} , {addresses.service.country} ,{addresses.service.state},
-                  {addresses.service.county} , {addresses.service.zone} ,{addresses.service.division},
                   {addresses.service.area} , {addresses.service.sub_area} ,{addresses.service.premise}
                 </p>
                 <p className="text-xs text-green-600 mt-2">
@@ -485,8 +473,6 @@ const addresses = {
               </div>
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                 {addresses.billing.region} , {addresses.billing.country} ,{addresses.billing.state},
-                  {addresses.billing.county} , {addresses.billing.zone} ,{addresses.billing.division},
                   {addresses.billing.area} , {addresses.billing.sub_area} ,{addresses.billing.premise}
                 </p>
                 <p className="text-xs text-blue-600 mt-2">

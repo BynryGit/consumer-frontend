@@ -182,7 +182,7 @@ const BillsTable = () => {
       header: 'Due Date',
     },
   ];
-
+  
   // Define table actions
   const actions = [
     {
