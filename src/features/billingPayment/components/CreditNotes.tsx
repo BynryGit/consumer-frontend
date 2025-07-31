@@ -26,6 +26,7 @@ interface CreditNote {
   status: string;
   createdDate: string;
   linkedPayment: string;
+  isPaymentConsiled: boolean;
 }
 
 // Credit Note filters interface

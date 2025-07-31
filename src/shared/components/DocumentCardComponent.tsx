@@ -18,7 +18,7 @@ import {
 } from "@shared/ui/select";
 
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
-import { toast } from "sonner";
+import { useToast } from '@shared/hooks/use-toast';
 import { Document, DocumentCard } from "./DocumentUploadForm";
 
 
@@ -65,7 +65,7 @@ export function DocumentCardComponent({
   canRemoveCard: boolean;
 }) {
   const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
-
+const { toast } = useToast();
   // Get document type code for selected document type
   const getDocumentTypeCode = useCallback((documentTypeName: string) => {
     const documentType = documentTypeData?.result?.find(
@@ -143,9 +143,11 @@ export function DocumentCardComponent({
     // Validate file (matching EvidenceAttachmentsStep validation)
     const validation = validateFile(file);
     if (validation) {
-      toast.error("File Upload Error", {
-        description: validation,
-      });
+      toast({
+  title: "File Upload Error",
+  description: validation,
+  variant: "destructive"
+});
       return;
     }
 
@@ -157,16 +159,20 @@ export function DocumentCardComponent({
     const subType = selectedSubTypes[doc.id];
 
     if (!docType) {
-      toast.error("Selection Required", {
-        description: "Please select a document type first",
-      });
+ toast({
+  title: "Selection Required",
+  description: "Please select a document type first",
+  variant: "destructive"
+});
       return;
     }
 
     if (!subType) {
-      toast.error("Selection Required", {
-        description: "Please select a document sub-type first",
-      });
+     toast({
+  title: "Selection Required",
+  description: "Please select a document sub-type first",
+  variant: "destructive"
+});
       return;
     }
 
@@ -187,16 +193,20 @@ export function DocumentCardComponent({
     const subType = selectedSubTypes[doc.id];
 
     if (!docType) {
-      toast.error("Selection Required", {
-        description: "Please select a document type first",
-      });
+toast({
+  title: "Selection Required",
+  description: "Please select a document type first",
+  variant: "destructive"
+});
       return;
     }
 
     if (!subType) {
-      toast.error("Selection Required", {
-          description: "Please select a document sub-type first",
-      });
+    toast({
+  title: "Selection Required",
+  description: "Please select a document sub-type first",
+  variant: "destructive"
+});
       return;
     }
 

@@ -67,7 +67,7 @@ const SignUp = ({ onSwitchToSignIn, onSwitchToPasswordSetup }: SignUpProps) => {
             A password setup link has been sent to <strong>{email}</strong>. Please check your email and follow the instructions to complete your account setup.
           </p>
           
-          {onSwitchToPasswordSetup && (
+          {/* {onSwitchToPasswordSetup && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-blue-800 text-sm mb-3">
                 <strong>Demo:</strong> Click below to simulate clicking the email link
@@ -79,7 +79,7 @@ const SignUp = ({ onSwitchToSignIn, onSwitchToPasswordSetup }: SignUpProps) => {
                 Setup Password (Demo)
               </Button>
             </div>
-          )}
+          )} */}
           
           <Button 
             onClick={onSwitchToSignIn}

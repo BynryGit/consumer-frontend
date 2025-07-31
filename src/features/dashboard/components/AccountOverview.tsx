@@ -2,20 +2,9 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/ui/card';
 import { Lightbulb, Droplet, Flame, Building, Link2 } from 'lucide-react';
 
-const AccountOverview = () => {
-  // Get consumer details from localStorage
-  const getConsumerDetailsFromStorage = () => {
-    try {
-      const consumerDetails = JSON.parse(localStorage.getItem('consumerDetails') || '{}');
-      console.log('Consumer Details:', consumerDetails);
-      return consumerDetails?.result || {};
-    } catch (error) {
-      console.error('Error parsing consumerDetails from localStorage:', error);
-      return {};
-    }
-  };
-
-  const consumerData = getConsumerDetailsFromStorage();
+const AccountOverview = ({ consumerDetail }) => {
+  // Extract consumer data from props, with fallback to empty object
+  const consumerData = consumerDetail?.result || {};
   const consumerMappingData = consumerData?.consumerMappingData || [];
   const territoryData = consumerData?.territoryData;
 
@@ -37,6 +26,12 @@ const AccountOverview = () => {
         meters.push({
           icon: Droplet,
           color: 'text-[#0099cc]',
+          number: meterNumber
+        });
+      } else if (serviceName === 'Hot Water') {
+        meters.push({
+          icon: Flame,
+          color: 'text-[#ff6633]',
           number: meterNumber
         });
       } else if (serviceName === 'Gas') {
@@ -96,7 +91,7 @@ const AccountOverview = () => {
           <div className="flex items-start gap-1">
             <Building className="h-4 w-4 text-muted-foreground mt-0.5" />
             <span className="text-sm">
-              {territoryData?.billing?.area} {territoryData?.billing?.subArea} {territoryData?.billing?.premise}
+              {territoryData?.service?.area} {territoryData?.service?.subArea} {territoryData?.service?.premise}
             </span>
           </div>
         </div>
@@ -107,7 +102,7 @@ const AccountOverview = () => {
             {linkedServices.map((service, index) => (
               <div key={index} className="flex items-center gap-1">
                 <Link2 className="h-3 w-3 text-muted-foreground" />
-                <span className="text-sm">{service.name} </span>
+                <span className="text-sm">{service.name}</span>
               </div>
             ))}
           </div>

@@ -16,7 +16,7 @@ interface Service {
   requestNumber: string;
   serviceType: string;
   requestDate: string;
-  technician: string;
+  technician: string; 
   status: string;
   statusDisplay:string;
   amount: number;

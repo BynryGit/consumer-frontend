@@ -1122,7 +1122,7 @@ export interface UtilityRequestConfiguration {
   configurationCode: string | null;
   supportRequestType: string;
   supportRequestSubtype: string;
-  extraData: {
+   extraData: {
     estTotalCost: number;
     serviceCharge: number;
     needServiceOrder: string;

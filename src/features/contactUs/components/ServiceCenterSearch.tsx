@@ -65,6 +65,24 @@ const ServiceCenterSearch = () => {
     }
   }, [urlSearchQuery]);
 
+  // Helper function to get user-friendly service labels from additional_data
+  const getAdditionalServices = (additionalData: any): string[] => {
+    if (!additionalData) return [];
+    
+    const serviceLabels: { [key: string]: string } = {
+      isComplaints: "Complaints",
+      isBillPayment: "Bill Payment",
+      isDisconnection: "Disconnection",
+      isNewConnections: "New Connections",
+      isTechnicalSupport: "Technical Support",
+      isDocumentCollection: "Document Collection"
+    };
+
+    return Object.entries(additionalData)
+      .filter(([key, value]) => value === true && serviceLabels[key])
+      .map(([key]) => serviceLabels[key]);
+  };
+
   // Transform API data to ServiceCenter format
   const apiServiceCenters: ServiceCenter[] = useMemo(() => {
     if (!data?.result) return [];
@@ -72,19 +90,23 @@ const ServiceCenterSearch = () => {
     // Handle both single result and array of results
     const results = Array.isArray(data.result) ? data.result : [data.result];
     
-    return results.map((center: any) => ({
-      id: center.id?.toString() || "",
-      name: center.name || "",
-      address: center.address || "",
-      city: center.cityNames?.join(", ") || "",
-      area: center.areaNames?.join(", ") || "",
-      subArea: center.subAreaNames?.join(", ") || "",
-      phone: center.contactNumber || "",
-      email: center.email || "",
-      type: center.typeDisplay || "Service Center",
-      availableServices: center.utilityService || [],
-      distance: "0.5 miles" // You might want to calculate this based on user location
-    }));
+    return results.map((center: any) => {
+      // Get only additional services (from additional_data where value is true)
+      const additionalServices = getAdditionalServices(center.additionalData);
+
+      return {
+        id: center.id?.toString() || "",
+        name: center.name || "",
+        address: center.address || "",
+        city: center.cityNames?.join(", ") || "",
+        area: center.areaNames?.join(", ") || "",
+        subArea: center.subAreaNames?.join(", ") || "",
+        phone: center.contactNumber || "",
+        email: center.email || "",
+        type: center.typeDisplay || "",
+        availableServices: additionalServices,
+      };
+    });
   }, [data]);
 
   // Handle search with debounce
@@ -138,6 +160,7 @@ const ServiceCenterSearch = () => {
       case 'Payment Center':
         return 'bg-orange-100 text-orange-800';
       case 'Customer Service Center':
+      case 'Customer service center':
         return 'bg-purple-100 text-purple-800';
       case 'Technical Support':
         return 'bg-red-100 text-red-800';
@@ -213,9 +236,11 @@ const ServiceCenterSearch = () => {
                               )}
                             </div>
                             <div className="flex items-center gap-2 mb-2">
-                              <Badge className={getTypeColor(center.type)}>
-                                {center.type}
-                              </Badge>
+                              {center.type && (
+                                <Badge className={getTypeColor(center.type)}>
+                                  {center.type}
+                                </Badge>
+                              )}
                               {center.area && center.subArea && (
                                 <span className="text-sm text-muted-foreground">
                                   {center.area} - {center.subArea}

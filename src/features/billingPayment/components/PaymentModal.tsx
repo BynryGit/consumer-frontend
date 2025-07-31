@@ -63,11 +63,14 @@ const PaymentModal = ({
   const handlePayment = async () => {
     if (!bill) return;
 
+    // Determine the payment amount based on payment type
+    const paymentAmount = paymentType === "bill" ? bill.outstandingAmount : bill.amount;
+
     // Create base payload
     const basePayload = {
       remote_utility_id: remoteUtilityId,
       consumer: consumerId,
-      amount: bill.amount,
+      amount: paymentAmount,
       payment_mode: "Online#2",
       payment_channel: "",
       payment_date: new Date().toISOString(),
@@ -77,9 +80,9 @@ const PaymentModal = ({
       create_credit_note: false,
       extra_data: {
         reference_no: `SRV-${bill.id}-${Date.now()}`,
-        bill_amount: bill.amount,
-        payment_amount: bill.amount,
-        outstanding_amount: 0,
+        bill_amount: paymentType === "bill" ? bill.outstandingAmount : bill.amount,
+        payment_amount: paymentAmount,
+        outstanding_amount: paymentType === "bill" ? 0 : bill.outstandingAmount,
         excess_refund: 0,
         additional_notes: `${
           paymentType === "service" ? "Service" : "Bill"
@@ -107,7 +110,7 @@ const PaymentModal = ({
         setPaymentComplete(true);
         toast({
           title: "Payment Successful!",
-          description: `Your payment of $${bill.amount} for ${bill.type} has been processed successfully.`,
+          description: `Your payment of $${paymentAmount} for ${bill.type} has been processed successfully.`,
         });
 
         // Call the callback to refetch data
@@ -169,6 +172,7 @@ const PaymentModal = ({
   if (!bill) return null;
 
   const statusDisplay = getStatusDisplay();
+  const displayAmount = paymentType === "bill" ? bill.outstandingAmount : bill.amount;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -218,7 +222,7 @@ const PaymentModal = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Amount:</span>
-                <span className="font-medium">${bill.amount}</span>
+                <span className="font-medium">${displayAmount}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
@@ -256,12 +260,14 @@ const PaymentModal = ({
                   </span>
                   <span className="font-medium">{bill.id}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Service Type
-                  </span>
-                  <Badge variant="outline">{bill.type}</Badge>
-                </div>
+                {paymentType !== "service" && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      Service Type
+                    </span>
+                    <Badge variant="outline">{bill.type}</Badge>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">
                     {paymentType === "service" ? "Request Date" : "Issue Date"}
@@ -285,9 +291,7 @@ const PaymentModal = ({
                   <span className="font-semibold">Total Amount</span>
                   <span className="font-bold text-lg flex items-center gap-1">
                     <DollarSign className="h-4 w-4" />
-                    {paymentType === "service"
-                      ? bill.amount
-                      : bill.outstandingAmount}
+                    {displayAmount}
                   </span>
                 </div>
               </div>
@@ -339,11 +343,7 @@ const PaymentModal = ({
               >
                 {isProcessing
                   ? "Processing..."
-                  : `Pay $${
-                      paymentType === "service"
-                        ? bill.amount
-                        : bill.outstandingAmount
-                    }`}
+                  : `Pay $${displayAmount}`}
               </Button>
             </div>
           )}

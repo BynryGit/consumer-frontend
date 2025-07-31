@@ -38,6 +38,9 @@ export const useMeterList = (params: {
   return useSmartQuery(
     QueryKeyFactory.module.cx.profile.meterList(params), 
     () => ProfileApi.getMeterList(params),
+    {
+      enabled: !!params.remote_meter_id,
+    }
   );
 };
 export const useUpdateConsumer = () => {
