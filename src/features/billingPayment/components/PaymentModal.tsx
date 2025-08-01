@@ -33,6 +33,7 @@ interface Bill {
   status: string;
   dueDate: string;
   serviceRequestId?: number; // Added to link to service request
+  billId:any;
 }
 
 interface PaymentModalProps {
@@ -100,6 +101,7 @@ const PaymentModal = ({
           }
         : {
             ...basePayload,
+            remote_bill_id: bill.billId, // Add remote_bill_id for bill payments
             payment_pay_type: 2, // Bill payment type
             // Don't include consumer_support_request for bills
           };
