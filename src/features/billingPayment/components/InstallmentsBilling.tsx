@@ -266,14 +266,6 @@ const handleViewAgreement = () => {
                           {installment.paidDate}
                         </p>
                       </div>
-                      {installment.paidDate && installment.paidDate !== "NA" && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Paid Date</p>
-                          <p className="font-medium text-green-600">
-                            {installment.paidDate}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
                   
