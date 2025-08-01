@@ -28,6 +28,7 @@ interface ProfileEditModalProps {
     };
   };
   onSave: (data: any) => void;
+  onRefetch: () => void;
 }
 
 const ProfileEditModal = ({
@@ -35,6 +36,7 @@ const ProfileEditModal = ({
   onClose,
   currentData,
   onSave,
+  onRefetch,
 }: ProfileEditModalProps) => {
   const { toast } = useToast();
   const updateConsumerMutation = useUpdateConsumer();
@@ -94,34 +96,42 @@ const ProfileEditModal = ({
     }
   }, [isOpen, currentData, form]);
 
-  const handleSubmit = async (data: any) => {
-    try {
-      const { remoteUtilityId, consumerId } = getLoginDataFromStorage();
-      const formPayload = FormService.createPayload(data, formFields);
+const handleSubmit = async (data: any) => {
+  try {
+    const { remoteUtilityId, consumerId } = getLoginDataFromStorage();
+    const formPayload = FormService.createPayload(data, formFields);
 
-      const apiPayload = {
-        consumer_details: {
-          primary_consumer: {
-            email: formPayload.email,
-            contact_number: formPayload.phone,
-          },
+    const apiPayload = {
+      consumer_details: {
+        primary_consumer: {
+          email: formPayload.email,
+          contact_number: formPayload.phone,
         },
-        remote_utility_id: remoteUtilityId,
-      };
+      },
+      remote_utility_id: remoteUtilityId,
+    };
 
-      await updateConsumerMutation.mutateAsync({
-        consumerId: consumerId,
-        payload: apiPayload,
-      });
-      onClose();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+    await updateConsumerMutation.mutateAsync({
+      consumerId: consumerId,
+      payload: apiPayload,
+    });
+    
+    // Add success toast here
+    toast({
+      title: "Success!",
+      description: "Profile updated successfully.",
+    });
+    
+    onRefetch();
+    onClose();
+  } catch (error) {
+    toast({
+      title: "Error",
+      description: "Failed to update profile. Please try again.",
+      variant: "destructive",
+    });
+  }
+};
 
   const handleCancel = () => {
     form.reset();

@@ -142,7 +142,7 @@ export function ReviewSubmitStep({
   const transferDetails = formData.transferDetails || {};
   const newCustomer = transferDetails?.newCustomer || {};
   const documents = formData.documentation?.documents || [];
-
+console.log("customereeee dataaaa",customer)
   const handleFormSubmit = (data) => {
     // Check if there are files that need re-upload
     const filesNeedingReupload = fileMetadata.filter((f) => f.needsReupload);
