@@ -19,6 +19,8 @@ function TransferRequestSuccessPage() {
     <RequestCreationSuccess 
       requestData={requestData}
       requestType="transfer"
+      onReturnToDashboard={() => navigate('/request-tracker')}
+      onAddNewRequest={() => navigate('/service/transfer')}
     />
   );
 }

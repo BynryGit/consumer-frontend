@@ -19,8 +19,8 @@ function DisconnectionSuccessPage() {
     <RequestCreationSuccess 
       requestData={requestData}
       requestType="disconnection"
-      onReturnToDashboard={() => navigate('/cx/disconnections')}
-      onAddNewRequest={() => navigate('/cx/disconnections/create')}
+        onReturnToDashboard={() => navigate('/request-tracker')}
+      onAddNewRequest={() => navigate('/service/disconnect')}
     />
   );
 }
