@@ -25,6 +25,7 @@ export type EntityType =
   | "request"
   | "profile"
   |"contacts"
+  |"preferences"
   |"faqs"
   | "document";
 
@@ -218,6 +219,12 @@ export class QueryKeyFactory {
           params,
         ],
       },
+      preferences:{ consumerDetails:
+        (params?: any): [EntityType, "consumerDetails", any?] => [
+          "preferences",
+          "consumerDetails",
+          params,
+        ],},
       usage:{
         getThershold:
         (params?: any): [EntityType, "getThershold", any?] => [
