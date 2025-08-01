@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -9,7 +9,7 @@ import { Button } from '@shared/ui/button';
 import { Switch } from '@shared/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/ui/select';
 import { Bell, Mail, Phone, Save, Clock } from 'lucide-react';
-import { useAddPreferences } from '../hooks';
+import { useAddPreferences, useConsumerDetails } from '../hooks';
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 
 
@@ -25,19 +25,24 @@ const communicationSchema = z.object({
 type CommunicationFormValues = z.infer<typeof communicationSchema>;
 
 const CommunicationForm = () => {
-    const { consumerId } = getLoginDataFromStorage();
+    const { consumerId,remoteUtilityId,remoteConsumerNumber } = getLoginDataFromStorage();
   const { toast } = useToast();
   const updatePreferencesMutation = useAddPreferences();
+const { data: consumerData } = useConsumerDetails({
+      remote_utility_id: remoteUtilityId,
+      consumer_no: remoteConsumerNumber,
+    });
+const communicationArray = consumerData?.result?.additionalData?.communication || [];
+const preferencesData = consumerData?.result?.additionalData?.preferences || {};
 
-  const defaultValues: CommunicationFormValues = {
-    emailNotifications: false,
-    smsNotifications: false,
-    pushNotifications: false,
-    billingReminders: false,
-    outageAlerts: false,
-    usageReports: false,
-  };
-
+const defaultValues: CommunicationFormValues = {
+  emailNotifications: communicationArray.includes("email"),
+  smsNotifications: communicationArray.includes("phone"),
+  pushNotifications: communicationArray.includes("push"),
+  billingReminders: preferencesData.isBillingAndPayment || false,
+  outageAlerts: preferencesData.isServiceOutage || false,
+  usageReports: preferencesData.isUsageInsights || false,
+};
   const form = useForm<CommunicationFormValues>({
     resolver: zodResolver(communicationSchema),
     defaultValues
@@ -64,7 +69,21 @@ const CommunicationForm = () => {
       }
     };
   };
-
+useEffect(() => {
+  if (consumerData?.result) {
+    const communicationArray = consumerData.result.additionalData?.communication || [];
+    const preferencesData = consumerData.result.additionalData?.preferences || {};
+    
+    form.reset({
+      emailNotifications: communicationArray.includes("email"),
+      smsNotifications: communicationArray.includes("phone"),
+      pushNotifications: communicationArray.includes("push"),
+      billingReminders: preferencesData.isBillingAndPayment || false,
+      outageAlerts: preferencesData.isServiceOutage || false,
+      usageReports: preferencesData.isUsageInsights || false,
+    });
+  }
+}, [consumerData, form]);
   const onSubmit = async (data: CommunicationFormValues) => {
     const payload = transformFormDataToPayload(data);
     

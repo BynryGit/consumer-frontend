@@ -307,7 +307,7 @@ const SignIn = ({ tenant = '', onSwitchToSignUp, onSwitchToForgotPassword }: Sig
   return (
     <AuthLayout 
       title="Welcome Back" 
-      subtitle={`Sign in to your account to continue (${tenant})`}
+      subtitle={`Sign in to your account to continue`}
     >
       <div className="space-y-2">
         {/* Dynamic Form */}
