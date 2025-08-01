@@ -133,23 +133,22 @@ const addresses = {
     : [
         { date: "N/A", action: "N/A", amount: "N/A", status: "N/A" },
       ];
-
-  const preferences = {
-    notifications: {
-      email: false,
-      sms: false,
-      push: false,
-      billReminders: false,
-      outageAlerts: false,
-      promotions: false,
-    },
-    billing: {
-      paperless: false,
-      autoPay: false,
-      currency: "N/A",
-      language: "N/A",
-    },
-  };
+const communicationArray = consumerDetailsData?.result?.additionalData?.communication || [];
+const preferences = {
+  notifications: {
+    email: communicationArray.includes("email"),
+    sms: communicationArray.includes("sms"),
+    push: false,
+    billReminders: false,
+    outageAlerts: false,
+    promotions: false,
+  },
+  billing: {
+    paperless: communicationArray.includes("ebill"),
+    paperBilling: communicationArray.includes("paper_bill"),
+ 
+  },
+};
 
   const handleViewDocument = (fileName: string, fileUrl?: string) => {
     if (fileUrl) {
