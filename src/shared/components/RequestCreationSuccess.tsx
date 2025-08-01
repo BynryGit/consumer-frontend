@@ -55,7 +55,7 @@ const REQUEST_TYPE_CONFIGS: Record<RequestType, RequestTypeConfig> = {
     icon: CheckCircle,
     iconColor: "text-green-500",
     titleColor: "text-green-600",
-    dashboardRoute: "/serviceRequest",
+    dashboardRoute: "/request-tracker",
     createRoute: "/service/newservice",
     receiptType: "Service Request Receipt",
     fieldMappings: {
@@ -71,7 +71,7 @@ const REQUEST_TYPE_CONFIGS: Record<RequestType, RequestTypeConfig> = {
     icon: AlertCircle,
     iconColor: "text-green-500",
     titleColor: "text-green-600",
-    dashboardRoute: "/serviceRequest",
+    dashboardRoute: "/request-tracker",
     createRoute: "/service/complaint",
     receiptType: "Complaint Receipt",
     fieldMappings: {
@@ -90,7 +90,7 @@ const REQUEST_TYPE_CONFIGS: Record<RequestType, RequestTypeConfig> = {
     icon: PowerOff,
     iconColor: "text-red-500",
     titleColor: "text-red-600",
-    dashboardRoute: "/serviceRequest",
+    dashboardRoute: "/request-tracker",
     createRoute: "/service/disconnect",
     receiptType: "Disconnection Request Receipt",
     fieldMappings: {
@@ -109,7 +109,7 @@ const REQUEST_TYPE_CONFIGS: Record<RequestType, RequestTypeConfig> = {
     icon: Power,
     iconColor: "text-blue-500",
     titleColor: "text-blue-600",
-    dashboardRoute: "/serviceRequest",
+    dashboardRoute: "/request-tracker",
     createRoute: "/cx/reconnections/create",
     receiptType: "Reconnection Request Receipt",
     fieldMappings: {
@@ -128,7 +128,7 @@ const REQUEST_TYPE_CONFIGS: Record<RequestType, RequestTypeConfig> = {
     icon: ArrowRightLeft,
     iconColor: "text-purple-500",
     titleColor: "text-purple-600",
-    dashboardRoute: "/serviceRequest",
+    dashboardRoute: "/request-tracker",
     createRoute: "/service/transfer",
     receiptType: "Transfer Request Receipt",
     fieldMappings: {
@@ -147,7 +147,7 @@ const REQUEST_TYPE_CONFIGS: Record<RequestType, RequestTypeConfig> = {
     icon: CreditCard, // Import: import { CreditCard } from "lucide-react";
     iconColor: "text-green-500",
     titleColor: "text-green-600",
-    dashboardRoute: "/cx/payments",
+    dashboardRoute: "/request-tracker",
     createRoute: "/cx/payments/create",
     receiptType: "Payment Receipt",
     fieldMappings: {
