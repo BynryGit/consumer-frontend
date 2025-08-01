@@ -18,8 +18,8 @@ function ComplaintSuccessPage() {
     <RequestCreationSuccess 
       requestData={requestData}
       requestType="complaint"
-      onReturnToDashboard={() => navigate('/cx/complaints')}
-      onAddNewRequest={() => navigate('/cx/complaints/create')}
+       onReturnToDashboard={() => navigate('/request-tracker')}
+      onAddNewRequest={() => navigate('/service/complaint')}
     />
   
   );

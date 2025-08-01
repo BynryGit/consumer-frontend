@@ -19,6 +19,8 @@ function ServiceRequestSuccessPage() {
     <RequestCreationSuccess 
       requestData={requestData}
       requestType="service"
+      onReturnToDashboard={() => navigate('/request-tracker')}
+      onAddNewRequest={() => navigate('/service/newservice')}
     />
   );
 }
