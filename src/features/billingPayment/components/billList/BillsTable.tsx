@@ -83,6 +83,7 @@ const BillsTable = () => {
     return billDetailsData.results.billData.map((billData: any, index: number) => ({
       downloadID: billData.id,
       id: billData.invoiceNo, 
+      billId:billData.id,
       date: billData.createdDate,
       amount: billData.billAmount,
       outstandingAmount: billData.outstandingBalance,

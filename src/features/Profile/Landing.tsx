@@ -41,7 +41,7 @@ const ProfileEditor = () => {
   const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
   
   // Fetch consumer details
-  const { data: consumerDetailsData } = useConsumerDetails({
+  const { data: consumerDetailsData, refetch: refetchConsumerDetails } = useConsumerDetails({
     remote_utility_id: remoteUtilityId,
     consumer_no: remoteConsumerNumber,
   });
@@ -110,6 +110,7 @@ const ProfileEditor = () => {
           }
         }}
         onSave={handleEditSave}
+        onRefetch={refetchConsumerDetails}
       />
     </div>
   );
