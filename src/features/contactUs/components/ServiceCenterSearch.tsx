@@ -240,12 +240,7 @@ const ServiceCenterSearch = () => {
                                 <Badge className={getTypeColor(center.type)}>
                                   {center.type}
                                 </Badge>
-                              )}
-                              {center.area && center.subArea && (
-                                <span className="text-sm text-muted-foreground">
-                                  {center.area} - {center.subArea}
-                                </span>
-                              )}
+                              )}  
                             </div>
                           </div>
                           <Button 
@@ -268,7 +263,7 @@ const ServiceCenterSearch = () => {
                               <div className="min-w-0">
                                 <p className="text-xs font-medium text-muted-foreground">Address</p>
                                 <p className="text-sm leading-tight">
-                                  {center.area} ,{center.subArea} , {center.city}
+                                  {center.address}
                                 </p>
                               </div>
                             </div>
