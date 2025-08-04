@@ -78,7 +78,7 @@ const CreditNotes = () => {
     consumer: item.consumerName,
     consumerId: item.consumerNo,
     amount: item.amount,
-    remaining: 0,
+   remaining: item.isPaymentConsiled ? 0 : item.amount,
     reason: item.creditNoteReason,
     status: item.paymentReceivedStatus,
     createdDate: item.createdDate,
