@@ -4,12 +4,13 @@ import { QueryStringParameters, UrlBuilder } from "./url-builder";
 export type ApiType =
   | "auth"
   | "cx"
-  |"bx"
+  | "bx"
   | "star"
   | "receipt"
   | "consumerWeb"
-  |"communication"
- | "activityLog"
+  | "communication"
+  | "activityLog"
+  | "payment"
   | "onboarding";
 
 // Define API base URLs
@@ -17,12 +18,13 @@ export const API_BASE_URLS: Record<ApiType, string> = {
   onboarding: import.meta.env.VITE_ONBOARDING_API_ENDPOINT || "",
   auth: import.meta.env.VITE_AUTH_API_ENDPOINT || "",
   cx: import.meta.env.VITE_CX_API_ENDPOINT || "",
-   bx: import.meta.env.VITE_BX_API_ENDPOINT || "",
+  bx: import.meta.env.VITE_BX_API_ENDPOINT || "",
   star: import.meta.env.VITE_STAR_API_ENDPOINT || "",
-   activityLog: import.meta.env.VITE_ACTIVITY_LOG_API_ENDPOINT || "",
-    communication: import.meta.env.VITE_NOTIFICATION_API_ENDPOINT || "",
+  activityLog: import.meta.env.VITE_ACTIVITY_LOG_API_ENDPOINT || "",
+  communication: import.meta.env.VITE_NOTIFICATION_API_ENDPOINT || "",
   receipt: import.meta.env.VITE_RECEIPT_API_ENDPOINT || "",
   consumerWeb: import.meta.env.VITE_CONSUMER_WEB_API_ENDPOINT || "",
+  payment: import.meta.env.VITE_PAYMENT_API_ENDPOINT || "",
 };
 
 export class ApiEndpoints {

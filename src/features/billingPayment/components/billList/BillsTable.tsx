@@ -1,15 +1,18 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { Badge } from '@shared/ui/badge';
-import GenericTable from '@shared/components/GenericTable';
-import { TableColumn } from '@shared/types/table';
-import PaymentModal from '../PaymentModal';
-import { BillingKPICards } from '../billingKpiCard/BillingKpiCard';
-import { useConsumerBillDetails } from '@features/billingPayment/hooks';
-import { useDownloadBillTemplate } from '@features/billingPayment/hooks';
-import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
-import { useSearchParams } from 'react-router-dom';
+import React, { useMemo, useState, useEffect } from "react";
+import { Badge } from "@shared/ui/badge";
+import GenericTable from "@shared/components/GenericTable";
+import { TableColumn } from "@shared/types/table";
+import PaymentModal from "../PaymentModal";
+import { BillingKPICards } from "../billingKpiCard/BillingKpiCard";
+import {
+  useConsumerBillDetails,
+  usePSPConfig,
+} from "@features/billingPayment/hooks";
+import { useDownloadBillTemplate } from "@features/billingPayment/hooks";
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PAGE_SIZE } from "@shared/utils/constants";
-import { useToast } from '@shared/hooks/use-toast'; // Changed from sonner
+import { useToast } from "@shared/hooks/use-toast"; // Changed from sonner
 
 // Bill interface
 interface Bill {
@@ -37,17 +40,23 @@ interface BillFilters {
 
 const BillsTable = () => {
   const { toast } = useToast(); // Added custom toast hook
-  const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+  const [selectedBill, setSelectedBill] = useState<any | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
-  
+
   const { remoteUtilityId, remoteConsumerNumber } = getLoginDataFromStorage();
+  const navigate = useNavigate();
 
   // Add the download hook
   const downloadBillTemplate = useDownloadBillTemplate();
+  const { data: pspConfig, refetch: refetchPspConfig } =
+    usePSPConfig(remoteUtilityId);
 
-  // Compute filters using useMemo
+  const activePsp = pspConfig?.find((item) => item.isActive && item.verificationStatus?.toLowerCase() === 'verified');
+  const activePspUtilityId = activePsp?.pspUtilityId;
+  const activePspName = activePsp?.organizationName;
+
   const filters = useMemo((): BillFilters => {
     const urlFilters: BillFilters = {
       remoteUtilityId: remoteUtilityId,
@@ -79,19 +88,21 @@ const BillsTable = () => {
 
   const bills: Bill[] = useMemo(() => {
     if (!billDetailsData?.results?.billData) return [];
-    
-    return billDetailsData.results.billData.map((billData: any, index: number) => ({
-      downloadID: billData.id,
-      id: billData.invoiceNo, 
-      billId:billData.id,
-      date: billData.createdDate,
-      amount: billData.billAmount,
-      outstandingAmount: billData.outstandingBalance,
-      status: billData.outstandingBalance > 0 ? 'Unpaid' : 'Paid',
-      dueDate: billData.dueDate,
-      type: billData.type || '',
-      billIndex: index
-    }));
+
+    return billDetailsData.results.billData.map(
+      (billData: any, index: number) => ({
+        downloadID: billData.id,
+        id: billData.invoiceNo,
+        billId: billData.id,
+        date: billData.createdDate,
+        amount: billData.billAmount,
+        outstandingAmount: billData.outstandingBalance,
+        status: billData.outstandingBalance > 0 ? "Unpaid" : "Paid",
+        dueDate: billData.dueDate,
+        type: billData.type || "",
+        billIndex: index,
+      })
+    );
   }, [billDetailsData]);
 
   // Extract bill summary data
@@ -122,36 +133,45 @@ const BillsTable = () => {
     setPage(newPage);
   };
 
-  const handlePayNow = (bill: Bill) => {
-    setSelectedBill(bill);
+  const handlePayNow = (bill: any) => {
+    console.log('debug bill selected', bill);
+    setSelectedBill({ ...bill, activePspUtilityId, activePspName });
     setIsPaymentModalOpen(true);
   };
 
   // Updated download handler with custom toast
   const handleDownloadBill = (bill: Bill) => {
-    downloadBillTemplate.mutate({
-      billId: bill.downloadID,
-    }, {
-      onSuccess: () => {
-        toast({
-          title: "Success!",
-          description: "Bill downloaded successfully",
-        });
+    downloadBillTemplate.mutate(
+      {
+        billId: bill.downloadID,
       },
-      onError: (error) => {
-        console.error("Download failed:", error);
-        toast({
-          title: "Download Failed",
-          description: "Failed to download bill. Please try again.",
-          variant: "destructive"
-        });
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success!",
+            description: "Bill downloaded successfully",
+          });
+        },
+        onError: (error) => {
+          console.error("Download failed:", error);
+          toast({
+            title: "Download Failed",
+            description: "Failed to download bill. Please try again.",
+            variant: "destructive",
+          });
+        },
       }
-    });
+    );
   };
 
   const handlePaymentModalClose = () => {
     setIsPaymentModalOpen(false);
     setSelectedBill(null);
+    localStorage.removeItem("billForPayment");
+    // Clear ?status=success from the URL
+    const updatedParams = new URLSearchParams(searchParams);
+    updatedParams.delete("status");
+    navigate(`?${updatedParams.toString()}`, { replace: true });
   };
 
   // Add this function to handle successful payment
@@ -167,54 +187,64 @@ const BillsTable = () => {
   // Define table columns
   const columns: TableColumn<Bill>[] = [
     {
-      key: 'id',
-      header: 'Bill Number',
+      key: "id",
+      header: "Bill Number",
       sortable: true,
     },
     {
-      key: 'date',
-      header: 'Issue Date',
+      key: "date",
+      header: "Issue Date",
       sortable: true,
     },
     {
-      key: 'amount',
-      header: 'Amount',
+      key: "amount",
+      header: "Amount",
       sortable: true,
     },
     {
-      key: 'outstandingAmount',
-      header: 'Outstanding Amount',
+      key: "outstandingAmount",
+      header: "Outstanding Amount",
       sortable: true,
     },
     {
-      key: 'dueDate',
-      header: 'Due Date',
+      key: "dueDate",
+      header: "Due Date",
     },
   ];
 
   // Define table actions
   const actions = [
     {
-      label: 'Pay Now',
-      icon: 'CreditCard' as const,
-      onClick: (bill: Bill) => handlePayNow(bill),
-      disabled: (bill: Bill) => bill.status === 'Paid' || bill.billIndex !== 0
+      label: "Pay Now",
+      icon: "CreditCard" as const,
+      onClick: (bill: any) => handlePayNow(bill),
+      disabled: (bill: any) => bill.status === "Paid" || bill.billIndex !== 0,
     },
     {
-      label: 'Download',
-      icon: 'Download' as const,
+      label: "Download",
+      icon: "Download" as const,
       onClick: (bill: Bill) => handleDownloadBill(bill),
-      disabled: (bill: Bill) => downloadBillTemplate.isPending
-    }
+      disabled: (bill: Bill) => downloadBillTemplate.isPending,
+    },
   ];
+
+  useEffect(() => {
+    const status = searchParams.get("status");
+    if (status) {
+      const storedBill = localStorage.getItem("billForPayment");
+      if (storedBill) {
+        const parsedBill = JSON.parse(storedBill);
+        setSelectedBill(parsedBill);
+        setIsPaymentModalOpen(true);
+      }
+    }
+  }, []);
 
   return (
     <div className="space-y-6">
-      <BillingKPICards 
-        billSummary={billSummary}
-      />
+      <BillingKPICards billSummary={billSummary} />
 
-      <GenericTable<Bill>
+      <GenericTable
         data={bills}
         columns={columns}
         rowKey="id"
@@ -236,12 +266,15 @@ const BillsTable = () => {
         emptyMessage="No bills found"
       />
 
-      <PaymentModal 
+      <PaymentModal
         bill={selectedBill}
         isOpen={isPaymentModalOpen}
         onClose={handlePaymentModalClose}
         onPaymentSuccess={handlePaymentSuccess}
         paymentType="bill"
+        status={searchParams.get("status")}
+        activePspId={activePspUtilityId}
+        activePspName={activePspName}
       />
     </div>
   );

@@ -1,52 +1,90 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/ui/card';
-import { Button } from '@shared/ui/button';
-import { Badge } from '@shared/ui/badge';
-import { useToast } from '@shared/hooks/use-toast';
-import { Calendar, DollarSign, FileText, User, Eye, AlertTriangle } from 'lucide-react';
-import InstallmentPaymentModal from './InstallmentPaymentModal';
-import { usePaymentAgreementDetail } from '../hooks';
-import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
+import React, { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@shared/ui/card";
+import { Button } from "@shared/ui/button";
+import { Badge } from "@shared/ui/badge";
+import { useToast } from "@shared/hooks/use-toast";
+import {
+  Calendar,
+  DollarSign,
+  FileText,
+  User,
+  Eye,
+  AlertTriangle,
+} from "lucide-react";
+import InstallmentPaymentModal from "./InstallmentPaymentModal";
+import { usePaymentAgreementDetail, usePSPConfig } from "../hooks";
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
+import PaymentModal from "./PaymentModal";
+import { useSearchParams } from "react-router-dom";
 
 const InstallmentsBilling = () => {
-  const { remoteUtilityId, remoteConsumerNumber, consumerId,firstName,lastName } = getLoginDataFromStorage();
+  const {
+    remoteUtilityId,
+    remoteConsumerNumber,
+    consumerId,
+    firstName,
+    lastName,
+  } = getLoginDataFromStorage();
   const { toast } = useToast();
   const [selectedInstallment, setSelectedInstallment] = useState(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-const handleViewAgreement = () => {
-  const printWindow = window.open("", "_blank");
-  if (printWindow) {
-    // Helper function to format currency
-    const formatCurrency = (amount) => {
-      if (!amount || amount === "NA") return "N/A";
-      return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-      }).format(amount);
-    };
+  const { data: pspConfig, refetch: refetchPspConfig } =
+      usePSPConfig(remoteUtilityId);
+  
+    const activePsp = pspConfig?.find((item) => item.isActive && item.verificationStatus?.toLowerCase() === 'verified');
+    const activePspUtilityId = activePsp?.pspUtilityId;
+    const activePspName = activePsp?.organizationName;
 
-    // Helper function to format date
-    const formatDate = (dateString) => {
-      if (!dateString || dateString === "NA" || dateString.trim() === "") {
-        return "N/A";
-      }
-      try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const status = searchParams.get("status");
+
+  useEffect(() => {
+    const stored = localStorage.getItem("pendingInstallmentPayment");
+    if ((status === "success" || status === "failed") && stored) {
+      setSelectedInstallment(JSON.parse(stored));
+      setIsPaymentModalOpen(true);
+    }
+  }, [status]);
+  const handleViewAgreement = () => {
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      // Helper function to format currency
+      const formatCurrency = (amount) => {
+        if (!amount || amount === "NA") return "N/A";
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+        }).format(amount);
+      };
+
+      // Helper function to format date
+      const formatDate = (dateString) => {
+        if (!dateString || dateString === "NA" || dateString.trim() === "") {
           return "N/A";
         }
-        return new Intl.DateTimeFormat("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }).format(date);
-      } catch (error) {
-        return "N/A";
-      }
-    };
+        try {
+          const date = new Date(dateString);
+          if (isNaN(date.getTime())) {
+            return "N/A";
+          }
+          return new Intl.DateTimeFormat("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }).format(date);
+        } catch (error) {
+          return "N/A";
+        }
+      };
 
-    printWindow.document.write(`
+      printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
@@ -70,19 +108,31 @@ const handleViewAgreement = () => {
           
           <div class="section">
             <h2>Account Information</h2>
-            <p><strong>Account Number:</strong> ${remoteConsumerNumber || "N/A"}</p>
+            <p><strong>Account Number:</strong> ${
+              remoteConsumerNumber || "N/A"
+            }</p>
             <p><strong>Customer Name:</strong>${firstName} ${lastName}</p>
             <p><strong>Service Address:</strong> N/A</p>
           </div>
 
           <div class="section">
             <h2>Agreement Terms</h2>
-            <p><strong>Total Amount:</strong> ${formatCurrency(paymentAgreement?.totalAmount)}</p>
-            <p><strong>Down Payment:</strong> ${formatCurrency(paymentAgreement?.downPayment)}</p>
-            <p><strong>Monthly Payment:</strong> ${formatCurrency(paymentAgreement?.monthlyPayment)}</p>
-            <p><strong>Number of Installments:</strong> ${installmentsData?.length || "N/A"}</p>
+            <p><strong>Total Amount:</strong> ${formatCurrency(
+              paymentAgreement?.totalAmount
+            )}</p>
+            <p><strong>Down Payment:</strong> ${formatCurrency(
+              paymentAgreement?.downPayment
+            )}</p>
+            <p><strong>Monthly Payment:</strong> ${formatCurrency(
+              paymentAgreement?.monthlyPayment
+            )}</p>
+            <p><strong>Number of Installments:</strong> ${
+              installmentsData?.length || "N/A"
+            }</p>
             <p><strong>Status:</strong> Active</p>
-            <p><strong>Created By:</strong> ${paymentAgreement?.createdBy || "N/A"}</p>
+            <p><strong>Created By:</strong> ${
+              paymentAgreement?.createdBy || "N/A"
+            }</p>
           </div>
           
           <div class="section">
@@ -97,49 +147,69 @@ const handleViewAgreement = () => {
                 </tr>
               </thead>
               <tbody>
-                ${installmentsData?.map(installment => `
+                ${
+                  installmentsData
+                    ?.map(
+                      (installment) => `
                   <tr>
                     <td>${installment.installmentNumber}</td>
                     <td>${formatCurrency(installment.amount)}</td>
                     <td>${installment.status}</td>
-                    <td>${installment.status === 'Paid' ? formatCurrency(installment.amount) : "-"}</td>
+                    <td>${
+                      installment.status === "Paid"
+                        ? formatCurrency(installment.amount)
+                        : "-"
+                    }</td>
                   </tr>
-                `).join("") || '<tr><td colspan="4">No installments found</td></tr>'}
+                `
+                    )
+                    .join("") ||
+                  '<tr><td colspan="4">No installments found</td></tr>'
+                }
               </tbody>
             </table>
           </div>
         </body>
       </html>
     `);
-    printWindow.document.close();
-    printWindow.print();
-  }
-};
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
 
-  const { data: paymentAgreementData, refetch: refetchPaymentAgreement } = usePaymentAgreementDetail({
-    remote_utility_id: remoteUtilityId ,
-    consumer_id: consumerId 
-  });
+  const { data: paymentAgreementData, refetch: refetchPaymentAgreement } =
+    usePaymentAgreementDetail({
+      remote_utility_id: remoteUtilityId,
+      consumer_id: consumerId,
+    });
 
-  const paymentAgreement = paymentAgreementData?.result ? {
-    agreementId: paymentAgreementData.result.agreementNo || "NA",
-    createdDate: paymentAgreementData.result.createdDate || "NA",
-    createdBy: paymentAgreementData.result.createdUserRemoteName || "NA",
-    totalAmount: paymentAgreementData.result.totalAgreementAmount || "NA",
-    downPayment: paymentAgreementData.result.downPayment || "NA",
-    monthlyPayment: paymentAgreementData.result.monthlyPayment || "NA",
-  } : null;
+  const paymentAgreement = paymentAgreementData?.result
+    ? {
+        agreementId: paymentAgreementData.result.agreementNo || "NA",
+        createdDate: paymentAgreementData.result.createdDate || "NA",
+        createdBy: paymentAgreementData.result.createdUserRemoteName || "NA",
+        totalAmount: paymentAgreementData.result.totalAgreementAmount || "NA",
+        downPayment: paymentAgreementData.result.downPayment || "NA",
+        monthlyPayment: paymentAgreementData.result.monthlyPayment || "NA",
+      }
+    : null;
 
-  const installmentsData = paymentAgreementData?.result?.installments?.map(installment => ({
-    id: installment.id || "NA",
-    installmentNumber: installment.installmentNo|| "NA",
-    dueDate: 'NA',
-    amount: installment.installmentAmount || "NA",
-    status: installment.statusDisplay || "NA",
-    paidDate: installment.paymentDate || "NA"
-  })) || [];
+  const installmentsData =
+    paymentAgreementData?.result?.installments?.map((installment) => ({
+      id: installment.id || "NA",
+      installmentNumber: installment.installmentNo || "NA",
+      dueDate: "NA",
+      amount: installment.installmentAmount || "NA",
+      status: installment.statusDisplay || "NA",
+      paidDate: installment.paymentDate || "NA",
+    })) || [];
 
-  const handlePayment = (installment: typeof installmentsData[0]) => {
+  const handlePayment = (installment) => {
+    console.log('debug installment selected', installment);
+    localStorage.setItem(
+      "pendingInstallmentPayment",
+      JSON.stringify(installment)
+    );
     setSelectedInstallment(installment);
     setIsPaymentModalOpen(true);
   };
@@ -149,21 +219,25 @@ const handleViewAgreement = () => {
     refetchPaymentAgreement();
   };
 
-  const handleCloseModal = () => {
-    setIsPaymentModalOpen(false);
-    setSelectedInstallment(null);
-  };
+ const handleCloseModal = () => {
+  setIsPaymentModalOpen(false);
+  setSelectedInstallment(null);
+  localStorage.removeItem("pendingInstallmentPayment");
+
+  searchParams.delete("status");
+  setSearchParams(searchParams, { replace: true });
+};
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Paid':
-        return 'bg-green-100 text-green-800';
-      case 'Unpaid':
-        return 'bg-blue-100 text-blue-800';
-      case 'Overdue':
-        return 'bg-red-100 text-red-800';
+      case "Paid":
+        return "bg-green-100 text-green-800";
+      case "Unpaid":
+        return "bg-blue-100 text-blue-800";
+      case "Overdue":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -207,17 +281,22 @@ const handleViewAgreement = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Amount</p>
-              <p className="font-semibold">${paymentAgreement?.totalAmount?.toLocaleString()}</p>
+              <p className="font-semibold">
+                ${paymentAgreement?.totalAmount?.toLocaleString()}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Down Payment</p>
-              <p className="font-semibold">${paymentAgreement?.downPayment?.toLocaleString()}</p>
+              <p className="font-semibold">
+                ${paymentAgreement?.downPayment?.toLocaleString()}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Monthly Payment</p>
-              <p className="font-semibold">${paymentAgreement?.monthlyPayment}</p>
+              <p className="font-semibold">
+                ${paymentAgreement?.monthlyPayment}
+              </p>
             </div>
-
           </div>
         </CardContent>
       </Card>
@@ -235,23 +314,27 @@ const handleViewAgreement = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {installmentsData.map(installment => {
+          {installmentsData.map((installment) => {
             return (
-              <div 
-                key={installment.id} 
+              <div
+                key={installment.id}
                 className={`border rounded-lg p-4 hover:shadow-sm transition-shadow ${
-                  installment.status === 'Overdue' ? 'border-red-300 bg-red-50' : ''
+                  installment.status === "Overdue"
+                    ? "border-red-300 bg-red-50"
+                    : ""
                 }`}
               >
                 <div className="flex items-start justify-between h-full">
                   <div className="flex-1 space-y-3">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-lg">Installment #{installment.installmentNumber}</h3>
+                      <h3 className="font-semibold text-lg">
+                        Installment #{installment.installmentNumber}
+                      </h3>
                       <Badge className={getStatusColor(installment.status)}>
                         {installment.status}
                       </Badge>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Amount</p>
@@ -260,22 +343,27 @@ const handleViewAgreement = () => {
                           {installment.amount}
                         </p>
                       </div>
-                        <div>
-                        <p className="text-sm text-muted-foreground">Paid Date</p>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Paid Date
+                        </p>
                         <p className="font-bold text-xl flex items-center gap-1">
                           {installment.paidDate}
                         </p>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col justify-center items-end h-full ml-4">
-                    {(installment.status === 'Unpaid' || installment.status === 'Overdue') && (
-                      <Button 
-                        size="lg" 
-                        onClick={() => handlePayment(installment)} 
+                    {(installment.status === "Unpaid" ||
+                      installment.status === "Overdue") && (
+                      <Button
+                        size="lg"
+                        onClick={() => handlePayment(installment)}
                         className={`${
-                          installment.status === 'Overdue' ? 'bg-red-600 hover:bg-red-700' : ''
+                          installment.status === "Overdue"
+                            ? "bg-red-600 hover:bg-red-700"
+                            : ""
                         } px-6`}
                       >
                         <DollarSign className="h-4 w-4 mr-2" />
@@ -290,11 +378,21 @@ const handleViewAgreement = () => {
         </CardContent>
       </Card>
 
-      <InstallmentPaymentModal 
+      {/* <InstallmentPaymentModal 
         installment={selectedInstallment} 
         isOpen={isPaymentModalOpen} 
         onClose={handleCloseModal}
         onPaymentSuccess={handlePaymentSuccess}
+      /> */}
+      <PaymentModal
+        bill={selectedInstallment}
+        isOpen={isPaymentModalOpen}
+        onClose={handleCloseModal}
+        paymentType="installment"
+        onPaymentSuccess={handlePaymentSuccess}
+        activePspId={activePspUtilityId}
+        activePspName={activePspName}
+        status={status}
       />
     </div>
   );

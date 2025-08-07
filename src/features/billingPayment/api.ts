@@ -6,6 +6,7 @@ import {
   bxApiClient,
   consumerApiClient,
   cxApiClient,
+  paymentApiClient,
 } from "@shared/api/clients/apiClientFactory";
 import { PaymentPayload } from "./types";
 
@@ -163,4 +164,23 @@ getCreditNoteList: async (params: {
       const response = await cxApiClient.post(url, payload);
       return response.data;
     },
+
+  getPSPConfigurationDetails: async (remoteUtilityId: string) :Promise<any> => {
+  const url = ApiEndpoints.createUrlWithQueryParameters(
+    'payment',
+    'psp',
+    query => {
+      query.push('remote_utility_id', remoteUtilityId);
+    }
+  );
+  const response = await paymentApiClient.get(url);
+  return response.data.result;
+},
+
+ connectPaymentMethod:  async (payload: any) => {
+  const url = ApiEndpoints.createUrl("payment", "initiate-payment");
+  const response = await paymentApiClient.post(url, payload);
+  return response.data.result ?? null;
+},
+
 };

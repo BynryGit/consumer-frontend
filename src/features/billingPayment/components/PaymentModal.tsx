@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,8 +21,9 @@ import {
   X,
   AlertTriangle,
 } from "lucide-react";
-import { usePayBill } from "../hooks";
+import { useConnectPaymentMethod, usePayBill } from "../hooks";
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
+import { useGlobalUserProfile } from "@shared/hooks/useGlobalUser";
 
 interface Bill {
   id: string;
@@ -33,21 +34,27 @@ interface Bill {
   status: string;
   dueDate: string;
   serviceRequestId?: number; // Added to link to service request
-  billId:any;
+  billId: any;
 }
 
 interface PaymentModalProps {
-  bill: Bill | null;
+  bill: any | null;
   isOpen: boolean;
   onClose: () => void;
+  status?: string;
+  activePspId?: number;
+  activePspName?: string;
   onPaymentSuccess?: () => void; // Callback to refetch data
-  paymentType: "bill" | "service"; // New prop to distinguish payment type
+  paymentType: "bill" | "service" | "installment"; // New prop to distinguish payment type
 }
 
 const PaymentModal = ({
   bill,
   isOpen,
   onClose,
+  status,
+  activePspId,
+  activePspName,
   onPaymentSuccess,
   paymentType,
 }: PaymentModalProps) => {
@@ -57,80 +64,130 @@ const PaymentModal = ({
     "success" | "failed" | null
   >(null);
   const { toast } = useToast();
-  const { remoteUtilityId, consumerId } = getLoginDataFromStorage();
+  const { remoteUtilityId, consumerId, firstName, lastName } =
+    getLoginDataFromStorage();
 
   const { mutate: payBill, isPending: isProcessing } = usePayBill();
+  const { mutate: connectPaymentMethod } = useConnectPaymentMethod();
+  const { data: user } = useGlobalUserProfile();
+  const consumerDetails = localStorage.getItem("consumerDetails");
+  const parsed = JSON.parse(consumerDetails);
+  useEffect(() => {
+    if (status === "success" || status === "failed") {
+      setPaymentComplete(true);
+      setPaymentStatus(status);
+    }
+  }, [status]);
 
+  const baseUrl = import.meta.env.VITE_PLATFORM_URL;
+
+  const paymentTypeMap: Record<string, string> = {
+    bill: "BILLING",
+    service: "SERVICE",
+    installment: "INSTALLMENT",
+  };
+
+  const tabNameMap: Record<string, string> = {
+    bill: "bills",
+    service: "services",
+    installment: "installments",
+  };
+  const tabName = tabNameMap[paymentType];
+  const paymentTypeLabel = paymentTypeMap[paymentType] || "UNKNOWN";
   const handlePayment = async () => {
-    if (!bill) return;
+    console.log("debug bill captured", bill);
+    if (!bill || !activePspId) {
+      toast({
+        title: "Error",
+        description: "Payment Method is not set from the utility yet.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    // Determine the payment amount based on payment type
-    const paymentAmount = paymentType === "bill" ? bill.outstandingAmount : bill.amount;
+    localStorage.setItem("billForPayment", JSON.stringify(bill));
 
-    // Create base payload
+    // Determine amount
+    const amount =
+      paymentType === "bill"
+        ? Number(bill?.outstandingAmount)
+        : Number(bill?.amount);
+
+    // Build conditional payment identifiers
+    const additionalFields: Record<string, any> = {};
+    if (paymentType === "installment") {
+      additionalFields["payment_installment"] = bill?.id;
+    } else if (paymentType === "service") {
+      additionalFields["consumer_support_request"] = bill?.id;
+    } else if (paymentType === "bill") {
+      additionalFields["remote_bill_id"] = bill?.billId;
+    }
+
+    // Shared base payload
     const basePayload = {
+      amount,
+      remote_consumer_id: parsed?.result?.id,
+      psp_mapping_id: activePspId,
       remote_utility_id: remoteUtilityId,
-      consumer: consumerId,
-      amount: paymentAmount,
-      payment_mode: "Online#2",
-      payment_channel: "",
-      payment_date: new Date().toISOString(),
-      status: "DEBIT",
-      source: 1,
-      payment_received_status: 0,
-      create_credit_note: false,
-      extra_data: {
-        reference_no: `SRV-${bill.id}-${Date.now()}`,
-        bill_amount: paymentType === "bill" ? bill.outstandingAmount : bill.amount,
-        payment_amount: paymentAmount,
-        outstanding_amount: paymentType === "bill" ? 0 : bill.outstandingAmount,
-        excess_refund: 0,
-        additional_notes: `${
-          paymentType === "service" ? "Service" : "Bill"
-        } payment for ${bill.type}`,
-      },
+      description: "It is a billing payment",
+      payment_type: paymentTypeLabel,
+      ...additionalFields, // Spread the conditional fields
     };
 
-    // Add payment type specific fields
-    const paymentPayload =
-      paymentType === "service"
-        ? {
-            ...basePayload,
-            consumer_support_request: bill.serviceRequestId || null,
-            payment_pay_type: 5, // Service payment type
-          }
-        : {
-            ...basePayload,
-            remote_bill_id: bill.billId, // Add remote_bill_id for bill payments
-            payment_pay_type: 2, // Bill payment type
-            // Don't include consumer_support_request for bills
-          };
+    let payload: Record<string, any> = {};
 
-    payBill(paymentPayload, {
-      onSuccess: (response) => {
-        setPaymentStatus("success");
-        setPaymentComplete(true);
+    // PSP-specific payload building
+    switch (activePspName.toLowerCase()) {
+      case "stripe":
+        payload = {
+          ...basePayload,
+          redirect_url: `${baseUrl}billing?tab=${tabName}&page=1&status=success`,
+          // redirect_url: `http://localhost:5175/billing?tab=${tabName}&page=1&status=success`,
+          cancel_url: `${baseUrl}billing?tab=${tabName}&page=1&status=failed`,
+          payment_method: "Card",
+        };
+        break;
+
+      case "doku":
+        payload = {
+          ...basePayload,
+          success_url: `${baseUrl}billing?tab=${tabName}&page=1&status=success`,
+          // success_url: `http://localhost:5175/billing?tab=${tabName}&page=1&status=success`,
+          cancel_url: `${baseUrl}billing?tab=${tabName}&page=1&status=failed`,
+          invoice_number: `INV-${Date.now()}-${parsed?.result?.id}`,
+          name: `${parsed?.result?.firstName} ${parsed?.result?.lastName}`,
+          email: parsed?.result?.email?.trim(),
+          phone: parsed?.result?.contactNumber,
+        };
+        break;
+
+      default:
         toast({
-          title: "Payment Successful!",
-          description: `Your payment of $${paymentAmount} for ${bill.type} has been processed successfully.`,
+          title: "Unsupported PSP",
+          description: `Payment provider "${activePspName}" is not supported.`,
+          variant: "destructive",
         });
+        return;
+    }
 
-        // Call the callback to refetch data
-        if (onPaymentSuccess) {
-          onPaymentSuccess();
+    console.log("debug", payload);
+
+    connectPaymentMethod(payload, {
+      onSuccess: (response) => {
+        const redirectionUrl = response?.url;
+        if (redirectionUrl) {
+          window.open(redirectionUrl, "_blank", "noopener,noreferrer");
+        } else {
+          console.error("Redirection link not found in response.");
         }
       },
       onError: (error) => {
-        setPaymentStatus("failed");
-        setPaymentComplete(true);
         toast({
-          title: "Payment Failed",
-          description:
-            "There was an error processing your payment. Please try again.",
+          title: "Error",
+          description: error.message,
           variant: "destructive",
-        });
-        console.error("Payment error:", error);
-      },
+        })
+      }
     });
   };
 
@@ -140,9 +197,8 @@ const PaymentModal = ({
     setPaymentStatus(null);
     onClose();
   };
-
   const getStatusDisplay = () => {
-    switch (paymentStatus) {
+    switch (status) {
       case "success":
         return {
           icon: "✓",
@@ -174,8 +230,8 @@ const PaymentModal = ({
   if (!bill) return null;
 
   const statusDisplay = getStatusDisplay();
-  const displayAmount = paymentType === "bill" ? bill.outstandingAmount : bill.amount;
-
+  const displayAmount =
+    paymentType === "bill" ? bill.outstandingAmount : bill.amount;
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
@@ -343,9 +399,7 @@ const PaymentModal = ({
                 disabled={isProcessing}
                 className="flex-1"
               >
-                {isProcessing
-                  ? "Processing..."
-                  : `Pay $${displayAmount}`}
+                {isProcessing ? "Processing..." : `Pay $${displayAmount}`}
               </Button>
             </div>
           )}
