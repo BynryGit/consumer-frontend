@@ -16,11 +16,13 @@ interface ImportMetaEnv {
   readonly VITE_AX_API_ENDPOINT: string;
   readonly VITE_RECEIPT_API_ENDPOINT: string;
   readonly VITE_MAPBOX_ACCESS_TOKEN: string;
+  readonly VITE_PUBLIC_POSTHOG_KEY:string
+  readonly VITE_PUBLIC_POSTHOG_HOST:string
   readonly VITE_PAYMENT_API_ENDPOINT: string;
   readonly VITE_PLATFORM_URL: string;
   // Add other env variables here
 }
 
-interface ImportMeta {
+interface ImportMeta {  
   readonly env: ImportMetaEnv;
 }
