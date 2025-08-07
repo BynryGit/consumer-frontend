@@ -180,6 +180,7 @@ const PaymentModal = ({
         } else {
           console.error("Redirection link not found in response.");
         }
+        onClose();
       },
       onError: (error) => {
         toast({
