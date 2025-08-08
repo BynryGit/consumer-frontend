@@ -113,16 +113,6 @@ const PaymentModal = ({
         ? Number(bill?.outstandingAmount)
         : Number(bill?.amount);
 
-    // Build conditional payment identifiers
-    const additionalFields: Record<string, any> = {};
-    if (paymentType === "installment") {
-      additionalFields["payment_installment"] = bill?.id;
-    } else if (paymentType === "service") {
-      additionalFields["consumer_support_request"] = bill?.id;
-    } else if (paymentType === "bill") {
-      additionalFields["remote_bill_id"] = bill?.billId;
-    }
-
     // Shared base payload
     const basePayload = {
       amount,
@@ -131,7 +121,9 @@ const PaymentModal = ({
       remote_utility_id: remoteUtilityId,
       description: "It is a billing payment",
       payment_type: paymentTypeLabel,
-      ...additionalFields, // Spread the conditional fields
+      remote_reference_entity_id:
+      paymentType === "bill" ? bill?.billId : bill?.id,
+      source: 1,
     };
 
     let payload: Record<string, any> = {};
