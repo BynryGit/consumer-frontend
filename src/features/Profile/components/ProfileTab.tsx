@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -24,6 +24,7 @@ import {
   Eye,
 } from "lucide-react";
 import { useActivityLog } from "../hooks";
+import { logEvent } from "@shared/analytics/analytics";
 
 interface ProfileTabProps {
   onEditClick: () => void;
@@ -37,6 +38,9 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ onEditClick, consumerDetailsDat
       consumer_no: remoteConsumerNumber,
       module: "cx"
     });
+    useEffect(() => {
+  logEvent("Profile Tab Viewed");
+}, []);
 
   const profileData = {
     name: consumerDetailsData?.result

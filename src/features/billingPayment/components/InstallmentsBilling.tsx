@@ -22,6 +22,7 @@ import { usePaymentAgreementDetail, usePSPConfig } from "../hooks";
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import PaymentModal from "./PaymentModal";
 import { useSearchParams } from "react-router-dom";
+import { logEvent } from "@shared/analytics/analytics";
 
 const InstallmentsBilling = () => {
   const {
@@ -36,14 +37,20 @@ const InstallmentsBilling = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const { data: pspConfig, refetch: refetchPspConfig } =
-      usePSPConfig(remoteUtilityId);
-  
-    const activePsp = pspConfig?.find((item) => item.isActive && item.verificationStatus?.toLowerCase() === 'verified');
-    const activePspUtilityId = activePsp?.pspUtilityId;
-    const activePspName = activePsp?.organizationName;
+    usePSPConfig(remoteUtilityId);
+
+  const activePsp = pspConfig?.find(
+    (item) =>
+      item.isActive && item.verificationStatus?.toLowerCase() === "verified"
+  );
+  const activePspUtilityId = activePsp?.pspUtilityId;
+  const activePspName = activePsp?.organizationName;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const status = searchParams.get("status");
+  useEffect(() => {
+    logEvent("Installments Tab Viewed");
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem("pendingInstallmentPayment");
@@ -205,7 +212,7 @@ const InstallmentsBilling = () => {
     })) || [];
 
   const handlePayment = (installment) => {
-    console.log('debug installment selected', installment);
+    console.log("debug installment selected", installment);
     localStorage.setItem(
       "pendingInstallmentPayment",
       JSON.stringify(installment)
@@ -219,14 +226,14 @@ const InstallmentsBilling = () => {
     refetchPaymentAgreement();
   };
 
- const handleCloseModal = () => {
-  setIsPaymentModalOpen(false);
-  setSelectedInstallment(null);
-  localStorage.removeItem("pendingInstallmentPayment");
+  const handleCloseModal = () => {
+    setIsPaymentModalOpen(false);
+    setSelectedInstallment(null);
+    localStorage.removeItem("pendingInstallmentPayment");
 
-  searchParams.delete("status");
-  setSearchParams(searchParams, { replace: true });
-};
+    searchParams.delete("status");
+    setSearchParams(searchParams, { replace: true });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
