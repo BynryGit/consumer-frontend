@@ -393,6 +393,7 @@ const InstallmentsBilling = () => {
         activePspId={activePspUtilityId}
         activePspName={activePspName}
         status={status}
+        setIsPaymentModalOpen={setIsPaymentModalOpen}
       />
     </div>
   );

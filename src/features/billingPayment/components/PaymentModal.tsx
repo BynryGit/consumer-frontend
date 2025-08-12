@@ -41,6 +41,7 @@ interface PaymentModalProps {
   bill: any | null;
   isOpen: boolean;
   onClose: () => void;
+  setIsPaymentModalOpen: (boolean) => void; // taking state function to close the modal when redirecting to payment portal so that when opened previous tab it will remain closed.
   status?: string;
   activePspId?: number;
   activePspName?: string;
@@ -52,6 +53,7 @@ const PaymentModal = ({
   bill,
   isOpen,
   onClose,
+  setIsPaymentModalOpen,
   status,
   activePspId,
   activePspName,
@@ -127,7 +129,14 @@ const PaymentModal = ({
     };
 
     let payload: Record<string, any> = {};
-
+    if (!activePspName || !activePspId) {
+      toast({
+        title: "Error",
+        description: 'Cannot find any active payment method.',
+        variant: 'destructive'
+      })
+      return;
+    }
     // PSP-specific payload building
     switch (activePspName.toLowerCase()) {
       case "stripe":
@@ -144,7 +153,7 @@ const PaymentModal = ({
         payload = {
           ...basePayload,
           success_url: `${baseUrl}billing?tab=${tabName}&page=1&status=success`,
-          // success_url: `http://localhost:5175/billing?tab=${tabName}&page=1&status=success`,
+          // success_url: `http://localhost:5173/billing?tab=${tabName}&page=1&status=success`,
           cancel_url: `${baseUrl}billing?tab=${tabName}&page=1&status=failed`,
           invoice_number: `INV-${Date.now()}-${parsed?.result?.id}`,
           name: `${parsed?.result?.firstName} ${parsed?.result?.lastName}`,
@@ -172,7 +181,7 @@ const PaymentModal = ({
         } else {
           console.error("Redirection link not found in response.");
         }
-        onClose();
+        setIsPaymentModalOpen(false);
       },
       onError: (error) => {
         toast({
@@ -279,7 +288,7 @@ const PaymentModal = ({
                 <span className="text-muted-foreground">
                   {paymentType === "service" ? "Service Type:" : "Bill Type:"}
                 </span>
-                <span className="font-medium">{bill.type}</span>
+                <span className="font-medium">{paymentType === "service" ? "Service" : "Bill"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Payment Method:</span>
