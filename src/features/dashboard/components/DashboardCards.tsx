@@ -120,7 +120,7 @@ const DashboardCards = ({ consumerBillData }: DashboardCardsProps) => {
         <CardContent className="flex-grow">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-2xl font-bold">₹{billData?.billAmount || 0}</div>
+              <div className="text-2xl font-bold">${billData?.billAmount || 0}</div>
               <div className="flex items-center gap-2 mt-1">
                 <Badge 
                   variant={
