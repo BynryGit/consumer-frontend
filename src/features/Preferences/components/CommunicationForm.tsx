@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Bell, Mail, Phone, Save, Clock } from 'lucide-react';
 import { useAddPreferences, useConsumerDetails } from '../hooks';
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
+import { logEvent } from '@shared/analytics/analytics';
 
 
 const communicationSchema = z.object({
@@ -32,6 +33,10 @@ const { data: consumerData } = useConsumerDetails({
       remote_utility_id: remoteUtilityId,
       consumer_no: remoteConsumerNumber,
     });
+
+    useEffect(() => {
+  logEvent("Preference Page Viewed");
+}, []);
 const communicationArray = consumerData?.result?.additionalData?.communication || [];
 const preferencesData = consumerData?.result?.additionalData?.preferences || {};
 
@@ -95,7 +100,7 @@ useEffect(() => {
       id: consumerId,
       payload
     });
-
+  logEvent("Preferences Saved");
     toast({
       title: 'Preferences Updated',
       description: 'Your communication preferences have been saved.'

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -33,6 +33,7 @@ import { usePayementHistory } from "../hooks";
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import { PaymentFilterPanel } from "./PaymentHistoryFilter";
 import { useSearchParams } from "react-router-dom";
+import { logEvent } from "@shared/analytics/analytics";
 
 interface PaymentFilters {
   status?: number[];
@@ -95,6 +96,9 @@ const PaymentHistory = () => {
     setVisibleCount(5); // Reset visible count when searching
   };
 
+  useEffect(() => {
+    logEvent("Payment History Tab Viewed");
+  }, []);
   // Debounced search effect
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -110,7 +114,7 @@ const PaymentHistory = () => {
 
     return apiResults.map((payment) => ({
       id: payment.id,
-      receiptNo:payment.receiptNo,
+      receiptNo: payment.receiptNo,
       date: payment.paymentDate,
       amount: payment.amount,
       method: payment.paymentMode,
@@ -125,7 +129,7 @@ const PaymentHistory = () => {
       paymentChannel: payment.paymentChannel,
       transactionId: payment.transactionId,
       consumerInfo: payment.consumer,
-      referenceNo:payment.referenceNo
+      referenceNo: payment.referenceNo,
     }));
   };
 
@@ -300,7 +304,9 @@ const PaymentHistory = () => {
                       <p className="text-sm text-muted-foreground">
                         Payment For
                       </p>
-                      <p className="font-medium">{payment.paymentType}-{payment.referenceNo}</p>
+                      <p className="font-medium">
+                        {payment.paymentType}-{payment.referenceNo}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -369,9 +375,9 @@ const PaymentHistory = () => {
                         Payment ID
                       </label>
                       <p className="text-lg font-semibold">
-                       {selectedPayment.receiptNo}
+                        {selectedPayment.receiptNo}
                       </p>
-                    </div>  
+                    </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">
                         Amount

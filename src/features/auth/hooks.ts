@@ -7,6 +7,7 @@ import type { ConsumerWebLoginPayload, forgotPassword, UserProfile } from "./typ
 import { QueryKeyFactory } from "@shared/api/queries/queryKeyFactory";
 import { globalQueryClient } from "@shared/api/queries/queryClients";
 import { useSmartMutation, useSmartQuery } from "@shared/api/queries/hooks";
+import { logEvent, setUserAndProps } from "@shared/analytics/analytics";
 
 interface User {
   id: string;
@@ -72,9 +73,19 @@ export const useAuth = (): UseAuthReturn => {
 
       // If no cached data, fetch from API
       const response = await authApi.getUserProfile();
+         setUserAndProps(String(response?.user?.id), {
+        name: response?.user?.name,
+        role: response?.roleCode,
+        email: response?.user?.email,
+        username: response?.user?.username,
+      })
+      logEvent("Login Success", {
+      email: response?.user?.email,
+      timestamp: new Date().toISOString(),
+    });
       // Store in localStorage as backup
       localStorage.setItem(CACHED_PROFILE_KEY, JSON.stringify(response));
-      return response;
+      return response;  
     },
     enabled: !!user, // Only fetch when user is logged in
     staleTime: 5 * 60 * 1000, // 5 minutes

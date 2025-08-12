@@ -6,6 +6,7 @@ import { Calendar, ChevronDown, Lightbulb, Droplet, Flame, Zap } from 'lucide-re
 import { LucideIcon } from 'lucide-react';
 import ReadingsTable from './ReadingsTable';
 import { useMeterList } from '../hooks';
+import { logEvent } from '@shared/analytics/analytics';
 
 interface Reading {
   date: string;
@@ -52,6 +53,10 @@ const ConnectionTab: React.FC<ConnectionTabProps> = ({ consumerDetailsData }) =>
     page: 1,
     limit: 10,
   });
+
+  useEffect(() => {
+  logEvent("Connection Tab Viewed");
+}, []);
 
   // Function to get utility icon and colors based on service type
   const getUtilityConfig = (utilityService: string) => {

@@ -123,3 +123,24 @@ export const usePaymentPayType = (params: { remote_utility_id: string }) => {
     () => billingApi.getPaymentPayType(params)
   );
 };
+
+export const usePSPConfig = (remoteUtilityId: string) =>
+  useSmartQuery(
+    QueryKeyFactory.module.payments.pspConfig(),
+    () =>
+      billingApi.getPSPConfigurationDetails(remoteUtilityId),
+    {
+      enabled: !!remoteUtilityId,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      retry: false,
+      staleTime: 0,
+    }
+  );
+
+export const useConnectPaymentMethod = (payload?: any) => {
+  return useSmartMutation(billingApi.connectPaymentMethod, {
+    ...payload,
+    onSuccess: () => {},
+  });
+};
