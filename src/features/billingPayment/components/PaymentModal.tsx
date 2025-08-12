@@ -24,6 +24,7 @@ import {
 import { useConnectPaymentMethod, usePayBill } from "../hooks";
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import { useGlobalUserProfile } from "@shared/hooks/useGlobalUser";
+import { logEvent } from "@shared/analytics/analytics";
 
 interface Bill {
   id: string;
@@ -95,7 +96,16 @@ const PaymentModal = ({
   const tabName = tabNameMap[paymentType];
   const paymentTypeLabel = paymentTypeMap[paymentType] || "UNKNOWN";
   const handlePayment = async () => {
-    console.log("debug bill captured", bill);
+    logEvent("Payment Initiated", {
+      paymentType,
+      billId: bill.id,
+      amount:
+        paymentType === "bill"
+          ? Number(bill?.outstandingAmount)
+          : Number(bill?.amount),
+      paymentMethod,
+      pspName: activePspName,
+    });
     if (!bill || !activePspId) {
       toast({
         title: "Error",
@@ -174,6 +184,12 @@ const PaymentModal = ({
 
     connectPaymentMethod(payload, {
       onSuccess: (response) => {
+        logEvent("Payment Success", {
+          paymentType,
+          billId: bill.id,
+          amount: amount,
+          pspName: activePspName,
+        });
         const redirectionUrl = response?.url;
         if (redirectionUrl) {
           window.open(redirectionUrl, "_blank", "noopener,noreferrer");
@@ -183,12 +199,19 @@ const PaymentModal = ({
         onClose();
       },
       onError: (error) => {
+        logEvent("Payment Failed", {
+          paymentType,
+          billId: bill.id,
+          amount: amount,
+          pspName: activePspName,
+          error: error.message,
+        });
         toast({
           title: "Error",
           description: error.message,
           variant: "destructive",
-        })
-      }
+        });
+      },
     });
   };
 
@@ -229,6 +252,15 @@ const PaymentModal = ({
   };
 
   if (!bill) return null;
+  useEffect(() => {
+    if (isOpen && bill) {
+      logEvent("Payment Modal Opened", {
+        paymentType,
+        billId: bill.id,
+        amount: paymentType === "bill" ? bill.outstandingAmount : bill.amount,
+      });
+    }
+  }, [isOpen, bill, paymentType]);
 
   const statusDisplay = getStatusDisplay();
   const displayAmount =

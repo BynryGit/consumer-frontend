@@ -16,6 +16,7 @@ import { usePSPConfig, useServicesData } from "../hooks";
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import { useNavigate } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
+import { logEvent } from "@shared/analytics/analytics";
 
 // Service interface
 interface Service {
@@ -51,7 +52,10 @@ const ServicesBilling = () => {
   const { data: pspConfig, refetch: refetchPspConfig } =
     usePSPConfig(remoteUtilityId);
 
-  const activePsp = pspConfig?.find((item) => item.isActive && item.verificationStatus?.toLowerCase() === 'verified');
+  const activePsp = pspConfig?.find(
+    (item) =>
+      item.isActive && item.verificationStatus?.toLowerCase() === "verified"
+  );
   const activePspUtilityId = activePsp?.pspUtilityId;
   const activePspName = activePsp?.organizationName;
   // Transform API data to match Service interface
@@ -71,12 +75,14 @@ const ServicesBilling = () => {
         "Service request",
       completionDate: item.closeDate || "NA",
     })) || [];
-
+  useEffect(() => {
+    logEvent("Services Tab Viewed");
+  }, []);
   // Get summary data from API
   const summaryData = data?.result?.summary;
 
   const handlePayment = (service: Service) => {
-    console.log('debug service selected', service)
+    console.log("debug service selected", service);
     const billData = {
       id: service.requestNumber,
       date: service.requestDate,
@@ -96,14 +102,14 @@ const ServicesBilling = () => {
   };
 
   const handlePaymentModalClose = () => {
-  setIsPaymentModalOpen(false);
-  setSelectedServiceForPayment(null);
-  localStorage.removeItem("pendingServicePayment");
+    setIsPaymentModalOpen(false);
+    setSelectedServiceForPayment(null);
+    localStorage.removeItem("pendingServicePayment");
 
-  // Remove only the status param
-  searchParams.delete("status");
-  setSearchParams(searchParams, { replace: true });
-};
+    // Remove only the status param
+    searchParams.delete("status");
+    setSearchParams(searchParams, { replace: true });
+  };
 
   const handlePaymentSuccess = () => {
     // Refetch the services data to get updated payment statuses
@@ -133,13 +139,13 @@ const ServicesBilling = () => {
   const hasMoreServices = visibleCount < servicesData.length;
 
   useEffect(() => {
-  const stored = localStorage.getItem("pendingServicePayment");
+    const stored = localStorage.getItem("pendingServicePayment");
 
-  if ((status === "success" || status === "failed") && stored) {
-    setSelectedServiceForPayment(JSON.parse(stored));
-    setIsPaymentModalOpen(true);
-  }
-}, [status]);
+    if ((status === "success" || status === "failed") && stored) {
+      setSelectedServiceForPayment(JSON.parse(stored));
+      setIsPaymentModalOpen(true);
+    }
+  }, [status]);
 
   return (
     <div className="space-y-6">
