@@ -281,6 +281,7 @@ const BillsTable = () => {
         status={searchParams.get("status")}
         activePspId={activePspUtilityId}
         activePspName={activePspName}
+        setIsPaymentModalOpen={setIsPaymentModalOpen}
       />
     </div>
   );
