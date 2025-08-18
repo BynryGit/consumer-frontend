@@ -120,7 +120,7 @@ const PaymentModal = ({
       amount,
       remote_consumer_id: parsed?.result?.id,
       psp_mapping_id: activePspId,
-      remote_utility_id: remoteUtilityId,
+      remote_utility_id: Number(remoteUtilityId),
       description: "It is a billing payment",
       payment_type: paymentTypeLabel,
       remote_reference_entity_id:
