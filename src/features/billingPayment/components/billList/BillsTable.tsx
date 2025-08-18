@@ -13,7 +13,6 @@ import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PAGE_SIZE } from "@shared/utils/constants";
 import { useToast } from "@shared/hooks/use-toast"; // Changed from sonner
-import { logEvent } from "@shared/analytics/analytics";
 
 // Bill interface
 interface Bill {
@@ -54,10 +53,7 @@ const BillsTable = () => {
   const { data: pspConfig, refetch: refetchPspConfig } =
     usePSPConfig(remoteUtilityId);
 
-  const activePsp = pspConfig?.find(
-    (item) =>
-      item.isActive && item.verificationStatus?.toLowerCase() === "verified"
-  );
+  const activePsp = pspConfig?.find((item) => item.isActive && item.verificationStatus?.toLowerCase() === 'verified');
   const activePspUtilityId = activePsp?.pspUtilityId;
   const activePspName = activePsp?.organizationName;
 
@@ -113,9 +109,7 @@ const BillsTable = () => {
   const billSummary = useMemo(() => {
     return billDetailsData?.results?.billSummary;
   }, [billDetailsData]);
-  useEffect(() => {
-    logEvent("Bills Tab Viewed");
-  }, []);
+
   const handleSearch = (searchTerm: string, paramName: "search_data") => {
     const params = new URLSearchParams(searchParams);
 
@@ -140,7 +134,7 @@ const BillsTable = () => {
   };
 
   const handlePayNow = (bill: any) => {
-    console.log("debug bill selected", bill);
+    console.log('debug bill selected', bill);
     setSelectedBill({ ...bill, activePspUtilityId, activePspName });
     setIsPaymentModalOpen(true);
   };
