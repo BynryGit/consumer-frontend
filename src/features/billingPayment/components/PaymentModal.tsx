@@ -63,7 +63,7 @@ const PaymentModal = ({
   const [paymentMethod, setPaymentMethod] = useState("online");
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<
-    "success" | "failed" | null
+    "success" | "failed" | "inProgress" | null
   >(null);
   const { toast } = useToast();
   const { remoteUtilityId, consumerId, firstName, lastName } =
@@ -71,8 +71,7 @@ const PaymentModal = ({
 
   const { mutate: payBill, isPending: isProcessing } = usePayBill();
   const { mutate: connectPaymentMethod } = useConnectPaymentMethod();
-  const { data: user } = useGlobalUserProfile();
-  const consumerDetails = localStorage.getItem("consumerDetails");
+  const consumerDetails = localStorage.getItem("loginResult");
   const parsed = JSON.parse(consumerDetails);
   useEffect(() => {
     if (status === "success" || status === "failed") {
@@ -118,13 +117,17 @@ const PaymentModal = ({
     // Shared base payload
     const basePayload = {
       amount,
-      remote_consumer_id: parsed?.result?.id,
+      remote_consumer_id: parsed?.result?.consumerId,
       psp_mapping_id: activePspId,
       remote_utility_id: Number(remoteUtilityId),
       description: "It is a billing payment",
       payment_type: paymentTypeLabel,
       remote_reference_entity_id:
-      paymentType === "bill" ? bill?.billId : bill?.id,
+        paymentType === "bill"
+          ? bill?.billId
+          : bill?.serviceRequestId
+          ? bill?.serviceRequestId
+          : bill?.id,
       source: 1,
     };
 
@@ -132,9 +135,9 @@ const PaymentModal = ({
     if (!activePspName || !activePspId) {
       toast({
         title: "Error",
-        description: 'Cannot find any active payment method.',
-        variant: 'destructive'
-      })
+        description: "Cannot find any active payment method.",
+        variant: "destructive",
+      });
       return;
     }
     // PSP-specific payload building
@@ -155,10 +158,10 @@ const PaymentModal = ({
           success_url: `${baseUrl}billing?tab=${tabName}&page=1&status=success`,
           // success_url: `http://localhost:5173/billing?tab=${tabName}&page=1&status=success`,
           cancel_url: `${baseUrl}billing?tab=${tabName}&page=1&status=failed`,
-          invoice_number: `INV-${Date.now()}-${parsed?.result?.id}`,
+          invoice_number: `INV-${Date.now()}-${parsed?.result?.user?.id}`,
           name: `${parsed?.result?.firstName} ${parsed?.result?.lastName}`,
-          email: parsed?.result?.email?.trim(),
-          phone: parsed?.result?.contactNumber,
+          email: parsed?.result?.user?.email?.trim(),
+          phone: parsed?.result?.mobileNo,
         };
         break;
 
@@ -188,8 +191,8 @@ const PaymentModal = ({
           title: "Error",
           description: error.message,
           variant: "destructive",
-        })
-      }
+        });
+      },
     });
   };
 
@@ -288,7 +291,9 @@ const PaymentModal = ({
                 <span className="text-muted-foreground">
                   {paymentType === "service" ? "Service Type:" : "Bill Type:"}
                 </span>
-                <span className="font-medium">{paymentType === "service" ? "Service" : "Bill"}</span>
+                <span className="font-medium">
+                  {paymentType === "service" ? "Service" : "Bill"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Payment Method:</span>
@@ -334,7 +339,7 @@ const PaymentModal = ({
                   </span>
                   <span className="flex items-center gap-1 text-sm">
                     <Calendar className="h-3 w-3" />
-                    {new Date(bill.date).toLocaleDateString()}
+                    {bill.date}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -343,7 +348,7 @@ const PaymentModal = ({
                   </span>
                   <span className="flex items-center gap-1 text-sm">
                     <Calendar className="h-3 w-3" />
-                    {new Date(bill.dueDate).toLocaleDateString()}
+                    {bill.dueDate}
                   </span>
                 </div>
                 <Separator />
