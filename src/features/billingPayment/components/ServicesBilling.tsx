@@ -70,6 +70,7 @@ const ServicesBilling = () => {
         item.utilitySupportRequest?.name ||
         "Service request",
       completionDate: item.closeDate || "NA",
+      additionalData: item?.additionalData || {},
     })) || [];
 
   // Get summary data from API
@@ -217,7 +218,7 @@ const ServicesBilling = () => {
 
                 <div className="flex items-center justify-end pt-2">
                   <div className="flex items-center gap-2">
-                    {service.status === "Unpaid" && (
+                    {service?.additionalData?.transactionStatusDisplay === "Un-paid" && (
                       <Button
                         size="sm"
                         onClick={() => handlePayment(service)}
@@ -226,7 +227,7 @@ const ServicesBilling = () => {
                         Pay Now
                       </Button>
                     )}
-                    {service.status === "Paid" && (
+                    {service?.additionalData?.transactionStatusDisplay === "Paid" && (
                       <Badge
                         variant="outline"
                         className="text-green-600 border-green-600 text-xs"

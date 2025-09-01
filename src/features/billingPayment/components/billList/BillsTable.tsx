@@ -85,7 +85,6 @@ const BillsTable = () => {
   }, [searchParams]);
 
   const { data: billDetailsData, refetch } = useConsumerBillDetails(filters);
-
   const bills: Bill[] = useMemo(() => {
     if (!billDetailsData?.results?.billData) return [];
 
@@ -99,8 +98,9 @@ const BillsTable = () => {
         outstandingAmount: billData.outstandingBalance,
         status: billData.outstandingBalance > 0 ? "Unpaid" : "Paid",
         dueDate: billData.dueDate,
-        type: billData.type || "",
+        type: billData.type || "Bill",
         billIndex: index,
+        paymentData: billData.paymentData,
       })
     );
   }, [billDetailsData]);
@@ -133,11 +133,41 @@ const BillsTable = () => {
     setPage(newPage);
   };
 
-  const handlePayNow = (bill: any) => {
-    console.log('debug bill selected', bill);
+ const handlePayNow = (bill: any) => {
+  console.log("debug bill selected", bill);
+
+  const { paymentData } = bill;
+
+  // Case 1: No paymentData present
+  if (!Array.isArray(paymentData)) {
     setSelectedBill({ ...bill, activePspUtilityId, activePspName });
     setIsPaymentModalOpen(true);
-  };
+    return;
+  }
+
+  // Case 2: paymentData exists
+  const hasPending = paymentData.some((p: any) => p.paymentReceivedStatus === 0);
+  if (hasPending) {
+    toast({
+      title: "Payment In Progress.",
+      description: "Your payment is still in progress. Please check again later.",
+    })
+    return;
+  }
+
+  const hasReceived = paymentData.some((p: any) => p.paymentReceivedStatus === 1);
+  if (hasReceived) {
+    toast({
+      title: "Payment Completed",
+      description: "This payment is successfully completed and received.",
+    })
+    return;
+  }
+
+  // Case 3: Otherwise, proceed
+  setSelectedBill({ ...bill, activePspUtilityId, activePspName });
+  setIsPaymentModalOpen(true);
+};
 
   // Updated download handler with custom toast
   const handleDownloadBill = (bill: Bill) => {
