@@ -155,8 +155,8 @@ const PaymentModal = ({
       case "doku":
         payload = {
           ...basePayload,
-          // success_url: `${baseUrl}billing?tab=${tabName}&page=1&status=success`,
-          success_url: `http://localhost:5173/billing?tab=${tabName}&page=1&status=success`,
+          success_url: `${baseUrl}billing?tab=${tabName}&page=1&status=success`,
+          // success_url: `http://localhost:5173/billing?tab=${tabName}&page=1&status=success`,
           cancel_url: `${baseUrl}billing?tab=${tabName}&page=1&status=failed`,
           invoice_number: `INV-${Date.now()}-${parsed?.result?.user?.id}`,
           name: `${parsed?.result?.firstName} ${parsed?.result?.lastName}`,
