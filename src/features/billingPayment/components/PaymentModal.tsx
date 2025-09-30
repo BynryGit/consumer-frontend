@@ -155,8 +155,8 @@ const PaymentModal = ({
       case "doku":
         payload = {
           ...basePayload,
-          success_url: `${baseUrl}billing?tab=${tabName}&page=1&status=success`,
-          // success_url: `http://localhost:5173/billing?tab=${tabName}&page=1&status=success`,
+          // success_url: `${baseUrl}billing?tab=${tabName}&page=1&status=success`,
+          success_url: `http://localhost:5173/billing?tab=${tabName}&page=1&status=success`,
           cancel_url: `${baseUrl}billing?tab=${tabName}&page=1&status=failed`,
           invoice_number: `INV-${Date.now()}-${parsed?.result?.user?.id}`,
           name: `${parsed?.result?.firstName} ${parsed?.result?.lastName}`,
@@ -178,11 +178,31 @@ const PaymentModal = ({
 
     connectPaymentMethod(payload, {
       onSuccess: (response) => {
-        const redirectionUrl = response?.url;
-        if (redirectionUrl) {
-          window.open(redirectionUrl, "_blank", "noopener,noreferrer");
-        } else {
-          console.error("Redirection link not found in response.");
+        // // ---- DOKU Version 1 Handling ----
+        if (response?.formData && response?.url) {
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = response.url;
+          form.target = "_blank";
+          form.style.display = "none";
+
+          Object.entries(response.formData).forEach(([key, value]) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = key; // force uppercase field names
+            input.value = value as string;
+            form.appendChild(input);
+          });
+
+          document.body.appendChild(form);
+          form.submit();
+          return;
+        }
+
+        // ---- DOKU Version 2 or Stripe ----
+        else if (response?.url) {
+          window.open(response.url, "_blank", "noopener,noreferrer");
+          return;
         }
         setIsPaymentModalOpen(false);
       },
