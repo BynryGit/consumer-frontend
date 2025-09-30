@@ -175,7 +175,11 @@ const PaymentModal = ({
     }
 
     console.log("debug", payload);
-
+    // For DOKU v1 → API responds with `formData` + `url`.
+    //   We must construct a hidden POST form, attach all fields from formData,
+    //   and submit it to the given URL (opens in new tab).
+    // For DOKU v2 or Stripe → API responds with only `url`,
+    //   so we just open the URL in a new tab directly.
     connectPaymentMethod(payload, {
       onSuccess: (response) => {
         // // ---- DOKU Version 1 Handling ----
@@ -196,12 +200,14 @@ const PaymentModal = ({
 
           document.body.appendChild(form);
           form.submit();
+          setIsPaymentModalOpen(false);
           return;
         }
 
         // ---- DOKU Version 2 or Stripe ----
         else if (response?.url) {
           window.open(response.url, "_blank", "noopener,noreferrer");
+          setIsPaymentModalOpen(false);
           return;
         }
         setIsPaymentModalOpen(false);
