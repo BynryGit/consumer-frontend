@@ -175,14 +175,40 @@ const PaymentModal = ({
     }
 
     console.log("debug", payload);
-
+    // For DOKU v1 → API responds with `formData` + `url`.
+    //   We must construct a hidden POST form, attach all fields from formData,
+    //   and submit it to the given URL (opens in new tab).
+    // For DOKU v2 or Stripe → API responds with only `url`,
+    //   so we just open the URL in a new tab directly.
     connectPaymentMethod(payload, {
       onSuccess: (response) => {
-        const redirectionUrl = response?.url;
-        if (redirectionUrl) {
-          window.open(redirectionUrl, "_blank", "noopener,noreferrer");
-        } else {
-          console.error("Redirection link not found in response.");
+        // // ---- DOKU Version 1 Handling ----
+        if (response?.formData && response?.url) {
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = response.url;
+          form.target = "_blank";
+          form.style.display = "none";
+
+          Object.entries(response.formData).forEach(([key, value]) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = key; // force uppercase field names
+            input.value = value as string;
+            form.appendChild(input);
+          });
+
+          document.body.appendChild(form);
+          form.submit();
+          setIsPaymentModalOpen(false);
+          return;
+        }
+
+        // ---- DOKU Version 2 or Stripe ----
+        else if (response?.url) {
+          window.open(response.url, "_blank", "noopener,noreferrer");
+          setIsPaymentModalOpen(false);
+          return;
         }
         setIsPaymentModalOpen(false);
       },
