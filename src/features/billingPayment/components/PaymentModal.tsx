@@ -80,7 +80,7 @@ const PaymentModal = ({
     }
   }, [status]);
 
-  const baseUrl = import.meta.env.VITE_PLATFORM_URL;
+  const baseUrl = import.meta.env.VITE_PAYMENT_API_ENDPOINT;
 
   const paymentTypeMap: Record<string, string> = {
     bill: "BILLING",
@@ -155,9 +155,9 @@ const PaymentModal = ({
       case "doku":
         payload = {
           ...basePayload,
-          success_url: `${baseUrl}billing?tab=${tabName}&page=1&status=success`,
+          success_url: `${baseUrl}doku/redirect/`,
           // success_url: `http://localhost:5173/billing?tab=${tabName}&page=1&status=success`,
-          cancel_url: `${baseUrl}billing?tab=${tabName}&page=1&status=failed`,
+          cancel_url: `${baseUrl}doku/redirect/`,
           invoice_number: `INV-${Date.now()}-${parsed?.result?.user?.id}`,
           name: `${parsed?.result?.firstName} ${parsed?.result?.lastName}`,
           email: parsed?.result?.user?.email?.trim(),
