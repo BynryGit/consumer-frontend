@@ -8,12 +8,16 @@
     "staging": "vite --mode staging",
     "prod": "vite --mode production",
     "new": "vite --mode new",
+    "sandbox": "vite --mode sandbox",
+
 
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "build:staging": "vite build --mode staging",
     "build:prod": "vite build --mode production",
     "build:new": "vite build --mode new",
+    "build:sandbox": "vite build --mode sandbox",
+
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "serve": "vite preview --host"
