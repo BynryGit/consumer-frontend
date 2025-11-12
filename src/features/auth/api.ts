@@ -148,3 +148,38 @@ export const resetPassword = async (
   const response = await authApiClient.post(url, payload);
   return response.data;
 };
+
+export const getNscResponseTimeConfiguration = async (
+  remote_utility_id: string
+): Promise<any> => {
+  try {
+    const url = ApiEndpoints.createUrlWithQueryParameters(
+      "cx",
+      "nsc-connection-configuration",
+      (query) => {
+        query.push("remote_utility_id", remote_utility_id);
+      }
+    );
+    const response = await cxApiClient.get(url);
+    const result = response.data.result || response.data;
+    // :white_check_mark: Automatically store in localStorage after successful fetch
+    if (result) {
+      localStorage.setItem("NSC-Configuration", JSON.stringify(result));
+      console.log(":white_check_mark: NSC configuration saved to localStorage");
+    }
+    return result;
+  } catch (error) {
+    console.error(":x: Failed to fetch NSC configuration:", error);
+    throw error; // rethrow so hook/query can handle it
+  }
+};
+
+
+
+
+
+
+
+
+
+
