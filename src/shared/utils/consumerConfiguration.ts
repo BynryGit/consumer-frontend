@@ -15,6 +15,8 @@ interface TerritoryAddressData {
   area?: string;
   subArea?: string;
   premise?: string;
+  unit?: string;
+  zipcode?: string;
 }
 
 interface AddressConfiguration {
@@ -106,19 +108,21 @@ export const formatTerritoryAddress = (
     const configData: AddressConfiguration = addressConfig.configurationData;
 
     // Mapping between config keys (uppercase) and interface keys (camelCase)
-    const fieldMapping: Record<string, keyof TerritoryAddressData> = {
-      'region': 'region',
-      'country': 'country',
-      'state': 'state',
-      'county': 'county',
-      'zone': 'zone',
-      'division': 'division',
-      'area': 'area',
-      'sub_area': 'subArea',
-      'subarea': 'subArea',
-      'premise': 'premise',
-    };
-
+        const fieldMapping: Record<string, keyof TerritoryAddressData> = {
+          'region': 'region',
+          'country': 'country',
+          'state': 'state',
+          'county': 'county',
+          'zone': 'zone',
+          'division': 'division',
+          'area': 'area',
+          'sub_area': 'subArea',
+          'subarea': 'subArea',
+          'premise': 'premise',
+          'unit': 'unit',
+          'zipcode': 'zipcode',
+        };
+    
     // Create array of [fieldName, orderValue] and sort by order
     const sortedFields = Object.entries(configData)
       .map(([fieldKey, orderValue]) => ({
@@ -180,6 +184,8 @@ export const getAddressField = (
       'sub_area': 'subArea',
       'subarea': 'subArea',
       'premise': 'premise',
+      'unit': 'unit',
+      'zipcode': 'zipcode',
     };
     
     const mappedKey = fieldMapping[fieldName.toLowerCase()];
@@ -250,21 +256,23 @@ export const getConfiguredDocumentTypes = (): DocumentCardConfig[] => {
     const documentTypes: DocumentCardConfig[] = [];
 
     Object.entries(configData).forEach(([key, value]) => {
-      // Only include enabled document types (value === 1)
-      if (value === 1) {
+      // Include both required (value === 1) and optional (value === 0) document types
+      if (value === 1 || value === 0) {
         const { name, code } = parseDocumentKey(key);
-        console.log(`➕ Enabling Document Type: ${name} (Full Code: ${code})`);
+        const isRequired = value === 1;
+        
+        console.log(`➕ ${isRequired ? 'Required' : 'Optional'} Document Type: ${name} (Full Code: ${code})`);
         
         documentTypes.push({
-          id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          id: code,
           name: name,
           code: code, // Using the full key like "Skills Documents#3"
-          required: true,
+          required: isRequired, // Set required based on value
         });
       }
     });
 
-    console.log("📋 Enabled Document Types:", documentTypes);
+    console.log("📋 All Document Types (Required + Optional):", documentTypes);
     return documentTypes;
   } catch (error) {
     console.error("❌ Error reading document configuration:", error);
