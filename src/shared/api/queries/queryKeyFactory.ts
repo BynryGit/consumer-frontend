@@ -135,7 +135,7 @@ export type ActionType =
   | "createMode"
   | "updateMode";
 
-export type ModuleType = "auth" | "cx" | "global";
+export type ModuleType = "auth" | "cx" | "payment" | "global";
 
 // Query key factory following entity-first pattern
 export class QueryKeyFactory {
@@ -466,6 +466,13 @@ export class QueryKeyFactory {
         ],
       },
     },
+    payments:{
+      pspConfig: (
+    ): [ModuleType, "psp-config"] => [
+      "payment",
+      "psp-config",
+    ],
+    }
   };
 
   // Utility methods

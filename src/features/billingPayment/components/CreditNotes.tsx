@@ -14,6 +14,7 @@ import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import { useCreditNoteList } from "../hooks";
 import { useSearchParams } from "react-router-dom";
 import { PAGE_SIZE } from "@shared/utils/constants";
+import { logEvent } from "@shared/analytics/analytics";
 
 // Credit Note interface
 interface CreditNote {
@@ -48,7 +49,7 @@ const CreditNotes = () => {
   const filters = useMemo((): CreditNoteFilters => {
     const urlFilters: CreditNoteFilters = {
       remote_utility_id: remoteUtilityId,
-      consumer_id:consumerId,
+      consumer_id: consumerId,
       payment_pay_type: "3",
       page: page,
       limit: PAGE_SIZE,
@@ -63,6 +64,9 @@ const CreditNotes = () => {
     return urlFilters;
   }, [searchParams, page]);
 
+  useEffect(() => {
+    logEvent("Credit Notes Tab Viewed");
+  }, []);
   // Update page when URL page param changes
   useEffect(() => {
     const pageParam = searchParams.get("page");
@@ -73,18 +77,19 @@ const CreditNotes = () => {
 
   const { data } = useCreditNoteList(filters);
 
-  const transformedData: CreditNote[] = data?.results?.map((item: any) => ({
-    id: item.receiptNo,
-    consumer: item.consumerName,
-    consumerId: item.consumerNo,
-    amount: item.amount,
-    remaining: 0,
-    reason: item.creditNoteReason,
-    status: item.paymentReceivedStatus,
-    createdDate: item.createdDate,
-    isPaymentConsiled:item.isPaymentConsiled,
-    linkedPayment: item.referenceReceiptNo,
-  })) || [];
+  const transformedData: CreditNote[] =
+    data?.results?.map((item: any) => ({
+      id: item.receiptNo,
+      consumer: item.consumerName,
+      consumerId: item.consumerNo,
+      amount: item.amount,
+      remaining: item.isPaymentConsiled ? 0 : item.amount,
+      reason: item.creditNoteReason,
+      status: item.paymentReceivedStatus,
+      createdDate: item.createdDate,
+      isPaymentConsiled: item.isPaymentConsiled,
+      linkedPayment: item.referenceReceiptNo,
+    })) || [];
 
   const [selectedCreditNote, setSelectedCreditNote] =
     useState<CreditNote | null>(null);

@@ -4,6 +4,7 @@ import { Input } from '@shared/ui/input';
 import { Button } from '@shared/ui/button';
 import { Card, CardContent } from '@shared/ui/card';
 import { Search } from 'lucide-react';
+import { logEvent } from '@shared/analytics/analytics';
 
 interface FAQSearchProps {
   onSearch: (query: string) => void;
@@ -21,7 +22,10 @@ const FAQSearch = ({ onSearch }: FAQSearchProps) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
-    onSearch(value); // Real-time search
+    onSearch(value); 
+     if (value.trim()) {
+    logEvent("FAQ Search Performed");
+  }
   };
   
   return (

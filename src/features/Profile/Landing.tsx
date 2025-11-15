@@ -7,6 +7,7 @@ import ConnectionTab from './components/ConnectionTab';
 import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
 import { useConsumerDetails } from './hooks';
 import ProfileEditModal from './components/ProfileEditDialog';
+import { logEvent } from '@shared/analytics/analytics';
 
 const ProfileEditor = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -63,7 +64,8 @@ const ProfileEditor = () => {
   const tabComponents = {
     profile: {
       label: 'Profile',
-      component: <ProfileTab onEditClick={() => setIsEditModalOpen(true)} consumerDetailsData={consumerDetailsData} />
+      component: <ProfileTab  onEditClick={() =>{ logEvent("Profile Edit Modal Opened"); setIsEditModalOpen(true)}} consumerDetailsData={consumerDetailsData} />
+      
     },
     connection: {
       label: 'Connection',

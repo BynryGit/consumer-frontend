@@ -1,13 +1,18 @@
 import MainLayout from "@core/layouts/MainLayout";
 import { routes } from "@core/router/routes";
-import React from "react";
+import React, { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import { Toaster } from "@shared/ui/toaster"; // Add this import
+import { initPosthog } from "@shared/analytics/analytics";
+import { usePageTracking } from "@shared/hooks/usePageTracking";
 
 const App: React.FC = () => {
   console.log('AUTH Endpoint:', import.meta.env.VITE_AUTH_API_ENDPOINT);
-  
-  return (
+   useEffect(() => {
+    initPosthog();
+  }, []);
+    usePageTracking();
+  return (  
     <>
       <Routes>
         <Route element={<MainLayout />}>

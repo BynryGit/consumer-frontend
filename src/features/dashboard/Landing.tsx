@@ -7,6 +7,7 @@
   import { useConsumerBillDetails } from "./hooks"; // Import the hook
   import { getLoginDataFromStorage } from "@shared/utils/loginUtils"; // Import login utils
   import { useConsumerDetails } from "@features/serviceRequest/hooks";
+import { logEvent } from "@shared/analytics/analytics";
 
   // Sample data for charts - updated to include total cost for each month
 
@@ -26,6 +27,7 @@
       consumer_no: remoteConsumerNumber,
     });
     useEffect(() => {
+        logEvent("Self Service Dashboard viewed");
       if (consumerDetail) {
         localStorage.setItem("consumerDetails", JSON.stringify(consumerDetail));
       }

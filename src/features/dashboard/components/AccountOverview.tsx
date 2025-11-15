@@ -1,12 +1,18 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/ui/card';
 import { Lightbulb, Droplet, Flame, Building, Link2 } from 'lucide-react';
+import { formatTerritoryAddress } from '@shared/utils/consumerConfiguration';
 
 const AccountOverview = ({ consumerDetail }) => {
   // Extract consumer data from props, with fallback to empty object
   const consumerData = consumerDetail?.result || {};
   const consumerMappingData = consumerData?.consumerMappingData || [];
   const territoryData = consumerData?.territoryData;
+  const serviceAddress =
+  formatTerritoryAddress(
+    { service: territoryData?.service },
+    "service"
+  ) || "No address configured";
 
   // Get meter numbers from consumer_mapping_data
   const getMeterNumbers = () => {
@@ -91,7 +97,7 @@ const AccountOverview = ({ consumerDetail }) => {
           <div className="flex items-start gap-1">
             <Building className="h-4 w-4 text-muted-foreground mt-0.5" />
             <span className="text-sm">
-              {territoryData?.service?.area} {territoryData?.service?.subArea} {territoryData?.service?.premise}
+             {serviceAddress}
             </span>
           </div>
         </div>
