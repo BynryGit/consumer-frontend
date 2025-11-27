@@ -13,7 +13,6 @@ import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PAGE_SIZE } from "@shared/utils/constants";
 import { useToast } from "@shared/hooks/use-toast"; // Changed from sonner
-import { logEvent } from "@shared/analytics/analytics";
 
 // Bill interface
 interface Bill {
@@ -54,10 +53,7 @@ const BillsTable = () => {
   const { data: pspConfig, refetch: refetchPspConfig } =
     usePSPConfig(remoteUtilityId);
 
-  const activePsp = pspConfig?.find(
-    (item) =>
-      item.isActive && item.verificationStatus?.toLowerCase() === "verified"
-  );
+  const activePsp = pspConfig?.find((item) => item.isActive && item.verificationStatus?.toLowerCase() === 'verified');
   const activePspUtilityId = activePsp?.pspUtilityId;
   const activePspName = activePsp?.organizationName;
 
@@ -89,7 +85,6 @@ const BillsTable = () => {
   }, [searchParams]);
 
   const { data: billDetailsData, refetch } = useConsumerBillDetails(filters);
-
   const bills: Bill[] = useMemo(() => {
     if (!billDetailsData?.results?.billData) return [];
 
@@ -103,8 +98,9 @@ const BillsTable = () => {
         outstandingAmount: billData.outstandingBalance,
         status: billData.outstandingBalance > 0 ? "Unpaid" : "Paid",
         dueDate: billData.dueDate,
-        type: billData.type || "",
+        type: billData.type || "Bill",
         billIndex: index,
+        paymentData: billData.paymentData,
       })
     );
   }, [billDetailsData]);
@@ -113,9 +109,7 @@ const BillsTable = () => {
   const billSummary = useMemo(() => {
     return billDetailsData?.results?.billSummary;
   }, [billDetailsData]);
-  useEffect(() => {
-    logEvent("Bills Tab Viewed");
-  }, []);
+
   const handleSearch = (searchTerm: string, paramName: "search_data") => {
     const params = new URLSearchParams(searchParams);
 
@@ -139,11 +133,41 @@ const BillsTable = () => {
     setPage(newPage);
   };
 
-  const handlePayNow = (bill: any) => {
-    console.log("debug bill selected", bill);
+ const handlePayNow = (bill: any) => {
+  console.log("debug bill selected", bill);
+
+  const { paymentData } = bill;
+
+  // Case 1: No paymentData present
+  if (!Array.isArray(paymentData)) {
     setSelectedBill({ ...bill, activePspUtilityId, activePspName });
     setIsPaymentModalOpen(true);
-  };
+    return;
+  }
+
+  // Case 2: paymentData exists
+  const hasPending = paymentData.some((p: any) => p.paymentReceivedStatus === 0);
+  if (hasPending) {
+    toast({
+      title: "Payment In Progress.",
+      description: "Your payment is still in progress. Please check again later.",
+    })
+    return;
+  }
+
+  const hasReceived = paymentData.some((p: any) => p.paymentReceivedStatus === 1);
+  if (hasReceived) {
+    toast({
+      title: "Payment Completed",
+      description: "This payment is successfully completed and received.",
+    })
+    return;
+  }
+
+  // Case 3: Otherwise, proceed
+  setSelectedBill({ ...bill, activePspUtilityId, activePspName });
+  setIsPaymentModalOpen(true);
+};
 
   // Updated download handler with custom toast
   const handleDownloadBill = (bill: Bill) => {
@@ -281,6 +305,7 @@ const BillsTable = () => {
         status={searchParams.get("status")}
         activePspId={activePspUtilityId}
         activePspName={activePspName}
+        setIsPaymentModalOpen={setIsPaymentModalOpen}
       />
     </div>
   );

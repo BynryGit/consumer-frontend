@@ -24,7 +24,6 @@ import {
 import { useConnectPaymentMethod, usePayBill } from "../hooks";
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 import { useGlobalUserProfile } from "@shared/hooks/useGlobalUser";
-import { logEvent } from "@shared/analytics/analytics";
 
 interface Bill {
   id: string;
@@ -42,6 +41,7 @@ interface PaymentModalProps {
   bill: any | null;
   isOpen: boolean;
   onClose: () => void;
+  setIsPaymentModalOpen: (boolean) => void; // taking state function to close the modal when redirecting to payment portal so that when opened previous tab it will remain closed.
   status?: string;
   activePspId?: number;
   activePspName?: string;
@@ -53,6 +53,7 @@ const PaymentModal = ({
   bill,
   isOpen,
   onClose,
+  setIsPaymentModalOpen,
   status,
   activePspId,
   activePspName,
@@ -62,7 +63,7 @@ const PaymentModal = ({
   const [paymentMethod, setPaymentMethod] = useState("online");
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<
-    "success" | "failed" | null
+    "success" | "failed" | "inProgress" | null
   >(null);
   const { toast } = useToast();
   const { remoteUtilityId, consumerId, firstName, lastName } =
@@ -70,8 +71,7 @@ const PaymentModal = ({
 
   const { mutate: payBill, isPending: isProcessing } = usePayBill();
   const { mutate: connectPaymentMethod } = useConnectPaymentMethod();
-  const { data: user } = useGlobalUserProfile();
-  const consumerDetails = localStorage.getItem("consumerDetails");
+  const consumerDetails = localStorage.getItem("loginResult");
   const parsed = JSON.parse(consumerDetails);
   useEffect(() => {
     if (status === "success" || status === "failed") {
@@ -80,7 +80,7 @@ const PaymentModal = ({
     }
   }, [status]);
 
-  const baseUrl = import.meta.env.VITE_PLATFORM_URL;
+  const baseUrl = import.meta.env.VITE_PAYMENT_API_ENDPOINT;
 
   const paymentTypeMap: Record<string, string> = {
     bill: "BILLING",
@@ -96,16 +96,7 @@ const PaymentModal = ({
   const tabName = tabNameMap[paymentType];
   const paymentTypeLabel = paymentTypeMap[paymentType] || "UNKNOWN";
   const handlePayment = async () => {
-    logEvent("Payment Initiated", {
-      paymentType,
-      billId: bill.id,
-      amount:
-        paymentType === "bill"
-          ? Number(bill?.outstandingAmount)
-          : Number(bill?.amount),
-      paymentMethod,
-      pspName: activePspName,
-    });
+    console.log("debug bill captured", bill);
     if (!bill || !activePspId) {
       toast({
         title: "Error",
@@ -123,29 +114,32 @@ const PaymentModal = ({
         ? Number(bill?.outstandingAmount)
         : Number(bill?.amount);
 
-    // Build conditional payment identifiers
-    const additionalFields: Record<string, any> = {};
-    if (paymentType === "installment") {
-      additionalFields["payment_installment"] = bill?.id;
-    } else if (paymentType === "service") {
-      additionalFields["consumer_support_request"] = bill?.id;
-    } else if (paymentType === "bill") {
-      additionalFields["remote_bill_id"] = bill?.billId;
-    }
-
     // Shared base payload
     const basePayload = {
       amount,
-      remote_consumer_id: parsed?.result?.id,
+      remote_consumer_id: parsed?.result?.consumerId,
       psp_mapping_id: activePspId,
-      remote_utility_id: remoteUtilityId,
+      remote_utility_id: Number(remoteUtilityId),
       description: "It is a billing payment",
       payment_type: paymentTypeLabel,
-      ...additionalFields, // Spread the conditional fields
+      remote_reference_entity_id:
+        paymentType === "bill"
+          ? bill?.billId
+          : bill?.serviceRequestId
+          ? bill?.serviceRequestId
+          : bill?.id,
+      source: 1,
     };
 
     let payload: Record<string, any> = {};
-
+    if (!activePspName || !activePspId) {
+      toast({
+        title: "Error",
+        description: "Cannot find any active payment method.",
+        variant: "destructive",
+      });
+      return;
+    }
     // PSP-specific payload building
     switch (activePspName.toLowerCase()) {
       case "stripe":
@@ -161,13 +155,13 @@ const PaymentModal = ({
       case "doku":
         payload = {
           ...basePayload,
-          success_url: `${baseUrl}billing?tab=${tabName}&page=1&status=success`,
-          // success_url: `http://localhost:5175/billing?tab=${tabName}&page=1&status=success`,
-          cancel_url: `${baseUrl}billing?tab=${tabName}&page=1&status=failed`,
-          invoice_number: `INV-${Date.now()}-${parsed?.result?.id}`,
+          success_url: `${baseUrl}doku/redirect/`,
+          // success_url: `http://localhost:5173/billing?tab=${tabName}&page=1&status=success`,
+          cancel_url: `${baseUrl}doku/redirect/`,
+          invoice_number: `INV-${Date.now()}-${parsed?.result?.user?.id}`,
           name: `${parsed?.result?.firstName} ${parsed?.result?.lastName}`,
-          email: parsed?.result?.email?.trim(),
-          phone: parsed?.result?.contactNumber,
+          email: parsed?.result?.user?.email?.trim(),
+          phone: parsed?.result?.mobileNo,
         };
         break;
 
@@ -181,31 +175,44 @@ const PaymentModal = ({
     }
 
     console.log("debug", payload);
-
+    // For DOKU v1 → API responds with `formData` + `url`.
+    //   We must construct a hidden POST form, attach all fields from formData,
+    //   and submit it to the given URL (opens in new tab).
+    // For DOKU v2 or Stripe → API responds with only `url`,
+    //   so we just open the URL in a new tab directly.
     connectPaymentMethod(payload, {
       onSuccess: (response) => {
-        logEvent("Payment Success", {
-          paymentType,
-          billId: bill.id,
-          amount: amount,
-          pspName: activePspName,
-        });
-        const redirectionUrl = response?.url;
-        if (redirectionUrl) {
-          window.open(redirectionUrl, "_blank", "noopener,noreferrer");
-        } else {
-          console.error("Redirection link not found in response.");
+        // // ---- DOKU Version 1 Handling ----
+        if (response?.formData && response?.url) {
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = response.url;
+          form.target = "_blank";
+          form.style.display = "none";
+
+          Object.entries(response.formData).forEach(([key, value]) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = key; // force uppercase field names
+            input.value = value as string;
+            form.appendChild(input);
+          });
+
+          document.body.appendChild(form);
+          form.submit();
+          setIsPaymentModalOpen(false);
+          return;
         }
-        onClose();
+
+        // ---- DOKU Version 2 or Stripe ----
+        else if (response?.url) {
+          window.open(response.url, "_blank", "noopener,noreferrer");
+          setIsPaymentModalOpen(false);
+          return;
+        }
+        setIsPaymentModalOpen(false);
       },
       onError: (error) => {
-        logEvent("Payment Failed", {
-          paymentType,
-          billId: bill.id,
-          amount: amount,
-          pspName: activePspName,
-          error: error.message,
-        });
         toast({
           title: "Error",
           description: error.message,
@@ -252,15 +259,6 @@ const PaymentModal = ({
   };
 
   if (!bill) return null;
-  useEffect(() => {
-    if (isOpen && bill) {
-      logEvent("Payment Modal Opened", {
-        paymentType,
-        billId: bill.id,
-        amount: paymentType === "bill" ? bill.outstandingAmount : bill.amount,
-      });
-    }
-  }, [isOpen, bill, paymentType]);
 
   const statusDisplay = getStatusDisplay();
   const displayAmount =
@@ -319,7 +317,9 @@ const PaymentModal = ({
                 <span className="text-muted-foreground">
                   {paymentType === "service" ? "Service Type:" : "Bill Type:"}
                 </span>
-                <span className="font-medium">{bill.type}</span>
+                <span className="font-medium">
+                  {paymentType === "service" ? "Service" : "Bill"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Payment Method:</span>
@@ -365,7 +365,7 @@ const PaymentModal = ({
                   </span>
                   <span className="flex items-center gap-1 text-sm">
                     <Calendar className="h-3 w-3" />
-                    {new Date(bill.date).toLocaleDateString()}
+                    {bill.date}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -374,7 +374,7 @@ const PaymentModal = ({
                   </span>
                   <span className="flex items-center gap-1 text-sm">
                     <Calendar className="h-3 w-3" />
-                    {new Date(bill.dueDate).toLocaleDateString()}
+                    {bill.dueDate}
                   </span>
                 </div>
                 <Separator />
