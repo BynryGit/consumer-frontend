@@ -1,26 +1,58 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/ui/select";
-import { Button } from '@shared/ui/button';
-import { Badge } from '@shared/ui/badge';
-import { Progress } from '@shared/ui/progress';
-import { Input } from '@shared/ui/input';
-import { Label } from '@shared/ui/label';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Lightbulb, Droplet, Flame, Settings, Zap, Loader2 } from 'lucide-react';
-import { useToast } from '@shared/hooks/use-toast';
-import { getLoginDataFromStorage } from '@shared/utils/loginUtils';
-import { useUsageChart, useThershold, useAddThreshold } from '../hooks';
-import { useService } from '@features/dashboard/hooks';
+import React, { useState, useMemo, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@shared/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@shared/ui/select";
+import { Button } from "@shared/ui/button";
+import { Badge } from "@shared/ui/badge";
+import { Progress } from "@shared/ui/progress";
+import { Input } from "@shared/ui/input";
+import { Label } from "@shared/ui/label";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
+import {
+  Lightbulb,
+  Droplet,
+  Flame,
+  Settings,
+  Zap,
+  Loader2,
+} from "lucide-react";
+import { useToast } from "@shared/hooks/use-toast";
+import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
+import { useUsageChart, useThershold, useAddThreshold } from "../hooks";
+import { useService } from "@features/dashboard/hooks";
+import { logEvent } from "@shared/analytics/analytics";
 
 const UsageCharts = () => {
   const [utilityType, setUtilityType] = useState("electricity");
   const [thresholds, setThresholds] = useState<Record<string, number>>({});
   const [showThresholdSettings, setShowThresholdSettings] = useState(false);
-  const [tempThresholds, setTempThresholds] = useState<Record<string, number>>({});
+  const [tempThresholds, setTempThresholds] = useState<Record<string, number>>(
+    {}
+  );
   const { toast } = useToast();
 
-  const { remoteUtilityId, remoteConsumerNumber,consumerId } = getLoginDataFromStorage();
+  const { remoteUtilityId, remoteConsumerNumber, consumerId } =
+    getLoginDataFromStorage();
 
   // API Hooks
   const { data: serviceData } = useService({ consumer: consumerId });
@@ -28,79 +60,86 @@ const UsageCharts = () => {
     consumer_number: remoteConsumerNumber,
     remote_utility_id: remoteUtilityId,
     fetch_latest: "True",
-    bill_data: "True"
+    bill_data: "True",
   });
   const { data: apiData } = useUsageChart({
     consumer_no: remoteConsumerNumber,
     remote_utility_id: remoteUtilityId,
     fetch_last_six_records: "True",
-    utility_service: utilityType.charAt(0).toUpperCase() + utilityType.slice(1)
+    utility_service: utilityType.charAt(0).toUpperCase() + utilityType.slice(1),
   });
   const addThresholdMutation = useAddThreshold();
 
   // Processed data
-  const activeServices = useMemo(() => 
-    serviceData?.result || [], 
+  const activeServices = useMemo(
+    () => serviceData?.result || [],
     [serviceData]
   );
 
-  const consumptionDetails = useMemo(() => 
-    thresholdData?.result?.billData?.consumptionDetails || [], 
+  const consumptionDetails = useMemo(
+    () => thresholdData?.result?.billData?.consumptionDetails || [],
     [thresholdData]
   );
 
-  const apiThresholds = useMemo(() => 
-    thresholdData?.result?.additionalData?.thresholds || {}, 
+  const apiThresholds = useMemo(
+    () => thresholdData?.result?.additionalData?.thresholds || {},
     [thresholdData]
   );
-
+  useEffect(() => {
+    logEvent("Usage Dashboard Viewed");
+  }, []);
   const transformedData = useMemo(() => {
     if (!apiData?.result) return [];
-    return Object.entries(apiData.result).map(([month, data]: [string, any]) => ({
-      month,
-      consumption: data.consumption,
-      [utilityType]: data.consumption
-    }));
+    return Object.entries(apiData.result).map(
+      ([month, data]: [string, any]) => ({
+        month,
+        consumption: data.consumption,
+        [utilityType]: data.consumption,
+      })
+    );
   }, [apiData, utilityType]);
 
   // Initialize utility type and thresholds
   useEffect(() => {
     if (activeServices.length > 0) {
-      if (!activeServices.find(s => s.toLowerCase() === utilityType)) {
+      if (!activeServices.find((s) => s.toLowerCase() === utilityType)) {
         setUtilityType(activeServices[0].toLowerCase());
       }
-      
+
       if (Object.keys(apiThresholds).length > 0) {
         setThresholds(apiThresholds);
       } else {
         const defaultThresholds: Record<string, number> = {};
-        activeServices.forEach(service => {
+        activeServices.forEach((service) => {
           // Add any default threshold logic here if needed
         });
-        setThresholds(prev => ({ ...prev, ...defaultThresholds }));
+        setThresholds((prev) => ({ ...prev, ...defaultThresholds }));
       }
     }
   }, [activeServices, utilityType, apiThresholds]);
 
   const getUnitLabel = (type: string) => {
     // Since we don't have utilityUnit property anymore, use fallback logic
-    return type === 'electricity' ? 'kWh' : type === 'water' ? 'L' : 'units';
+    return type === "electricity" ? "kWh" : type === "water" ? "L" : "units";
   };
 
   const getUtilityIcon = (utility: string) => {
     const serviceName = utility.toLowerCase();
-    if (serviceName === 'electricity') return <Lightbulb className="h-4 w-4 text-amber-500" />;
-    if (serviceName.includes('water')) return <Droplet className="h-4 w-4 text-blue-500" />;
-    if (serviceName === 'gas') return <Flame className="h-4 w-4 text-orange-500" />;
+    if (serviceName === "electricity")
+      return <Lightbulb className="h-4 w-4 text-amber-500" />;
+    if (serviceName.includes("water"))
+      return <Droplet className="h-4 w-4 text-blue-500" />;
+    if (serviceName === "gas")
+      return <Flame className="h-4 w-4 text-orange-500" />;
     return <Zap className="h-4 w-4 text-gray-500" />;
   };
 
   const getUtilityColor = (utility: string) => {
     const serviceName = utility.toLowerCase();
-    if (serviceName === 'electricity') return '#ffcc00';
-    if (serviceName.includes('water')) return '#0099cc';
-    if (serviceName === 'gas') return '#ff6633';
-    return '#8884d8';
+    if (serviceName === "electricity") return "#ffcc00";
+    if (serviceName.includes("water")) return "#0099cc";
+    if (serviceName === "gas") return "#ff6633";
+    return "#8884d8";
   };
 
   const handleSaveThresholds = async () => {
@@ -108,7 +147,7 @@ const UsageCharts = () => {
       await addThresholdMutation.mutateAsync({
         consumer_no: remoteConsumerNumber,
         remote_utility_id: remoteUtilityId,
-        thresholds: tempThresholds
+        thresholds: tempThresholds,
       });
 
       setThresholds(tempThresholds);
@@ -117,13 +156,14 @@ const UsageCharts = () => {
 
       toast({
         title: "Thresholds Updated",
-        description: "Your consumption thresholds have been saved successfully."
+        description:
+          "Your consumption thresholds have been saved successfully.",
       });
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to save thresholds. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -136,7 +176,9 @@ const UsageCharts = () => {
           <div className="flex items-center justify-between">
             <div className="pb-4">
               <CardTitle className="pb-2">Consumption Thresholds</CardTitle>
-              <CardDescription>Set alerts when usage exceeds these limits</CardDescription>
+              <CardDescription>
+                Set alerts when usage exceeds these limits
+              </CardDescription>
             </div>
             <Button
               variant="outline"
@@ -147,7 +189,7 @@ const UsageCharts = () => {
               }}
             >
               <Settings className="h-4 w-4 mr-2" />
-              {showThresholdSettings ? 'Cancel' : 'Configure'}
+              {showThresholdSettings ? "Cancel" : "Configure"}
             </Button>
           </div>
         </CardHeader>
@@ -166,11 +208,13 @@ const UsageCharts = () => {
                       <Input
                         id={`${key}-threshold`}
                         type="number"
-                        value={tempThresholds[key] }
-                        onChange={(e) => setTempThresholds(prev => ({ 
-                          ...prev, 
-                          [key]: parseInt(e.target.value) 
-                        }))}
+                        value={tempThresholds[key]}
+                        onChange={(e) =>
+                          setTempThresholds((prev) => ({
+                            ...prev,
+                            [key]: parseInt(e.target.value),
+                          }))
+                        }
                         placeholder={`Enter ${serviceName.toLowerCase()} threshold`}
                       />
                     </div>
@@ -178,10 +222,18 @@ const UsageCharts = () => {
                 })}
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleSaveThresholds} disabled={addThresholdMutation.isPending}>
-                  {addThresholdMutation.isPending ? 'Saving...' : 'Save Thresholds'}
+                <Button
+                  onClick={handleSaveThresholds}
+                  disabled={addThresholdMutation.isPending}
+                >
+                  {addThresholdMutation.isPending
+                    ? "Saving..."
+                    : "Save Thresholds"}
                 </Button>
-                <Button variant="outline" onClick={() => setShowThresholdSettings(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowThresholdSettings(false)}
+                >
                   Cancel
                 </Button>
               </div>
@@ -195,24 +247,37 @@ const UsageCharts = () => {
                 const current = data.consumption || 0;
                 const percentage = data.thresholdPercentage || 0;
                 const threshold = data.limit || 0;
-                const status = percentage >= 90 ? 'danger' : percentage >= 75 ? 'warning' : 'safe';
-                
+                const status =
+                  percentage >= 90
+                    ? "danger"
+                    : percentage >= 75
+                    ? "warning"
+                    : "safe";
+
                 return (
                   <div key={index} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {getUtilityIcon(utility)}
-                        <span className="text-sm font-medium">{serviceName}</span>
+                        <span className="text-sm font-medium">
+                          {serviceName}
+                        </span>
                       </div>
-                      <Badge variant={
-                        status === 'danger' ? 'destructive' : status === 'warning' ? 'secondary' : 'default'
-                      }>
+                      <Badge
+                        variant={
+                          status === "danger"
+                            ? "destructive"
+                            : status === "warning"
+                            ? "secondary"
+                            : "default"
+                        }
+                      >
                         {`${percentage}%`}
                       </Badge>
                     </div>
-                    <Progress 
-                      value={Math.min(percentage, 100)} 
-                      className="h-2" 
+                    <Progress
+                      value={Math.min(percentage, 100)}
+                      className="h-2"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Current: {current}</span>
@@ -247,10 +312,12 @@ const UsageCharts = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             {getUtilityIcon(utilityType)}
-            {utilityType.charAt(0).toUpperCase() + utilityType.slice(1)} Usage Trends
+            {utilityType.charAt(0).toUpperCase() + utilityType.slice(1)} Usage
+            Trends
           </CardTitle>
           <CardDescription>
-            Monthly consumption patterns for {utilityType} ({getUnitLabel(utilityType)})
+            Monthly consumption patterns for {utilityType} (
+            {getUnitLabel(utilityType)})
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -260,10 +327,10 @@ const UsageCharts = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip 
+                <Tooltip
                   formatter={(value) => [
-                    `${value} ${getUnitLabel(utilityType)}`, 
-                    utilityType.charAt(0).toUpperCase() + utilityType.slice(1)
+                    `${value} ${getUnitLabel(utilityType)}`,
+                    utilityType.charAt(0).toUpperCase() + utilityType.slice(1),
                   ]}
                 />
                 <Legend />
@@ -273,7 +340,9 @@ const UsageCharts = () => {
                   stroke={getUtilityColor(utilityType)}
                   fill={getUtilityColor(utilityType)}
                   fillOpacity={0.6}
-                  name={`${utilityType.charAt(0).toUpperCase() + utilityType.slice(1)} (${getUnitLabel(utilityType)})`}
+                  name={`${
+                    utilityType.charAt(0).toUpperCase() + utilityType.slice(1)
+                  } (${getUnitLabel(utilityType)})`}
                 />
               </AreaChart>
             </ResponsiveContainer>

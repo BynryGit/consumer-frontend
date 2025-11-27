@@ -2,11 +2,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { authApi } from "./api";
+import { authApi, getNscResponseTimeConfiguration } from "./api";
 import type { ConsumerWebLoginPayload, forgotPassword, UserProfile } from "./types";
 import { QueryKeyFactory } from "@shared/api/queries/queryKeyFactory";
 import { globalQueryClient } from "@shared/api/queries/queryClients";
 import { useSmartMutation, useSmartQuery } from "@shared/api/queries/hooks";
+import { logEvent, setUserAndProps } from "@shared/analytics/analytics";
 
 interface User {
   id: string;
@@ -72,9 +73,19 @@ export const useAuth = (): UseAuthReturn => {
 
       // If no cached data, fetch from API
       const response = await authApi.getUserProfile();
+         setUserAndProps(String(response?.user?.id), {
+        name: response?.user?.name,
+        role: response?.roleCode,
+        email: response?.user?.email,
+        username: response?.user?.username,
+      })
+      logEvent("Login Success", {
+      email: response?.user?.email,
+      timestamp: new Date().toISOString(),
+    });
       // Store in localStorage as backup
       localStorage.setItem(CACHED_PROFILE_KEY, JSON.stringify(response));
-      return response;
+      return response;  
     },
     enabled: !!user, // Only fetch when user is logged in
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -262,3 +273,23 @@ export const useUserUtility = (params: { tenant_alias: string }) => {
     }
   );
 };  
+
+export const fetchNscConfigIfNeeded = async (utilityId: string | number) => {
+  // ✅ Run only if utilityId is valid
+  if (!utilityId) {
+    console.warn(":warning: Skipping NSC config fetch — invalid utility ID");
+    return;
+  }
+
+  const storedConfig = localStorage.getItem("NSC-Configuration");
+  if (storedConfig) return; // ✅ Already saved, skip API call
+
+  try {
+    const response = await getNscResponseTimeConfiguration(String(utilityId));
+    localStorage.setItem("NSC-Configuration", JSON.stringify(response));
+    console.log("NSC-Configuration", JSON.stringify(response));
+    console.log(":white_check_mark: NSC configuration saved to localStorage");
+  } catch (err) {
+    console.error(":x: Failed to fetch NSC configuration:", err);
+  }
+};

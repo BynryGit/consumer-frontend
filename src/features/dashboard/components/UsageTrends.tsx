@@ -30,6 +30,7 @@ import {
 import { getLoginDataFromStorage } from "@shared/utils/loginUtils";
 
 import { useService, useUsageChart } from "../hooks";
+import { logEvent } from "@shared/analytics/analytics";
 
 interface UsageTrendsProps {
   usageData?: Array<{
@@ -60,6 +61,7 @@ const UsageTrends = ({ usageData, consumerBillData }: UsageTrendsProps) => {
 
   // Set default utility filter when services are loaded
   useEffect(() => {
+     logEvent("Utility filter opened");
     if (activeServices.length > 0 && !utilityFilter) {
       setUtilityFilter(activeServices[0]);
     }

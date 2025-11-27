@@ -82,6 +82,11 @@ const SERVICE_CONFIGS: Record<ApiType, ApiClientConfig> = {
     retries: 2,
     requiresAuth: true,
   },
+  payment: {
+    timeout: 30000,
+    retries: 2,
+    requiresAuth: true,
+  },
 };
 
 // Optimized request deduplication with automatic cleanup
@@ -521,5 +526,6 @@ export const receiptApiClient = createServiceApiClient("receipt");
 export const activityLogApiClient = createServiceApiClient("activityLog");
 export const consumerApiClient = createServiceApiClient("consumerWeb");
 export const communicationApiClient = createServiceApiClient("communication");
+export const paymentApiClient = createServiceApiClient("payment");
 
 // export const consumerWebClient = createServiceApiClient("consumerWeb");
