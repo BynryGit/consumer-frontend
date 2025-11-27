@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useActivityLog } from "../hooks";
 import { logEvent } from "@shared/analytics/analytics";
+import { formatTerritoryAddress } from "@shared/utils/consumerConfiguration";
 
 interface ProfileTabProps {
   onEditClick: () => void;
@@ -60,6 +61,18 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ onEditClick, consumerDetailsDat
       "N/A",
   };
 
+console.log("consumerDetailsData",consumerDetailsData)
+  const serviceAddress =
+  formatTerritoryAddress(
+    { service: consumerDetailsData?.result?.territoryData?.service },
+    "service"
+  ) || "No address configured";
+
+const billingAddress =
+  formatTerritoryAddress(
+    { billing: consumerDetailsData?.result?.territoryData?.billing },
+    "billing"
+  ) || "No address configured";
 const addresses = {
   billing: {
     region:
@@ -449,12 +462,12 @@ const preferences = {
                   Service Address
                 </h4>
                 <Badge variant="outline" className="text-xs">
-                  Primary Location
+                  Primary Location  
                 </Badge>
               </div>
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  {addresses.service.area} , {addresses.service.sub_area} ,{addresses.service.premise}
+                 {serviceAddress}
                 </p>
                 <p className="text-xs text-green-600 mt-2">
                   Where utility services are provided
@@ -476,7 +489,7 @@ const preferences = {
               </div>
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  {addresses.billing.area} , {addresses.billing.sub_area} ,{addresses.billing.premise}
+                 {billingAddress}
                 </p>
                 <p className="text-xs text-blue-600 mt-2">
                   Where bills and statements are sent
